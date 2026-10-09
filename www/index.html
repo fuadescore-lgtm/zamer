@@ -2280,7 +2280,7 @@ function placePanel(){ /* панель свойств закреплена на�
 function syncPanel(){
   const sel=doc.items.find(i=>i.id===selId);
   const key=tool+'|'+selMode+'|'+(rotC?1:0)+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'');
-  if(key===panelKey) return; panelKey=key;
+  if(key===panelKey) return; if(styleEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')) styleEnd(true); panelKey=key;
   let h='';
   const kindSeg=`<div class="seg" role="group" aria-label="Вид линии"><button data-dkind="line" aria-pressed="${lineKind==='line'}">Прямая</button><button data-dkind="rect" aria-pressed="${lineKind==='rect'}">Прямоуг.</button><button data-dkind="circ" aria-pressed="${lineKind==='circ'}">Круг</button><button data-dkind="poly" aria-pressed="${lineKind==='poly'}">Многоуг.</button><button data-dkind="aux" aria-pressed="${lineKind==='aux'}">Конструкц.</button></div>`;
   if(tool==='line'||tool==='rect'){ h=''; }
@@ -2469,7 +2469,7 @@ panel.addEventListener('click',e=>{
     case 'ungrp':if(sel&&sel.g){pushUndo();const gg=sel.g;for(const it of doc.items) if(it.g===gg) delete it.g;editGrp=null;persist();panelKey='';syncPanel();redraw();toast('Фигура разбита на отдельные линии');}break;
     case 'alignJ':alignJoint();break;
     case 'imgImport':$('#imgFile').click();break;
-    case 'colReset':{ pushUndo(); const S=selIds(); for(const it of doc.items) if(S.has(it.id)){ delete it.lc; delete it.fc; delete it.hp; } persist(); panelKey=''; syncPanel(); redraw(); }break;
+    case 'colReset':{ styleBegin(); const S=selIds(); for(const it of doc.items) if(S.has(it.id)){ delete it.lc; delete it.fc; delete it.hp; } panelKey=''; syncPanel(); redraw(); }break;
     case 'stFlip':if(sel&&sel.t==='stair'){ pushUndo(); sel.flip=!sel.flip; persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'stRev':if(sel&&sel.t==='stair'){ pushUndo(); if(sel.kind==='U'){ const g=stairGeom(sel), A=sel.pts[0],B=sel.pts[1], d=sel.w+(sel.gap||0), u=unit(A,B), nn=lft(u), sg=sel.flip?-1:1; sel.pts=[{x:r3(A.x+nn.x*d*sg),y:r3(A.y+nn.y*d*sg)},{x:r3(B.x+nn.x*d*sg),y:r3(B.y+nn.y*d*sg)}]; sel.flip=!sel.flip; } else sel.pts=sel.pts.slice().reverse(); persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'imgCal':if(sel&&sel.t==='img') startCal(sel.id);break;
@@ -2485,7 +2485,7 @@ panel.addEventListener('click',e=>{
   }
 });
 panel.addEventListener('change',e=>applyProp(e.target));
-panel.addEventListener('input',e=>{ if(e.target.id==='imgOp'){ const it=doc.items.find(i=>i.id===selId); if(it){ it.op=+e.target.value; redraw(); } } });
+panel.addEventListener('input',e=>{ if(e.target.id==='pLc'||e.target.id==='pFc'){ styleSet(e.target.id==='pLc'?'lc':'fc',e.target.value); const sw=e.target.parentElement.querySelector('span'); if(sw) sw.style.background=e.target.value; return; } if(e.target.id==='imgOp'){ const it=doc.items.find(i=>i.id===selId); if(it){ it.op=+e.target.value; redraw(); } } });
 $('#imgFile').addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; importImage(f); });
 panel.addEventListener('keydown',e=>{
   if(e.key!=='Enter') return; const id=e.target.id; e.preventDefault();
@@ -2498,9 +2498,7 @@ panel.addEventListener('keydown',e=>{
 function applyProp(t){
   if(t.id==='inW'){const v=parseNum(t.value); if(v>=0){doc.settings.wallW=v;persist();const mb=$('#moreBtn');if(mb&&lineKind==='wall')mb.textContent='Стена '+fmt(v)+' ▴';toast(v?'Новые стены: '+fmt(v)+' мм':'Новые стены без толщины');} return;}
   if(t.id==='pFix'){fixMode=t.value;return;}
-  if(t.id==='pLc'||t.id==='pFc'||t.id==='pHp'){ const S=selIds(), key=t.id==='pLc'?'lc':t.id==='pFc'?'fc':'hp'; pushUndo(); let n=0;
-    for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line') continue; if(key!=='lc'&&!isWall(it)) continue; if(key==='hp'&&t.value==='none') delete it.hp; else it[key]=t.value; n++; }
-    persist(); panelKey=''; syncPanel(); redraw(); return; }
+  if(t.id==='pLc'||t.id==='pFc'||t.id==='pHp'){ styleSet(t.id==='pLc'?'lc':t.id==='pFc'?'fc':'hp',t.value); const sw=t.parentElement&&t.parentElement.querySelector('span'); if(sw) sw.style.background=t.value; return; }
   if(t.id==='mW'){ const v=parseNum(t.value); if(!(v>=0)) return; const S=selIds(); pushUndo(); let n=0; for(const it of doc.items) if(S.has(it.id)&&isWall(it)){ it.w=v; n++; }
     persist(); panelKey=''; syncPanel(); redraw(); toast('Толщина '+fmt(v)+' мм у стен: '+n); return; }
   if(t.id==='pCD'){ const so=doc.items.find(i=>i.id===selId), v=parseNum(t.value); if(so&&so.t==='circ'&&v>0){ pushUndo(); so.r=r3(v/2); persist(); panelKey=''; syncPanel(); redraw(); } return; }
@@ -2689,10 +2687,17 @@ $('#docName').addEventListener('input',e=>{doc.name=e.target.value;persist();});
 $('#docNum').addEventListener('input',e=>{doc.num=e.target.value;persist();});
 function syncTop(){ $('#btnUndo').disabled=!undoS.length; $('#btnRedo').disabled=!redoS.length; }
 // ✓ и ✕ видны в режимах рисования и вставки
-function syncModeBtns(){ const on=tool!=='select'; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
+// правка цвета/штриховки: ✓ — применить, ✕ — вернуть как было до начала правки
+let styleEdit=null;
+function styleBegin(){ if(styleEdit) return; const S=selIds(), snap={}; for(const it of doc.items) if(S.has(it.id)) snap[it.id]={lc:it.lc,fc:it.fc,hp:it.hp}; pushUndo(); styleEdit={snap}; syncModeBtns(); }
+function styleSet(key,val){ styleBegin(); const S=selIds(); for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line') continue; if(key!=='lc'&&!isWall(it)) continue; if(key==='hp'&&val==='none') delete it.hp; else it[key]=val; } redraw(); }
+function styleEnd(apply){ if(!styleEdit) return; const E=styleEdit; styleEdit=null;
+  if(!apply) for(const it of doc.items){ const o=E.snap[it.id]; if(!o) continue; for(const k of ['lc','fc','hp']){ if(o[k]===undefined) delete it[k]; else it[k]=o[k]; } }
+  persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Цвет применён':'Цвет отменён'); }
+function syncModeBtns(){ const on=tool!=='select'||!!styleEdit; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
 syncModeBtns();
-$('#btnOk').addEventListener('click',()=>{ if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
-$('#btnCancel').addEventListener('click',()=>{
+$('#btnOk').addEventListener('click',()=>{ if(styleEdit){ styleEnd(true); return; } if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
+$('#btnCancel').addEventListener('click',()=>{ if(styleEdit){ styleEnd(false); return; }
   if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
   chain.pts=[]; chain.ids=[]; live=null; arcB=null; dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); redraw(); });
 /* ---------- перетаскиваемые окошки ---------- */
