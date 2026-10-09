@@ -557,7 +557,7 @@ function arcTrim(A,ak,Y){ if(!isWall(Y)||isArc(Y)) return null; const G=arcG(A),
 // стена, в грань которой упирается конец дуги: из стен в этом узле — та, что поперечнее дуге
 function arcHost(A,k){ if(nj(A,k)) return null; const P=A[k], G=arcG(A), t=k==='a'?arcTan(G,0):arcTan(G,1); let best=null,bc=0.2;
   for(const Y of doc.items){ if(Y===A||!isWall(Y)||isArc(Y)) continue;
-    const at=(near(Y.a,P)&&!nj(Y,'a'))||(near(Y.b,P)&&!nj(Y,'b'))||(()=>{ const ob=onBody(P,Y); return ob&&!ob.end; })(); if(!at) continue;
+    const at=near(Y.a,P)||near(Y.b,P)||(()=>{ const ob=onBody(P,Y); return ob&&!ob.end; })(); if(!at) continue;
     const u=unit(Y.a,Y.b), c=Math.abs(t.x*u.y-t.y*u.x); if(c>bc){ bc=c; best=Y; } }
   return best; }
 function arcEnds(W){ const G=arcG(W), o=offs(W), r={};
@@ -753,8 +753,10 @@ function polarMulti(list,sx,sy){ const rs=[]; for(const Q of list){ const r=pola
     const t=((B.Q.x-A.Q.x)*B.d.y-(B.Q.y-A.Q.y)*B.d.x)/den, P={x:A.Q.x+A.d.x*t,y:A.Q.y+A.d.y*t}; if(S(P)<=POLAR_PX*1.5) return {p:P,two:true,from:A.Q,from2:B.Q}; }
   rs.sort((a,b)=>S({x:a.Q.x+a.d.x*a.t,y:a.Q.y+a.d.y*a.t})-S({x:b.Q.x+b.d.x*b.t,y:b.Q.y+b.d.y*b.t}));
   const r=rs[0]; return {p:{x:r.Q.x+r.d.x*r.t,y:r.Q.y+r.d.y*r.t},d:r.d,from:r.Q}; }
-let polarGuide=null;
-function snapPoint(sx,sy,from,opt){ polarGuide=null;
+let polarGuide=null, trackGuide=null;
+// отслеживание от вершин (как в Revit/AutoCAD): точка выравнивается по X или Y с ближайшей вершиной
+function trackCands(pts,from){ return pts.filter(c=>(c.k==='end'||c.k==='origin')&&!(from&&near(c.p,from))); }
+function snapPoint(sx,sy,from,opt){ polarGuide=null; trackGuide=null;
   opt=opt||{}; let w=toW(sx,sy); liveSnap=null; alignGuide=null;
   const G=osnapOn?snapGeo(opt.exclude):{pts:chain.pts.map(p=>({p,k:'end'})).concat([{p:{x:0,y:0},k:'origin'}]),segs:[],circs:[]};
   const {pts,segs,circs}=G;
@@ -771,6 +773,11 @@ function snapPoint(sx,sy,from,opt){ polarGuide=null;
     if(pm&&pm.two){ polarGuide=[[pm.from,pm.p],[pm.from2,pm.p]]; liveSnap='align'; return {x:r3(pm.p.x),y:r3(pm.p.y)}; }
     if(pm){ const F=pm.from, d=pm.d; let t=(pm.p.x-F.x)*d.x+(pm.p.y-F.y)*d.y; if(snapOn) t=Math.round(t/g)*g;
       w={x:F.x+d.x*t,y:F.y+d.y*t}; polarGuide=[[F,{x:F.x+d.x*Math.max(t,1)*1.5,y:F.y+d.y*Math.max(t,1)*1.5}]];
+      // луч «Орто» и линия выравнивания от вершины: точка на их пересечении
+      { let bt=null,btd=12; for(const c of trackCands(pts,F)){ const q=c.p;
+          for(const [ax,val] of [['y',q.y],['x',q.x]]){ const dd=ax==='y'?d.y:d.x; if(Math.abs(dd)<1e-6) continue; const tt=(val-(ax==='y'?F.y:F.x))/dd; if(tt<=0) continue;
+            const ip={x:F.x+d.x*tt,y:F.y+d.y*tt}; if(near(ip,q)) continue; const s2=toS(ip), dd2=Math.hypot(s2.x-sx,s2.y-sy); if(dd2<btd){ btd=dd2; bt={p:ip,q}; } } }
+        if(bt){ trackGuide=[[bt.q,bt.p]]; liveSnap='align'; return {x:r3(bt.p.x),y:r3(bt.p.y)}; } }
       // остановка на грани/линии, которую пересекает луч
       let bi=null,bdi=14; const c=toS(w);
       for(const sg of segs){ const ex=sg.b.x-sg.a.x, ey=sg.b.y-sg.a.y, den=d.x*ey-d.y*ex; if(Math.abs(den)<1e-9) continue;
@@ -801,6 +808,10 @@ function snapPoint(sx,sy,from,opt){ polarGuide=null;
     if(ap){ if(horiz) w.x=ap.x; else w.y=ap.y; liveSnap='align'; alignGuide={from:ap,to:{x:w.x,y:w.y}}; }
     return {x:r3(w.x),y:r3(w.y)};
   }
+  // свободное направление: выравнивание по X/Y с вершинами (можно сразу с двумя)
+  if(from||opt.track){ let bx=null,by=null,dx0=8,dy0=8;
+    for(const c of trackCands(pts,from)){ const t=toS(c.p); const ddx=Math.abs(t.x-sx), ddy=Math.abs(t.y-sy); if(ddx<dx0){dx0=ddx;bx=c.p;} if(ddy<dy0){dy0=ddy;by=c.p;} }
+    if(bx||by){ const P={x:bx?bx.x:w.x,y:by?by.y:w.y}; trackGuide=[]; if(bx) trackGuide.push([bx,P]); if(by) trackGuide.push([by,P]); liveSnap='align'; return {x:r3(P.x),y:r3(P.y)}; } }
   // free: project onto faces / lines
   let bp=null,bdp=10;
   for(const sg of segs){ const A=toS(sg.a),B=toS(sg.b),dx=B.x-A.x,dy=B.y-A.y,l2=dx*dx+dy*dy; if(l2<1) continue;
@@ -1094,6 +1105,8 @@ function render(){ queueMicrotask(placePanel);
     ctx.fillStyle=C.muted; for(const it of doc.items){ if(it.t!=='line') continue; for(const p of [it.a,it.b]){const s=toS(p);ctx.fillRect(s.x-2,s.y-2,4,4);} }
   }
   // луч полярного «Орто» (0°/45°/90°) при рисовании и правке вершины
+  if(trackGuide&&((tool==='line'&&live)||jointDrag)){ ctx.save(); ctx.strokeStyle='#38c6d9'; ctx.lineWidth=1.2; ctx.setLineDash([5,4]); for(const [A,B] of trackGuide){ const a=toS(A),b=toS(B); line(a,b); ctx.fillStyle='#38c6d9'; ctx.fillRect(a.x-3,a.y-3,6,6); } ctx.restore(); ctx.setLineDash([]);
+    if(live&&tool==='line'){ const t=toS(live); ctx.save(); ctx.strokeStyle='#e040c8'; ctx.lineWidth=1.5; line({x:t.x-6,y:t.y-6},{x:t.x+6,y:t.y+6}); line({x:t.x-6,y:t.y+6},{x:t.x+6,y:t.y-6}); ctx.restore(); } }
   if(polarGuide&&((tool==='line'&&live)||jointDrag)){ ctx.save(); ctx.strokeStyle=C.tape; ctx.lineWidth=1.2; ctx.setLineDash([6,5]);
     for(const [A,B] of polarGuide){ const a=toS(A), b=toS(B), d=Math.hypot(b.x-a.x,b.y-a.y)||1, k=Math.max(1,(Math.max(W,H))/d); line(a,{x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k}); }
     ctx.restore(); ctx.setLineDash([]); }
@@ -1229,8 +1242,10 @@ cv.addEventListener('pointerdown',e=>{
       if(jb){ const it=doc.items.find(i=>i.id===jb.id); if(it){ press.pan=false; press.noop=true; pushUndo(); const linked=!nj(it,jb.k)&&endLinked(it,jb.k);
         if(linked){ it.nj={...(it.nj||{}),[jb.k]:true}; toast('Отсоединено: этот конец двигается свободно, соседи его не тянут'); }
         else { if(it.nj){ delete it.nj[jb.k]; if(!it.nj.a&&!it.nj.b) delete it.nj; }
+          const P0=it[jb.k]; for(const o of doc.items){ if(o===it||o.t!=='line'||!o.nj) continue; for(const kk of ['a','b']) if(o.nj[kk]&&near(o[kk],P0)) delete o.nj[kk]; if(!o.nj.a&&!o.nj.b) delete o.nj; }
           if(endLinked(it,jb.k)) toast('Соединено: конец двигается вместе с соседней стеной');
-          else if(extendEnd(it,jb.k)){ syncDims(); toast('Соединено: конец дотянут до стены'); }
+          else if(extendEnd(it,jb.k)){ const P1=it[jb.k]; for(const o of doc.items){ if(o===it||o.t!=='line'||!o.nj) continue; for(const kk of ['a','b']) if(o.nj[kk]&&near(o[kk],P1)) delete o.nj[kk]; if(!o.nj.a&&!o.nj.b) delete o.nj; }
+            syncDims(); toast('Соединено: конец дотянут до стены'); }
           else toast('По направлению этой '+(isWall(it)?'стены':'линии')+' нет '+(isWall(it)?'стены':'линии')+' для соединения'); }
         persist(); panelKey=''; syncPanel(); redraw(); return; } } }
     if(tool==='select'){ let db=null,dd=20; for(const h of dimHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<dd){dd=d;db=h;} }
@@ -1374,7 +1389,7 @@ cv.addEventListener('pointermove',e=>{
   if(press.joint){ const J=press.joint; if(!press.moved) return;
     if(!J.started){J.started=true;pushUndo();jointDrag=true;}
     const far=J.refs.filter(([it])=>it.t==='line'&&!isArc(it)).map(([it,k])=>it[k==='a'?'b':'a']);
-    const np=axisMode==='ortho'?snapPoint(p.x+J.dx,p.y+J.dy,null,{exclude:J.ex,polar:far,noGrid:true}):snapPoint(p.x+J.dx,p.y+J.dy,J.orig,{exclude:J.ex,strict:true});
+    const np=axisMode==='ortho'?snapPoint(p.x+J.dx,p.y+J.dy,null,{exclude:J.ex,polar:far,noGrid:true,track:true}):snapPoint(p.x+J.dx,p.y+J.dy,J.orig,{exclude:J.ex,strict:true});
     for(const [it,k] of J.refs) it[k]={x:np.x,y:np.y};
     for(const T of J.tj){ const X=T.X, W=T.W, Q=X[T.k==='a'?'b':'a'], u=unit(Q,T.o), v=unit(W.a,W.b), n=lft(v), A={x:W.a.x+n.x*T.s,y:W.a.y+n.y*T.s};
       const den=u.x*v.y-u.y*v.x; if(Math.abs(den)<1e-6) continue; const wx=A.x-Q.x, wy=A.y-Q.y, t=(wx*v.y-wy*v.x)/den; if(t<1) continue;
