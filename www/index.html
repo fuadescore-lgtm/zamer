@@ -759,7 +759,7 @@ function polarMulti(list,sx,sy){ const rs=[]; for(const Q of list){ const r=pola
   const r=rs[0]; return {p:{x:r.Q.x+r.d.x*r.t,y:r.Q.y+r.d.y*r.t},d:r.d,from:r.Q}; }
 let polarGuide=null, trackGuide=null;
 // отслеживание от вершин (как в Revit/AutoCAD): точка выравнивается по X или Y с ближайшей вершиной
-function trackCands(pts,from){ return pts.filter(c=>(c.k==='end'||c.k==='origin')&&!(from&&near(c.p,from))); }
+function trackCands(pts,from){ return pts.filter(c=>(c.k==='end'||c.k==='mid'||c.k==='origin')&&!(from&&near(c.p,from))); }
 function snapPoint(sx,sy,from,opt){ polarGuide=null; trackGuide=null;
   opt=opt||{}; let w=toW(sx,sy); liveSnap=null; alignGuide=null;
   const G=osnapOn?snapGeo(opt.exclude):{pts:chain.pts.map(p=>({p,k:'end'})).concat([{p:{x:0,y:0},k:'origin'}]),segs:[],circs:[]};
