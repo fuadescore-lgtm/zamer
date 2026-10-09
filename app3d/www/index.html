@@ -925,7 +925,7 @@ function drawArcLine(it,sel){
 }
 function drawItem(it,sel){
   if(it.t==='grid'){ drawGrid2(it,sel); return; }
-  if(it.t==='stair'){ drawStair(it,sel); return; }
+  if(it.t==='stair'){ drawStair(it,sel); if(sel) drawStairEdit(it); return; }
   if(it.t==='roof'){ drawRoof(it,sel); return; }
   if(it.t==='img'){ if(sel){ const P=imgCorners(it).map(toS); ctx.save(); ctx.strokeStyle=C.sel; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(P); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); } return; }
   if(it.t==='line'&&isArc(it)){ drawArcLine(it,sel); return; }
@@ -1280,6 +1280,10 @@ cv.addEventListener('pointerdown',e=>{
     pan:tool==='select'||(e.pointerType==='mouse'&&(e.button===1||e.button===2))};
   if(tool==='roof'&&!press.pan){ press.pan=true; press.roofTap=true; }
   if(tool==='select'&&roofTap(p)){ press.noop=true; press.pan=false; return; }
+  if(tool==='select'&&stEd&&!hitLabel(p.x,p.y)){ const it=doc.items.find(i=>i.id===stEd&&i.t==='stair'); const hd=it&&stairEdgeHit(it,p);
+    if(hd){ press.pan=false; press.stEnd={it,hd,started:false}; return; } }
+  if(tool==='select'&&!moveSel.size){ const g=doc.items.find(i=>i.id===selId&&i.t==='grid');
+    if(g) for(const k of ['a','b']){ const sp=toS(g[k]); if(Math.hypot(sp.x-p.x,sp.y-p.y)<20){ const o=k==='a'?{...g.b}:{...g.a}; press.pan=false; press.gEnd={it:g,k,o,u:unit(o,g[k]),started:false}; return; } } }
   if(tool==='select'&&roofEd&&!hitLabel(p.x,p.y)){ const r=doc.items.find(i=>i.id===roofEd&&i.t==='roof'); const eh=r&&roofEaveHit(r,p);
     if(eh){ press.pan=false; press.roofOv={r,i:eh.i,A:eh.A,out:eh.out,snap:JSON.stringify(r),started:false}; return; } }
   if(tool==='split'&&!press.pan){ press.split=true; updSplit(p); redraw(); return; }
@@ -1334,6 +1338,10 @@ cv.addEventListener('pointerdown',e=>{
       if(tb){ press.pan=false; press.tdh={...tb,started:false}; return; } } }
   if(tool==='select'){
     let lh=press.forceJoint?null:hitLabel(p.x,p.y); const h0=hit(p.x,p.y);
+    // двойное касание по лестнице или крыше — режим правки (важнее синих цифр поверх них)
+    if(h0&&(h0.t==='stair'||h0.t==='roof')&&!(lh&&/^(rf|st)/.test(lh.kind||''))){ const now=Date.now();
+      if(lastObjTap&&lastObjTap.id===h0.id&&now-lastObjTap.t<420){ lastObjTap=null; press.noop=true; press.pan=false; if(h0.t==='stair') stairEdit(h0); else roofEdit(h0); return; }
+      lastObjTap={id:h0.id,t:now}; }
     // окно, дверь или дымоход под пальцем важнее чужой подписи длины
     if(lh&&h0&&(isHole(h0)||h0.t==='chim')&&lh.id!==h0.id&&!/^rf/.test(lh.kind||'')) lh=null;
     if(lh&&(lh.kind==='td'||lh.one||((lh.kind==='hl'||lh.kind==='hr')&&lh.id===selId))){ press.label=lh; press.pan=false; if(lh.one){ const hh=hit(p.x,p.y), ids=selIds(); if(hh&&ids.has(hh.id)) press.sd=startObjDrag(ids,p,true); } return; }
@@ -1374,6 +1382,7 @@ cv.addEventListener('pointerdown',e=>{
     const h=hit(p.x,p.y);
     if(h&&!isHole(h)&&h.t!=='chim'){
       const key=h.g||h.id, now=Date.now(), dbl=lastObjTap&&lastObjTap.id===key&&now-lastObjTap.t<420; lastObjTap={id:key,t:now};
+      if(dbl&&h.t==='stair'){ lastObjTap=null; press.noop=true; press.pan=false; stairEdit(h); return; }
       if(dbl&&h.t==='roof'){ lastObjTap=null; press.noop=true; press.pan=false; roofEdit(h); return; }
       if(dbl&&h.t==='circ'){ lastObjTap=null; const lh=labelHits.find(l=>l.id===h.id&&l.kind==='cd'); if(lh){ press.label=lh; press.pan=false; return; } }
       armLongPress(h); const ids=selIds();
@@ -1419,6 +1428,19 @@ cv.addEventListener('pointermove',e=>{
   }
   if(press.id!==e.pointerId) return;
   if(Math.hypot(p.x-press.sx,p.y-press.sy)>6) press.moved=true;
+  if(press.stEnd){ const q=press.stEnd, it=q.it, hd=q.hd; if(!press.moved) return; if(!q.started){ q.started=true; editBegin(); pushUndo(); }
+    const w=toW(p.x,p.y); let s=(w.x-hd.o.x)*hd.u.x+(w.y-hd.o.y)*hd.u.y, snapK=null; const tol=14/view.scale;
+    // прилипание: где край лестницы встанет на грань стены/линии (по оси марша)
+    const {segs}=osnapOn?snapGeo(new Set([it.id])):{segs:[]}; const half=(it.w||900)/2, nn=lft(hd.u);
+    for(const sg of segs){ for(const off of [0,half,-half]){ const O={x:hd.o.x+nn.x*off,y:hd.o.y+nn.y*off}, v={x:sg.b.x-sg.a.x,y:sg.b.y-sg.a.y}, den=hd.u.x*v.y-hd.u.y*v.x; if(Math.abs(den)<1e-9) continue;
+        const t=((sg.a.x-O.x)*v.y-(sg.a.y-O.y)*v.x)/den, r=((sg.a.x-O.x)*hd.u.y-(sg.a.y-O.y)*hd.u.x)/den; if(r<-0.01||r>1.01) continue; if(Math.abs(t-s)<tol&&(!snapK||Math.abs(t-s)<Math.abs(snapK-s))) snapK=t; } }
+    s=snapK!=null?snapK:Math.round(s/10)*10; s=Math.max(300,s); liveSnap=snapK!=null?'face':null;
+    it.pts[hd.k]={x:r3(hd.o.x+hd.u.x*s),y:r3(hd.o.y+hd.u.y*s)}; redraw(); return; }
+  if(press.gEnd){ const q=press.gEnd, it=q.it; if(!press.moved) return; if(!q.started){ q.started=true; editBegin(); pushUndo(); }
+    const w=toW(p.x,p.y); let s=(w.x-q.o.x)*q.u.x+(w.y-q.o.y)*q.u.y, best=null; const tol=14/view.scale, ext=gridDef().ext||1500;
+    for(const o of doc.items){ if(o.t!=='grid'||o===it) continue; const v=unit(o.a,o.b), den=q.u.x*v.y-q.u.y*v.x; if(Math.abs(den)<1e-3) continue;
+      const t=((o.a.x-q.o.x)*v.y-(o.a.y-q.o.y)*v.x)/den; for(const c of [t,t+ext,t-ext]) if(Math.abs(c-s)<tol&&(best==null||Math.abs(c-s)<Math.abs(best-s))) best=c; }
+    s=best!=null?best:Math.round(s/10)*10; s=Math.max(300,s); it[q.k]={x:r3(q.o.x+q.u.x*s),y:r3(q.o.y+q.u.y*s)}; liveSnap=best!=null?'cross':null; redraw(); return; }
   if(press.roofOv){ const q=press.roofOv, w=toW(p.x,p.y); if(!press.moved) return;
     if(!q.started){ q.started=true; pushUndo(); q.r.edges=q.r.edges&&q.r.edges.length===q.r.pts.length?q.r.edges:(roofPreset(q.r,q.r.type||'gable'),q.r.edges); }
     let ov=(w.x-q.A.x)*q.out.x+(w.y-q.A.y)*q.out.y; ov=Math.max(0,Math.min(3000,Math.round(ov/10)*10)); const old=q.r.edges[q.i].ov; q.r.edges[q.i].ov=ov;
@@ -1499,6 +1521,8 @@ function endPtr(e,cancel){
   if(pr.joint){ jointDrag=null; if(pr.joint.started){persist();} liveSnap=null; alignGuide=null; panelKey=''; syncPanel();
     if(selJoint){ const sp=toS(selJoint), lim=H-(panel.hidden?0:panel.offsetHeight)-40; if(sp.y>lim) view.cy-=(sp.y-lim+20)/view.scale; }
     redraw(); return; }
+  if(pr.stEnd){ liveSnap=null; if(pr.stEnd.started){ persist(); toast('Лестница: '+stairGeom(pr.stEnd.it).n+' ступ., шаг '+[...new Set(stairGeom(pr.stEnd.it).tr.map(Math.round))].join('/')+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.gEnd){ liveSnap=null; if(pr.gEnd.started){ persist(); toast('Длина оси: '+fmt(lineLen(pr.gEnd.it))+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.roofOv){ if(pr.roofOv.started){ persist(); toast('Свес грани '+(pr.roofOv.i+1)+': '+fmt(roofOv(pr.roofOv.r,pr.roofOv.i))+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.dimOff){ if(pr.dimOff.started){ persist(); } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.box){ if(!pr.moved){ const h=hit(pr.box.a.x,pr.box.a.y); selId=h&&!isHole(h)?h.id:null; moveSel.clear(); selJoint=null; panelKey=''; syncPanel(); redraw(); return; }
@@ -1614,6 +1638,9 @@ function closeInline(apply){
     const moved=R.some(r=>selIds().has(r.it.id)&&!near(r.it[r.k],r.o,0.05));
     persist(); panelKey=''; syncPanel(); redraw(); toast(moved?'Расстояние: '+fmt(L)+' мм':'В эту сторону стена держится соседними стенами. Включите «Отдельно» или тяните узел'); return; }
   const it0=doc.items.find(i=>i.id===h.id);
+  if(it0&&it0.t==='stair'&&h.kind==='stL'){ const v=parseNum(ied.value); if(isNaN(v)||Math.abs(v-h.val)<0.05){ redraw(); return; }
+    if(!(v>=300&&v<=30000)){ toast('Не соответствует: длина марша 300…30000 мм'); redraw(); return; }
+    editBegin(); pushUndo(); stairSetLen(it0,h.i,v); persist(); panelKey=''; syncPanel(); redraw(); const g=stairGeom(it0); toast('Марш '+fmt(v)+' мм: '+g.n+' ступ., шаг '+[...new Set(g.tr.map(Math.round))].join('/')+' мм'); return; }
   if(it0&&it0.t==='roof'&&(h.kind==='rfA'||h.kind==='rfO')){ const v=parseNum(ied.value); if(isNaN(v)||Math.abs(v-h.val)<0.05){ redraw(); return; } editBegin();
     if(roofChange(it0,r=>{ if(!r.edges||r.edges.length!==r.pts.length) roofPreset(r,r.type||'gable'); const e=r.edges[h.i]; if(h.kind==='rfA'){ e.a=v; e.s=true; r.type='custom'; } else e.ov=v; }))
       toast(h.kind==='rfA'?'Уклон ската '+(h.i+1)+': '+v+'°':'Свес грани '+(h.i+1)+': '+fmt(v)+' мм');
@@ -2011,6 +2038,7 @@ function drawGrid2(it,sel,ghost){ const a=toS(it.a), b=toS(it.b), R=gridR()*view
   line(a,b); ctx.setLineDash([]);
   for(const [P,sg] of ends){ const c={x:P.x+u.x*sg*R,y:P.y-u.y*sg*R}; ctx.beginPath(); ctx.arc(c.x,c.y,Math.max(R,9),0,Math.PI*2); ctx.fillStyle=C.paper; ctx.fill(); ctx.stroke();
     ctx.fillStyle=sel?C.sel:C.ink; ctx.font='600 '+Math.max(10,R*1.05)+'px '+FTXT; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(it.lab,c.x,c.y+1); }
+  if(sel&&!ghost&&tool==='select'){ ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; for(const P of [a,b]){ ctx.beginPath(); ctx.rect(P.x-6,P.y-6,12,12); ctx.fill(); ctx.stroke(); } }
   ctx.restore(); }
 // расстояния до соседних параллельных осей у выделенной оси — синие, вводятся вручную
 function drawGridGaps(){ if(tool!=='select'||moveSel.size) return; const it=doc.items.find(i=>i.id===selId); if(!it||it.t!=='grid') return;
@@ -2039,8 +2067,13 @@ function drawLeader(it,sel){ const g=leaderGeom(it); if(!g) return; const T=toS(
 /* ---------- лестницы: прямая, угловая, П-образная, по траектории ---------- */
 let stairKind='str', stairDraw=null, stairLive=null;
 const stairDef=()=>Object.assign({tread:300,w:900,gap:150},doc.settings.stair||{});
-function stairGeom(it){ const T=it.tread||300, w=it.w||900, polys=[], treads=[], arrow=[]; let n=0, P=it.pts;
-  const flight=(S,E,first)=>{ const L=Math.hypot(E.x-S.x,E.y-S.y); if(L<1) return; const u=unit(S,E), nn=lft(u), h=w/2, k=Math.max(1,Math.floor(L/T+1e-6));
+// шаг ступеней: авто — делим марш поровну, шаг как можно ближе к 300 мм (в пределах 290…350); вручную — заданный шаг
+function stairSteps(L,it){ if(it.tm){ const T=Math.max(50,it.tread||300); return {k:Math.max(1,Math.floor(L/T+1e-6)),t:T}; }
+  let best=null; const k0=Math.max(1,Math.floor(L/350)), k1=Math.max(1,Math.ceil(L/290));
+  for(let k=k0;k<=k1;k++){ const t=L/k, pen=(t<290?290-t:t>350?t-350:0)*10+Math.abs(t-300); if(!best||pen<best.pen) best={k,t,pen}; }
+  return {k:best.k,t:best.t}; }
+function stairGeom(it){ const w=it.w||900, polys=[], treads=[], arrow=[], tr=[], fl=[]; let n=0, P=it.pts;
+  const flight=(S,E,first)=>{ const L=Math.hypot(E.x-S.x,E.y-S.y); if(L<1) return; const u=unit(S,E), nn=lft(u), h=w/2, st=stairSteps(L,it), k=st.k, T=st.t; tr.push(T); fl.push({S,E,L});
     polys.push([{x:S.x+nn.x*h,y:S.y+nn.y*h},{x:E.x+nn.x*h,y:E.y+nn.y*h},{x:E.x-nn.x*h,y:E.y-nn.y*h},{x:S.x-nn.x*h,y:S.y-nn.y*h}]);
     for(let j=1;j<k;j++){ const q={x:S.x+u.x*T*j,y:S.y+u.y*T*j}; treads.push([{x:q.x+nn.x*h,y:q.y+nn.y*h},{x:q.x-nn.x*h,y:q.y-nn.y*h}]); }
     n+=k; };
@@ -2052,8 +2085,8 @@ function stairGeom(it){ const T=it.tread||300, w=it.w||900, polys=[], treads=[],
       if(i>0){ S={x:S.x+u.x*h,y:S.y+u.y*h}; } if(i<P.length-2){ E={x:E.x-u.x*h,y:E.y-u.y*h}; } flight(S,E);
       if(i<P.length-2){ const V=P[i+1], nn=lft(u); polys.push([{x:V.x-u.x*h+nn.x*h,y:V.y-u.y*h+nn.y*h},{x:V.x+u.x*h+nn.x*h,y:V.y+u.y*h+nn.y*h},{x:V.x+u.x*h-nn.x*h,y:V.y+u.y*h-nn.y*h},{x:V.x-u.x*h-nn.x*h,y:V.y-u.y*h-nn.y*h}]); } }
     for(const q of P) arrow.push(q); }
-  return {polys,treads,arrow,n}; }
-function stairItem(pts){ const d=stairDef(); return {id:uid(),t:'stair',kind:stairKind,pts:pts.map(q=>({x:r3(q.x),y:r3(q.y)})),tread:d.tread,w:d.w,gap:d.gap,flip:false}; }
+  return {polys,treads,arrow,n,tr,fl}; }
+function stairItem(pts){ const d=stairDef(); return {id:uid(),t:'stair',kind:stairKind,pts:pts.map(q=>({x:r3(q.x),y:r3(q.y)})),tread:d.tread,tm:!!d.tm,w:d.w,gap:d.gap,flip:false}; }
 function finishStair(){ if(!stairDraw) return; const P=stairDraw.pts; stairDraw=null; stairLive=null;
   if(P.length<2){ redraw(); return; } pushUndo(); const it=stairItem(P); doc.items.push(it); persist(); selId=it.id; panelKey=''; syncPanel(); redraw();
   toast('Лестница: '+stairGeom(it).n+' ступеней по '+fmt(it.tread)+' мм'); }
@@ -2383,6 +2416,7 @@ function syncPanel(){
   const sel=doc.items.find(i=>i.id===selId);
   const key=tool+'|'+selMode+'|'+(rotC?1:0)+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'');
   if(roofEd&&(!sel||sel.id!==roofEd||tool!=='select')) roofEd=null;
+  if(stEd&&(!sel||sel.id!==stEd||tool!=='select')) stEd=null;
   if(key===panelKey) return; if(barEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')){ barEdit=null; setTimeout(syncModeBtns,0); }
   if(styleEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')) styleEnd(true); panelKey=key;
   let h='';
@@ -2481,13 +2515,14 @@ function syncPanel(){
   } else if(tool==='select'&&sel&&sel.t==='grid'&&!moveSel.size){
     h=`<div class="title">Ось</div><div class="fld inl"><label for="gLab">Имя</label><input class="inp xs" id="gLab" value="${esc(sel.lab)}" style="width:52px"></div>
       <button class="btn" data-act="gBoth" aria-pressed="${!!sel.both}" title="Кружок на обоих концах">${sel.both?'◯—◯':'◯—'}</button>
-      <button class="btn" data-act="gRelab" title="Переименовать все параллельные оси по порядку, начиная с этой">↻ по порядку</button>${colorBtns(sel)}${ICOPY()}${IDEL()}`;
+      <button class="btn" data-act="gRelab" title="Переименовать все параллельные оси по порядку, начиная с этой">↻ по порядку</button>
+      <button class="btn" data-act="gFit" title="Дотянуть все оси так, чтобы вертикальные и горизонтальные пересекались">⊞ Дотянуть</button>${colorBtns(sel)}${ICOPY()}${IDEL()}`;
   } else if(tool==='hole'&&holeType==='stair'){ const d=stairDef();
     const SI={str:'<rect x="7" y="3" width="10" height="18"/><path d="M7 7h10M7 11h10M7 15h10"/>',L:'<path d="M4 20V10h10V4h6v16z"/><path d="M4 14h10M14 8h6"/>',U:'<rect x="3" y="3" width="18" height="18"/><path d="M12 9v12M3 9h18M3 14h9M12 14h9"/>',path:'<path d="M4 20c2-8 6-12 16-16"/><path d="M5 15l3 1M8 10l3 2M12 7l2 3"/>'};
     const ST={str:'Прямая',L:'Угловая (3 точки)',U:'П-образная',path:'По траектории (✓ — готово)'};
     h=`<div class="seg" role="group">${[['win','Окно'],['door','Дверь'],['chim','Дымоход'],['stair','Лестница']].map(([k,n])=>`<button data-htype="${k}" aria-pressed="${holeType===k}">${n}</button>`).join('')}</div>
       <div class="seg" role="group">${['str','L','U','path'].map(k=>`<button class="sico" data-skind="${k}" aria-pressed="${stairKind===k}" title="${ST[k]}" aria-label="${ST[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">${SI[k]}</svg></button>`).join('')}</div>
-      <div class="fld inl"><label for="dsT" title="Шаг ступени (проступь)">Шаг</label><input class="inp xs" id="dsT" inputmode="decimal" value="${d.tread}"></div>
+      <div class="fld inl"><label for="dsT" title="Шаг ступени (проступь)">Шаг</label><input class="inp xs" id="dsT" inputmode="decimal" value="${d.tm?d.tread:''}" placeholder="авто" title="Пусто — авто: ступени поровну, шаг около 300 мм (290…350)"></div>
       <div class="fld inl"><label for="dsW" title="Ширина марша">Ширина</label><input class="inp xs" id="dsW" inputmode="decimal" value="${d.w}"></div>
       ${stairKind==='U'?`<div class="fld inl"><label for="dsG" title="Зазор между маршами">Зазор</label><input class="inp xs" id="dsG" inputmode="decimal" value="${d.gap}"></div>`:''}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='roof'&&!moveSel.size){ const re=roofEdge&&roofEdge.id===sel.id&&roofEdge.i<sel.pts.length?roofEdge.i:null, E=sel.edges||[], ed=re!=null?E[re]:null;
@@ -2502,8 +2537,11 @@ function syncPanel(){
       <span class="lbl">конёк ${(()=>{ try{ const g=roofGeom(sel); let m=-1e18; for(const f of g.faces) for(const q of f.P) m=Math.max(m,g.H(q)+g.th); return fmtElev(m); }catch(e){ return ''; } })()}</span>
       ${IB('v3d','box','Показать в 3D')}${ICOPY()}${IDEL()}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='stair'&&!moveSel.size){ const g=stairGeom(sel);
+    const trs=g.tr.map(t=>Math.round(t)), trTxt=[...new Set(trs)].join('/');
     h=`<div class="title"><b>${g.n}</b> ступ.</div>
-      <div class="fld inl"><label for="stT">Шаг</label><input class="inp xs" id="stT" inputmode="decimal" value="${sel.tread}"></div>
+      <div class="fld inl"><label for="stT" title="Шаг ступени (проступь)">Шаг</label><input class="inp xs" id="stT" inputmode="decimal" value="${sel.tm?r1(sel.tread):trTxt}" title="${sel.tm?'Задан вручную':'Авто: ступени поровну, около 300 мм (290…350)'}"></div>
+      <button class="btn${sel.tm?'':' go'}" data-act="stAuto" title="Авто: шаг подбирается сам (290…350 мм, ближе к 300)">${sel.tm?'Ручн.':'Авто'}</button>
+      ${stEd===sel.id?'<span class="lbl">Тяните край · цифры — длина</span>':IB('stEd','edges','Изменить длину: тянуть края (двойное касание по лестнице)')}
       <div class="fld inl"><label for="stW">Ширина</label><input class="inp xs" id="stW" inputmode="decimal" value="${sel.w}"></div>
       ${sel.kind==='U'?`<div class="fld inl"><label for="stG">Зазор</label><input class="inp xs" id="stG" inputmode="decimal" value="${sel.gap}"></div>${IB('stFlip','flip','Второй марш на другую сторону')}`:''}
       ${IB('stRev','rot','Развернуть направление подъёма')}${ICOPY()}${IDEL()}`;
@@ -2616,6 +2654,9 @@ panel.addEventListener('click',e=>{
     case 'rfEdge':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ editBegin(); pushUndo(); undoS.pop(); roofChange(sel,r=>{ const e=r.edges[roofEdge.i]; e.s=!e.s; if(e.s&&!(e.a>0)) e.a=r.ang||30; r.type='custom'; }); }break;
     case 'wAtt':if(sel&&isWall(sel)){ editBegin(); pushUndo(); if(sel.ht) delete sel.ht; else { const z=wallZ(sel,doc.curLv); sel.ht=r3(z.z1-z.z0); } persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'v3d':open3D();break;
+    case 'stAuto':if(sel&&sel.t==='stair'){ editBegin(); pushUndo(); sel.tm=!sel.tm; if(sel.tm) sel.tread=Math.round(stairGeom({...sel,tm:false}).tr[0]||300); persist(); panelKey=''; syncPanel(); redraw(); toast(sel.tm?'Шаг вручную: '+fmt(sel.tread)+' мм':'Шаг авто: ступени поровну, около 300 мм'); }break;
+    case 'stEd':if(sel&&sel.t==='stair') stairEdit(sel);break;
+    case 'gFit':if(sel&&sel.t==='grid'){ editBegin(); pushUndo(); const n=gridFit(); persist(); panelKey=''; syncPanel(); redraw(); toast(n?'Оси дотянуты до пересечений ('+n+')':'Нет пересекающихся осей'); }break;
     case 'rfEd':if(sel&&sel.t==='roof') roofEdit(sel);break;
     case 'stFlip':if(sel&&sel.t==='stair'){ pushUndo(); sel.flip=!sel.flip; persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'stRev':if(sel&&sel.t==='stair'){ pushUndo(); if(sel.kind==='U'){ const g=stairGeom(sel), A=sel.pts[0],B=sel.pts[1], d=sel.w+(sel.gap||0), u=unit(A,B), nn=lft(u), sg=sel.flip?-1:1; sel.pts=[{x:r3(A.x+nn.x*d*sg),y:r3(A.y+nn.y*d*sg)},{x:r3(B.x+nn.x*d*sg),y:r3(B.y+nn.y*d*sg)}]; sel.flip=!sel.flip; } else sel.pts=sel.pts.slice().reverse(); persist(); panelKey=''; syncPanel(); redraw(); }break;
@@ -2696,13 +2737,19 @@ function applyProp(t){
   if(['gNV','gNH','gSV','gSH','gLV','gLH'].includes(t.id)){ const d=gridDef(), k={gNV:'nV',gNH:'nH',gSV:'sV',gSH:'sH',gLV:'labV',gLH:'labH'}[t.id];
     if(k==='labV'||k==='labH') d[k]=t.value.trim()||d[k]; else { const v=parseNum(t.value); if(!(v>=0)) return; d[k]=k.startsWith('n')?Math.max(0,Math.min(60,Math.round(v))):Math.max(100,v); }
     doc.settings.grid2=d; persist(); redraw(); return; }
+  if(t.id==='dsT'&&!t.value.trim()){ const d=stairDef(); d.tm=false; doc.settings.stair=d; persist(); redraw(); return; }
+  if(t.id==='dsT'){ const v=parseNum(t.value); if(!(v>=150&&v<=500)){ toast('Не соответствует: шаг ступени 150…500 мм (пусто — авто)'); return; } const d=stairDef(); d.tm=true; d.tread=v; doc.settings.stair=d; persist(); redraw(); return; }
   if(['dsT','dsW','dsG'].includes(t.id)){ const v=parseNum(t.value); if(!(v>=0)) return; const d=stairDef(); d[{dsT:'tread',dsW:'w',dsG:'gap'}[t.id]]=v; if(d.tread<50) d.tread=50; doc.settings.stair=d; persist(); redraw(); return; }
   const sel=doc.items.find(i=>i.id===selId); if(!sel) return;
   if(t.id==='pLen'&&sel.t==='line'){
     const L=parseNum(t.value); if(!(L>0)){toast('Длина должна быть больше нуля');return;}
     pushUndo(); setLineLength(sel,L);
   }
-  if(sel&&sel.t==='stair'&&['stT','stW','stG'].includes(t.id)){ const v=parseNum(t.value); if(!(v>=0)) return; pushUndo(); sel[{stT:'tread',stW:'w',stG:'gap'}[t.id]]=t.id==='stT'?Math.max(50,v):v; persist(); panelKey=''; syncPanel(); redraw(); return; }
+  if(sel&&sel.t==='stair'&&['stT','stW','stG'].includes(t.id)){ const v=parseNum(t.value); if(isNaN(v)) return;
+    if(t.id==='stT'&&!(v>=150&&v<=500)){ toast('Не соответствует: шаг ступени 150…500 мм'); panelKey=''; syncPanel(); return; }
+    if(t.id==='stW'&&!(v>=500&&v<=3000)){ toast('Не соответствует: ширина марша 500…3000 мм'); panelKey=''; syncPanel(); return; }
+    if(t.id==='stG'&&!(v>=0&&v<=3000)){ toast('Не соответствует: зазор 0…3000 мм'); panelKey=''; syncPanel(); return; }
+    pushUndo(); if(t.id==='stT'){ sel.tread=v; sel.tm=true; } else sel[{stW:'w',stG:'gap'}[t.id]]=v; persist(); panelKey=''; syncPanel(); redraw(); return; }
   if(t.id==='gLab'&&sel.t==='grid'){ const v=t.value.trim(); if(v){ pushUndo(); sel.lab=v; persist(); panelKey=''; syncPanel(); redraw(); } return; }
   if(t.id==='rotAng'){ const A=parseNum(t.value); if(!isNaN(A)&&A) rotateSel(A); t.value=''; return; }
   if(t.id==='pAng'&&sel.t==='line'&&!isArc(sel)){ const A=parseNum(t.value); if(isNaN(A)) return;
@@ -2868,8 +2915,8 @@ function styleEnd(apply){ if(!styleEdit) return; const E=styleEdit; styleEdit=nu
   persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Применено':'Отменено'); }
 function syncModeBtns(){ const on=tool!=='select'||!!styleEdit||!!barEdit; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
 syncModeBtns();
-$('#btnOk').addEventListener('click',()=>{ if(roofEd&&barEdit){ roofEd=null; panelKey=''; syncPanel(); redraw(); } if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)) ae.blur(); const had=!!barEdit; barEdit=null; if(styleEdit) styleEnd(true); else { syncModeBtns(); if(had) toast('Сохранено'); } return; } if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
-$('#btnCancel').addEventListener('click',()=>{ if(roofEd) roofEd=null; if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)){ if('defaultValue' in ae) ae.value=ae.defaultValue; ae.blur(); }
+$('#btnOk').addEventListener('click',()=>{ if((roofEd||stEd)&&barEdit){ roofEd=null; stEd=null; panelKey=''; syncPanel(); redraw(); } if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)) ae.blur(); const had=!!barEdit; barEdit=null; if(styleEdit) styleEnd(true); else { syncModeBtns(); if(had) toast('Сохранено'); } return; } if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
+$('#btnCancel').addEventListener('click',()=>{ if(roofEd) roofEd=null; if(stEd) stEd=null; if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)){ if('defaultValue' in ae) ae.value=ae.defaultValue; ae.blur(); }
     if(barEdit){ doc.items=JSON.parse(barEdit.snap); if(undoS.length>barEdit.und) undoS.length=barEdit.und; } barEdit=null;
     if(styleEdit) styleEnd(false); else { persist(); panelKey=''; syncPanel(); redraw(); syncModeBtns(); toast('Отменено'); } return; }
   if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
@@ -2965,7 +3012,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.2':'4.0.2'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.3':'4.0.3'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3321,7 +3368,32 @@ function roofPlan(r){ const g=roofGeom(r), ridges=[], key=new Set(), onO=(a,b)=>
   return {g,ridges,arrows}; }
 function roofBadges(r){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1;
   return P.map((A,i)=>{ const B=P[(i+1)%n], u=unit(A,B), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+B.x)/2,y:(A.y+B.y)/2}, ov=roofOv(r,i), t=0.3; return {i,p:m,out,ov,s:toS({x:m.x+u.x*Math.hypot(B.x-A.x,B.y-A.y)*t+out.x*ov/2,y:m.y+u.y*Math.hypot(B.x-A.x,B.y-A.y)*t+out.y*ov/2})}; }); }
-let roofEdge=null, roofEd=null;
+let roofEdge=null, roofEd=null, stEd=null;
+// лестница: режим правки длины (двойное касание) — края тянутся пальцем с прилипанием к граням, длины маршей вводятся цифрами
+function stairEdit(it){ if(inlineH) closeInline(false); selId=it.id; moveSel.clear(); selJoint=null; stEd=null; panelKey=''; syncPanel(); stEd=it.id; editBegin(); panelKey=''; syncPanel(); redraw();
+  toast('Лестница: тяните начало или конец, коснитесь цифры длины. ✓ — готово, ✕ — отмена'); }
+// ручки краёв: [индекс точки, направление удлинения, неподвижная точка]
+function stairHandles(it){ const P=it.pts, n=P.length; if(n<2) return [];
+  if(it.kind==='U') return [{k:0,u:unit(P[1],P[0]),o:P[1]},{k:1,u:unit(P[0],P[1]),o:P[0]}];
+  return [{k:0,u:unit(P[1],P[0]),o:P[1]},{k:n-1,u:unit(P[n-2],P[n-1]),o:P[n-2]}]; }
+function stairEdgeSeg(it,hd){ const w=(it.w||900)/2, P=it.pts[hd.k], nn=lft(hd.u); return [{x:P.x+nn.x*w,y:P.y+nn.y*w},{x:P.x-nn.x*w,y:P.y-nn.y*w}]; }
+function stairEdgeHit(it,p){ let best=null,bd=20; for(const hd of stairHandles(it)){ const [a,b]=stairEdgeSeg(it,hd), d=segDist(p.x,p.y,toS(a),toS(b)); if(d<bd){ bd=d; best=hd; } } return best; }
+function stairSetLen(it,i,L){ const P=it.pts, u=unit(P[i],P[i+1]), d=L-Math.hypot(P[i+1].x-P[i].x,P[i+1].y-P[i].y); for(let j=i+1;j<P.length;j++) P[j]={x:r3(P[j].x+u.x*d),y:r3(P[j].y+u.y*d)}; }
+function drawStairEdit(it){ if(stEd!==it.id) return; const P=it.pts;
+  ctx.save(); for(const hd of stairHandles(it)){ const [a,b]=stairEdgeSeg(it,hd); ctx.strokeStyle=C.sel; ctx.globalAlpha=.4; ctx.lineWidth=8; line(toS(a),toS(b)); } ctx.restore();
+  for(let i=0;i<P.length-1;i++){ const A=P[i],B=P[i+1], L=Math.hypot(B.x-A.x,B.y-A.y), u=unit(A,B), nn=lft(u), off=(it.w||900)/2+250*1/Math.max(view.scale*4,0.25)/4;
+    const a=toS({x:A.x+nn.x*((it.w||900)/2),y:A.y+nn.y*((it.w||900)/2)}), b=toS({x:B.x+nn.x*((it.w||900)/2),y:B.y+nn.y*((it.w||900)/2)});
+    const so=toS({x:0,y:0}), nd={x:toS(nn).x-so.x,y:toS(nn).y-so.y}, nl=Math.hypot(nd.x,nd.y)||1, k=22, ao={x:a.x+nd.x/nl*k,y:a.y+nd.y/nl*k}, bo={x:b.x+nd.x/nl*k,y:b.y+nd.y/nl*k};
+    ctx.save(); ctx.strokeStyle=C.sel; ctx.lineWidth=1; line(ao,bo); line(a,ao); line(b,bo); ctx.restore();
+    const m={x:(ao.x+bo.x)/2,y:(ao.y+bo.y)/2}; tmpBox(fmt(L),m.x,m.y,0); labelHits.push({id:it.id,kind:'stL',i,one:true,w:toW(m.x,m.y),x:m.x,y:m.y,val:L}); } }
+// оси: дотянуть все оси уровня так, чтобы перпендикулярные пересекались (вылет за крайнюю — как в настройках сетки)
+function gridFit(){ const G=doc.items.filter(i=>i.t==='grid'), ext=gridDef().ext||1500; let n=0;
+  for(const g of G){ const u=unit(g.a,g.b), ts=[];
+    for(const o of G){ if(o===g) continue; const v=unit(o.a,o.b), den=u.x*v.y-u.y*v.x; if(Math.abs(den)<1e-3) continue;
+      const t=((o.a.x-g.a.x)*v.y-(o.a.y-g.a.y)*v.x)/den; ts.push(t); }
+    if(!ts.length) continue; const t0=Math.min(...ts)-ext, t1=Math.max(...ts)+ext, a0={...g.a};
+    g.a={x:r3(a0.x+u.x*t0),y:r3(a0.y+u.y*t0)}; g.b={x:r3(a0.x+u.x*t1),y:r3(a0.y+u.y*t1)}; n++; }
+  return n; }
 // проверка крыши: при несогласованных данных — понятная причина
 function roofCheck(r){ const n=r.pts.length, E=r.edges||[];
   for(let i=0;i<n;i++){ const e=E[i]||{}; if(e.s&&!(e.a>=1&&e.a<=75)) return 'уклон ската '+(i+1)+' должен быть от 1° до 75°';
@@ -3336,7 +3408,7 @@ function roofChange(r,fn){ const snap=JSON.stringify(r); pushUndo(); fn(r); cons
   if(err){ const o=JSON.parse(snap); for(const k of Object.keys(r)) delete r[k]; Object.assign(r,o); undoS.pop(); toast('Не соответствует: '+err); panelKey=''; syncPanel(); redraw(); return false; }
   persist(); panelKey=''; syncPanel(); redraw(); return true; }
 function editBegin(){ if(!barEdit){ barEdit={snap:JSON.stringify(doc.items),und:undoS.length}; syncModeBtns(); } }
-function roofEdit(r){ selId=r.id; moveSel.clear(); selJoint=null; roofEdge=null; roofEd=null; panelKey=''; syncPanel(); roofEd=r.id; editBegin();
+function roofEdit(r){ if(inlineH) closeInline(false); selId=r.id; moveSel.clear(); selJoint=null; roofEdge=null; roofEd=null; panelKey=''; syncPanel(); roofEd=r.id; editBegin();
   panelKey=''; syncPanel(); redraw(); toast('Края крыши: тяните край свеса или коснитесь цифры. ✓ — готово, ✕ — отмена'); }
 function roofEaveHit(r,p){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1; let best=null, bd=18;
   for(let i=0;i<n;i++){ const A=P[i],B=P[(i+1)%n], u=unit(A,B), out={x:u.y*sg,y:-u.x*sg}, ov=roofOv(r,i), d=segDist(p.x,p.y,toS({x:A.x+out.x*ov,y:A.y+out.y*ov}),toS({x:B.x+out.x*ov,y:B.y+out.y*ov}));
@@ -3438,8 +3510,8 @@ function thinStrip(it,sa,sb,t){ // тонкая полоса по оси сте�
   const a=A(sa), b=A(sb); return [{x:a.x+n.x*(m+t/2),y:a.y+n.y*(m+t/2)},{x:b.x+n.x*(m+t/2),y:b.y+n.y*(m+t/2)},{x:b.x+n.x*(m-t/2),y:b.y+n.y*(m-t/2)},{x:a.x+n.x*(m-t/2),y:a.y+n.y*(m-t/2)}]; }
 function stairMesh(M,it,z0,Hl){ const T=it.tread||300, w=it.w||900, h=w/2, col=[0.78,0.76,0.72], P=it.pts, seq=[];
   const rect=(S,E,nn,a,b)=>{ const u=unit(S,E), p=s=>({x:S.x+u.x*s,y:S.y+u.y*s}), A=p(a), B=p(b); return [{x:A.x+nn.x*h,y:A.y+nn.y*h},{x:B.x+nn.x*h,y:B.y+nn.y*h},{x:B.x-nn.x*h,y:B.y-nn.y*h},{x:A.x-nn.x*h,y:A.y-nn.y*h}]; };
-  const flight=(S,E)=>{ const L=Math.hypot(E.x-S.x,E.y-S.y); if(L<1) return; const u=unit(S,E), nn=lft(u), k=Math.max(1,Math.floor(L/T+1e-6)), t=L/k;
-    for(let j=0;j<k;j++) seq.push(rect(S,E,nn,t*j,t*(j+1))); };
+  const flight=(S,E)=>{ const L=Math.hypot(E.x-S.x,E.y-S.y); if(L<1) return; const u=unit(S,E), nn=lft(u), st=stairSteps(L,it), k=st.k, t=st.t;
+    for(let j=0;j<k;j++) seq.push(rect(S,E,nn,t*j,j===k-1?L:t*(j+1))); };
   if(it.kind==='U'&&P.length>=2){ const A=P[0],B=P[1], u=unit(A,B), nn0=lft(u), sg=it.flip?-1:1, nn={x:nn0.x*sg,y:nn0.y*sg}, d=w+(it.gap==null?150:it.gap);
     flight(A,B); seq.push([{x:B.x-nn.x*h,y:B.y-nn.y*h},{x:B.x+u.x*w-nn.x*h,y:B.y+u.y*w-nn.y*h},{x:B.x+u.x*w+nn.x*(d+h),y:B.y+u.y*w+nn.y*(d+h)},{x:B.x+nn.x*(d+h),y:B.y+nn.y*(d+h)}]);
     flight({x:B.x+nn.x*d,y:B.y+nn.y*d},{x:A.x+nn.x*d,y:A.y+nn.y*d}); }
