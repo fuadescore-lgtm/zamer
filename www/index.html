@@ -1097,8 +1097,9 @@ function drawJoinIcons(){
       lk(-2.6-g); lk(2.6+g);
       ctx.restore();
       ctx.restore(); } } }
-function tmpTarget(){ if(tool!=='select'||moveSel.size||selJoint||editGrp) return null; const S=selIds(); if(S.size!==1) return null;
-  const it=doc.items.find(i=>i.id===selId); return it&&it.t==='line'&&!isArc(it)&&!it.g?it:null; }
+// длина и угол на чертеже: у отдельной стены/линии и у грани фигуры (цепочка, прямоугольник), которой коснулись
+function tmpTarget(){ if(tool!=='select'||moveSel.size||selJoint||editGrp||selMode!=='pick') return null; const it=doc.items.find(i=>i.id===selId);
+  if(!it||it.t!=='line'||isArc(it)) return null; const S=selIds(); if(!it.g&&S.size!==1) return null; return it; }
 function tmpBox(txt,x,y,rot){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.font='600 12px '+FNUM; const w=ctx.measureText(txt).width+12;
   ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=1.2; ctx.beginPath(); ctx.roundRect?ctx.roundRect(-w/2,-10,w,20,4):ctx.rect(-w/2,-10,w,20); ctx.fill(); ctx.stroke();
   ctx.fillStyle=C.sel; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt,0,0.5); ctx.restore(); }
