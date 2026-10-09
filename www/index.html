@@ -2447,8 +2447,8 @@ panel.addEventListener('click',e=>{
   if(b.dataset.pgn!==undefined){ polyN=+b.dataset.pgn; const i=$('#pgN'); if(i) i.value=polyN; toast('Граней: '+polyN); return; }
   if(b.dataset.dkind!==undefined){drawKind=lineKind=b.dataset.dkind; chain.pts=[];chain.ids=[]; live=null; panelKey=''; syncPanel(); redraw(); return;}
   if(b.dataset.act==='crot'&&sel&&sel.t==='chim'){pushUndo();sel.rot=((sel.rot||0)+90)%180;persist();panelKey='';syncPanel();redraw();return;}
-  if(b.dataset.htype!==undefined){holeType=b.dataset.htype;holeGhost=null;stairDraw=null;stairLive=null;panelKey='';syncPanel();redraw();if(holeType==='stair')toast('Лестница: выберите вид и протяните от начала к концу (магнит прилипает к граням)');return;}
-  if(b.dataset.skind!==undefined){stairKind=b.dataset.skind;stairDraw=null;stairLive=null;panelKey='';syncPanel();redraw();toast({str:'Прямая: протяните от низа до верха',L:'Угловая: три точки — начало, поворот, конец',U:'П-образная: протяните первый марш до площадки; второй пойдёт рядом',path:'По траектории: ставьте точки, ✓ — готово'}[stairKind]);return;}
+  if(b.dataset.htype!==undefined){holeType=b.dataset.htype;holeGhost=null;stairDraw=null;stairLive=null;panelKey='';syncPanel();redraw();return;}
+  if(b.dataset.skind!==undefined){stairKind=b.dataset.skind;stairDraw=null;stairLive=null;panelKey='';syncPanel();redraw();return;}
   if(b.dataset.act==='hinge'&&sel&&isHole(sel)){pushUndo();sel.hinge=sel.hinge?0:1;persist();redraw();return;}
   if(b.dataset.act==='swing'&&sel&&isHole(sel)){pushUndo();sel.swing=(sel.swing>=0)?-1:1;persist();redraw();return;}
   if(b.dataset.pldend!==undefined&&sel&&sel.t==='text'&&sel.ld){ pushUndo(); sel.ld.end=b.dataset.pldend; doc.settings.ldEnd=sel.ld.end; persist(); panelKey=''; syncPanel(); redraw(); return; }
@@ -2617,12 +2617,12 @@ function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
   const r=btn.getBoundingClientRect(), sr=stage.getBoundingClientRect(), w=m.offsetWidth;
   m.style.left=Math.max(8,Math.min(sr.width-w-8,r.left-sr.left+r.width/2-w/2))+'px'; }
 $('#toolMenu').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
-  if(b.dataset.wm){ wallMode=b.dataset.wm; saveModes(); setTool('line'); closeToolMenu(); toast('Стены: '+MODEN[wallMode]); return; }
-  if(b.dataset.lm){ lineMode=b.dataset.lm; saveModes(); setTool('draw'); if(lineMode==='poly'||lineMode==='rect'||lineMode==='circ') openToolMenu('draw',document.querySelector('[data-tool="draw"]')); else closeToolMenu(); toast('Линии: '+MODEN[lineMode]); return; }
-  if(b.dataset.ly){ lineLayer=b.dataset.ly; $('#toolMenu').querySelectorAll('[data-ly]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); toast('Слой новых линий: '+(lineLayer==='open'?'Проёмы':'Прочее')); return; }
-  if(b.dataset.tm){ textMode=b.dataset.tm==='tleader'?'leader':'plain'; ldPick=null; pendingText=null; setTool('text'); closeToolMenu(); toast(textMode==='leader'?'Выноска: коснитесь точки, на которую она укажет, затем места для текста':'Текст: коснитесь места надписи'); return; }
+  if(b.dataset.wm){ wallMode=b.dataset.wm; saveModes(); setTool('line'); closeToolMenu(); return; }
+  if(b.dataset.lm){ lineMode=b.dataset.lm; saveModes(); setTool('draw'); if(lineMode==='poly'||lineMode==='rect'||lineMode==='circ') openToolMenu('draw',document.querySelector('[data-tool="draw"]')); else closeToolMenu(); return; }
+  if(b.dataset.ly){ lineLayer=b.dataset.ly; $('#toolMenu').querySelectorAll('[data-ly]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
+  if(b.dataset.tm){ textMode=b.dataset.tm==='tleader'?'leader':'plain'; ldPick=null; pendingText=null; setTool('text'); closeToolMenu(); return; }
   if(b.dataset.ldend){ doc.settings.ldEnd=b.dataset.ldend; persist(); $('#toolMenu').querySelectorAll('[data-ldend]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
-  if(b.dataset.sm){ selMode=b.dataset.sm; setTool('select'); closeToolMenu(); rotC=null; toast(selMode==='win'?'Рамка: проведите пальцем по пустому месту — выберутся объекты, целиком попавшие внутрь':selMode==='cross'?'Рамка: проведите пальцем — выберутся все объекты, которых коснётся рамка':selMode==='copy'?'Копирование: тяните любой объект — появится его копия':selMode==='rot'?'Вращение: выберите объект, тяните вокруг центра (кружок с крестом можно передвинуть) или введите угол':'Выбор'); return; }
+  if(b.dataset.sm){ selMode=b.dataset.sm; setTool('select'); closeToolMenu(); rotC=null; return; }
   if(b.dataset.em){ editMode=b.dataset.em; saveModes(); setTool('edit'); closeToolMenu(); return; }
   if(b.dataset.wside!==undefined){ doc.settings.wallSide=+b.dataset.wside; persist(); $('#toolMenu').querySelectorAll('[data-wside]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
   if(b.dataset.pgn!==undefined){ polyN=+b.dataset.pgn; const i=$('#pgN'); if(i) i.value=polyN; toast('Граней: '+polyN); return; } });
@@ -2637,7 +2637,7 @@ document.addEventListener('pointerdown',e=>{ if(!$('#toolMenu').hidden&&!e.targe
 let lineLayer='misc';
 const AX={ortho:['Орто','Орто: только горизонтально или вертикально'],x:['Ось X','Только по оси X (влево-вправо)'],y:['Ось Y','Только по оси Y (вверх-вниз)'],free:['Свободно','Свободное движение под любым углом']};
 function setAxis(m,quiet){ axisMode=m; $('#axLbl').textContent=AX[m][0]; $('#tgOrtho').setAttribute('aria-pressed',String(m!=='free'));
-  document.querySelectorAll('#axPick [data-ax]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ax===m))); if(!quiet) toast(AX[m][1]); }
+  document.querySelectorAll('#axPick [data-ax]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ax===m))); }
 $('#tgOrtho').addEventListener('click',()=>{const order=['ortho','x','y','free']; setAxis(order[(order.indexOf(axisMode)+1)%4]);});
 $('#axPick').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#axPick').addEventListener('click',e=>{ if(e.target.closest('#axAlign')) return alignJoint(); const b=e.target.closest('[data-ax]'); if(b) setAxis(b.dataset.ax);});
@@ -2675,14 +2675,13 @@ function placeAxPick(){
   el.querySelectorAll('[data-ax]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ax===axisMode)));
 }
 function syncLabelsBtn(){ const b=$('#tgLabels'); if(b) b.setAttribute('aria-pressed',String(!!doc.settings.wallLabels)); }
-$('#tgLabels').addEventListener('click',()=>{ doc.settings.wallLabels=!doc.settings.wallLabels; persist(); syncLabelsBtn(); redraw();
-  toast(doc.settings.wallLabels?'Цифры длин показаны':'Цифры длин скрыты. У выделенного объекта цифра видна всегда'); });
+$('#tgLabels').addEventListener('click',()=>{ doc.settings.wallLabels=!doc.settings.wallLabels; persist(); syncLabelsBtn(); redraw(); });
 function setAttach(v){attachOn=v; const t=$('#tgAttach'); t.setAttribute('aria-pressed',String(v)); $('#atLbl').textContent='Примык.';}
-$('#tgAttach').addEventListener('click',()=>{setAttach(!attachOn); redraw(); toast(attachOn?'Кнопки соединить/отсоединить на концах показаны':'Кнопки соединить/отсоединить скрыты'); });
+$('#tgAttach').addEventListener('click',()=>{setAttach(!attachOn); redraw(); });
 function setOsnap(v){ osnapOn=v; $('#tgOsnap').setAttribute('aria-pressed',String(v)); $('#osLbl').textContent=v?'Магнит':'Без магн.'; try{localStorage.setItem('zamer-osnap',v?'1':'0');}catch(e){} }
 setOsnap(osnapOn);
-$('#tgOsnap').addEventListener('click',()=>{ setOsnap(!osnapOn); toast(osnapOn?'Магнит включён: вершины, середины граней, линии и окружности':'Магнит выключен: только орто и шаг сетки'); });
-$('#tgSnap').addEventListener('click',e=>{snapOn=!snapOn;e.currentTarget.setAttribute('aria-pressed',String(snapOn));toast(snapOn?'Привязка к шагу '+doc.settings.grid+' мм':'Привязка к шагу выключена');});
+$('#tgOsnap').addEventListener('click',()=>{ setOsnap(!osnapOn); });
+$('#tgSnap').addEventListener('click',e=>{snapOn=!snapOn;e.currentTarget.setAttribute('aria-pressed',String(snapOn));});
 $('#btnUndo').addEventListener('click',undo);
 $('#btnRedo').addEventListener('click',redo);
 $('#btnFit').addEventListener('click',fitView);
