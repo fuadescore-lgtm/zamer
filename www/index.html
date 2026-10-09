@@ -68,7 +68,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #toast{position:absolute;top:96px;pointer-events:none;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;font-size:14px;box-shadow:0 6px 20px var(--shadow);transition:opacity .2s}
 #toast.off{opacity:0;pointer-events:none}
 
-.panel{position:absolute;left:6px;right:6px;bottom:6px;max-width:560px;margin-inline:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:5px 8px;box-shadow:0 8px 28px var(--shadow);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;max-height:40vh;overflow-y:auto}
+.panel{position:absolute;left:6px;bottom:6px;width:max-content;max-width:min(440px,calc(100% - 12px));background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:5px 8px;box-shadow:0 8px 28px var(--shadow);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;max-height:40vh;overflow-y:auto}
 .fld{display:flex;flex-direction:column;gap:3px;min-width:0}
 .fld label,.lbl{font-family:var(--f-ui);font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .inp{height:30px;width:78px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums;padding:0 6px}
@@ -113,6 +113,14 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
 .hint{flex-basis:100%;margin:0;font-size:11.5px;color:var(--muted);line-height:1.35}
 .title{flex-basis:100%;display:flex;align-items:baseline;gap:6px;font-family:var(--f-ui);font-weight:600;font-size:13.5px;line-height:1.2}
 @media (max-height:820px){.panel .hint{display:none}}
+.panel .hint{display:none}.panel .title{font-size:12px}
+.panel .inp{height:30px}
+.ibn{width:34px;height:32px;padding:0;display:inline-grid;place-items:center;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink)}
+.ibn svg{width:20px;height:20px}.ibn.danger{color:var(--dim)}
+.panel .fld.inl{flex-direction:row;align-items:center;gap:4px}.panel .fld.inl label{font-size:11px;letter-spacing:0}
+.panel .inp.xs{width:58px;padding:0 5px}
+.panel #pLayer{width:auto;max-width:84px;font-size:12px;padding:0 2px}
+.panel{padding:4px 6px!important}
 .title b{font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums}
 
 .tools{min-width:0;display:flex;gap:2px;align-items:center;padding-block:6px;padding-inline:16px;background:var(--surface);border-top:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
@@ -123,13 +131,27 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
 .tool{position:relative}.tool .car{position:absolute;top:3px;right:3px;font-style:normal;font-size:9px;line-height:1;opacity:.7}
 .tmenu{position:absolute;z-index:7;bottom:8px;min-width:220px;max-width:min(360px,calc(100% - 16px));display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;box-shadow:0 10px 30px var(--shadow)}
 .tmenu .mh{font-family:var(--f-ui);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.tmenu .mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:4px}
-.tmenu .mg button{height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-weight:600;font-size:13px}
+.tmenu{min-width:0!important}
+.tmenu .mg{display:flex;flex-wrap:wrap;gap:4px}
+.tmenu .mg button{width:42px;height:42px;padding:0;display:grid;place-items:center;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-weight:600;font-size:13px}
 .tmenu .mg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tmenu .mg svg{width:26px;height:26px}
+.seg button.sico{min-width:32px;padding:0 4px}.seg button.sico svg{width:24px;height:24px;display:block}
 .tmenu .mr{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
 .sep{flex:none;width:1px;height:34px;background:var(--rule);margin:0 4px}
 #layerSel{height:40px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-weight:600;font-size:15px;padding:0 6px;flex:none}
 
+#sheet.appm{align-items:flex-start;justify-content:flex-start;background:rgb(0 0 0 / .25)}
+.appbody{flex-direction:row!important;gap:0!important;padding:0!important;margin:56px 0 0 8px;width:min(620px,calc(100% - 16px));max-height:calc(100% - 72px);border-radius:12px!important;overflow:hidden!important;border:1px solid var(--rule);box-shadow:0 14px 40px var(--shadow)}
+.amcol{flex:none;width:150px;display:flex;flex-direction:column;padding:6px;gap:2px;background:var(--paper);border-right:1px solid var(--rule)}
+.amcol .sp{flex:1}
+.am{display:flex;align-items:center;gap:10px;height:46px;padding:0 8px;border:0;border-radius:8px;background:none;color:var(--ink);font-family:var(--f-ui);font-weight:600;font-size:15px;text-align:left}
+.am svg{width:26px;height:26px;flex:none}.am span{flex:1}.am i{font-style:normal;opacity:.6;font-size:12px}
+.am[aria-pressed="true"],.am:hover{background:var(--surface)}
+.ampane{flex:1;min-width:0;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+.amh{font-family:var(--f-ui);font-weight:700;font-size:16px}
+.amfoot{margin-top:auto;display:flex;justify-content:flex-end;gap:8px}
+@media (max-width:440px){.amcol{width:52px}.am span,.am i{display:none}.am{justify-content:center;padding:0}}
 #sheet{position:fixed;inset:0;background:rgb(0 0 0 / .4);display:flex;align-items:flex-end;justify-content:center;z-index:5}
 .sheet-body{width:100%;max-width:560px;max-height:88%;overflow:auto;background:var(--surface);border-radius:16px 16px 0 0;padding-block:16px 24px;padding-inline:16px;display:flex;flex-direction:column;gap:16px}
 .sheet-head{display:flex;align-items:center;justify-content:space-between}
@@ -441,10 +463,24 @@ function wallNeighbor(it,key){
     if(near(o.a,P)){ if(nj(o,'a')) continue; found=[o,'a'];n++;} else if(near(o.b,P)){ if(nj(o,'b')) continue; found=[o,'b'];n++;} }
   return n===1?found:null;
 }
+// узел из 3-4 стен: две стены по одной прямой идут насквозь, остальные упираются в их грань (как в Revit)
+function nodeJoin(it,key){ if(nj(it,key)||isArc(it)) return null; const P=it[key], os=[];
+  for(const o of doc.items){ if(o===it||!isWall(o)||isArc(o)) continue;
+    if(near(o.a,P)&&!nj(o,'a')) os.push([o,'a']); else if(near(o.b,P)&&!nj(o,'b')) os.push([o,'b']); }
+  if(os.length<2) return null; const X=awayInfo(it,key);
+  for(const [o,k] of os){ const Y=awayInfo(o,k); if(X.d.x*Y.d.x+X.d.y*Y.d.y<-0.996) return {thru:true}; }
+  for(let i=0;i<os.length;i++) for(let j=i+1;j<os.length;j++){ const Yi=awayInfo(...os[i]), Yj=awayInfo(...os[j]);
+    if(Yi.d.x*Yj.d.x+Yi.d.y*Yj.d.y>=-0.996) continue;
+    const s=X.d.x*lft(Yi.d).x+X.d.y*lft(Yi.d).y, nn=s>0?lft(Yi.d):rgt(Yi.d), off=s>0?Yi.la:Yi.ra, base={x:P.x+nn.x*off,y:P.y+nn.y*off};
+    const LA={x:P.x+lft(X.d).x*X.la,y:P.y+lft(X.d).y*X.la}, RA={x:P.x+rgt(X.d).x*X.ra,y:P.y+rgt(X.d).y*X.ra};
+    const cL=xLines(LA,X.d,base,Yi.d), cR=xLines(RA,X.d,base,Yi.d); if(!cL||!cR) continue;
+    return {thru:false,cL,cR,pair:[os[i][0],os[j][0]],d:X.d}; }
+  return null; }
 function wallEnd(it,key){
   const X=awayInfo(it,key), P=X.P;
   let LA={x:P.x+lft(X.d).x*X.la,y:P.y+lft(X.d).y*X.la}, RA={x:P.x+rgt(X.d).x*X.ra,y:P.y+rgt(X.d).y*X.ra}, cap=true;
   if(nj(it,key)) return key==='a'?{L:LA,R:RA,cap}:{L:RA,R:LA,cap};
+  const nd=nodeJoin(it,key); if(nd){ cap=false; if(!nd.thru){ LA=nd.cL; RA=nd.cR; } return key==='a'?{L:LA,R:RA,cap}:{L:RA,R:LA,cap}; }
   const nb=wallNeighbor(it,key);
   if(nb){ const Y=awayInfo(nb[0],nb[1]);
     const c1=xLines(LA,X.d,{x:P.x+rgt(Y.d).x*Y.ra,y:P.y+rgt(Y.d).y*Y.ra},Y.d);
@@ -554,6 +590,10 @@ function faceGaps(Y){ const g={L:[],R:[]};
     for(const k of ['a','b']){ if(endCount(X,k)!==0) continue; const tj=tJoinFind(X,k); if(!tj||tj.Y!==Y) continue;
       const t1=(tj.cL.x-Y.a.x)*tj.u.x+(tj.cL.y-Y.a.y)*tj.u.y, t2=(tj.cR.x-Y.a.x)*tj.u.x+(tj.cR.y-Y.a.y)*tj.u.y;
       g[tj.side].push([Math.min(t1,t2),Math.max(t1,t2)]); } }
+  if(!isArc(Y)) for(const X of doc.items){ if(X===Y||!isWall(X)||isArc(X)) continue;
+    for(const k of ['a','b']){ const nd=nodeJoin(X,k); if(!nd||nd.thru||!nd.pair.includes(Y)) continue;
+      const u=unit(Y.a,Y.b), n=lft(u), t1=(nd.cL.x-Y.a.x)*u.x+(nd.cL.y-Y.a.y)*u.y, t2=(nd.cR.x-Y.a.x)*u.x+(nd.cR.y-Y.a.y)*u.y;
+      g[(nd.d.x*n.x+nd.d.y*n.y)>0?'L':'R'].push([Math.min(t1,t2),Math.max(t1,t2)]); } }
   return g;
 }
 // Расстояния от проёма до ближайших стен по грани со стороны комнаты
@@ -743,7 +783,7 @@ function drawGrid(){
   const label=major>=1000?(major/1000)+' м':major+' мм';
   const px=major*view.scale;
   if(px<W*.6){
-    const x=W-16-px,y=H-(panel.hidden?18:panel.offsetHeight+30);
+    const x=W-16-px,y=H-(true||panel.hidden?18:panel.offsetHeight+30);
     ctx.strokeStyle=C.muted;ctx.lineWidth=1.5;line({x,y},{x:x+px,y});line({x,y:y-4},{x,y:y+4});line({x:x+px,y:y-4},{x:x+px,y:y+4});
     ctx.font='11px '+FNUM;ctx.textAlign='center';ctx.textBaseline='bottom';haloText(label,x+px/2,y-4,C.muted);
   }
@@ -785,7 +825,7 @@ function drawItem(it,sel){
       ctx.strokeStyle=col;ctx.lineWidth=it.L==='walls'?2.6:it.L==='open'?2:1.5;
       if(it.L==='open'){ctx.setLineDash([6,4]);} line(a,b); ctx.setLineDash([]);
     }
-    if(doc.settings.wallLabels||sel){
+    if((doc.settings.wallLabels||sel)&&tmpTarget()!==it){
       const len=Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y), sl=Math.hypot(b.x-a.x,b.y-a.y);
       if(sl>42){
         const u={x:(it.b.x-it.a.x)/len,y:(it.b.y-it.a.y)/len},n={x:-u.y,y:u.x};
@@ -906,8 +946,12 @@ function extendEnd(it,k){ if(it.t!=='line'||isArc(it)) return false; const o=k==
     const eY=(isWall(Y)?Math.max(offs(Y).L,offs(Y).R):0)+eI+1, I={x:r3(P.x+u.x*sP),y:r3(P.y+u.y*sP)};
     let yk=null, cost=Math.abs(sP-L0);
     if(tY<=eY) yk='a'; else if(tY>=LY-eY) yk='b';
-    if(yk){ const yFree=!nj(Y,yk)&&!doc.items.some(Z=>Z!==Y&&Z!==it&&Z.t==='line'&&(near(Z.a,Y[yk])||near(Z.b,Y[yk])));
-      const out=yk==='a'?-tY:tY-LY; if(out>0&&!yFree) continue; if(!yFree) yk=null; else cost+=Math.abs(yk==='a'?tY:LY-tY); }
+    if(yk){ const N=Y[yk], yFree=!nj(Y,yk)&&!doc.items.some(Z=>Z!==Y&&Z!==it&&Z.t==='line'&&(near(Z.a,N)||near(Z.b,N)));
+      if(!yFree){ // у конца соседней стены уже есть угол — входим третьей (четвёртой) стеной прямо в этот узел
+        const vx=N.x-P.x, vy=N.y-P.y, sN=vx*u.x+vy*u.y, off=Math.abs(vx*u.y-vy*u.x);
+        if(off<=eY&&sN>=Math.max(50,eI*2)){ const c=Math.abs(sN-L0)+off; if(!best||c<best.cost) best={Y,yk:null,I:{x:N.x,y:N.y},cost:c}; }
+        const out=yk==='a'?-tY:tY-LY; if(out>0) continue; yk=null; }
+      else cost+=Math.abs(yk==='a'?tY:LY-tY); }
     if(!best||cost<best.cost) best={Y,yk,I,cost}; }
   if(!best) return false;
   it[k]=best.I; if(best.yk) best.Y[best.yk]={...best.I}; return true; }
@@ -927,7 +971,35 @@ function drawJoinIcons(){
       lk(-2.6-g); lk(2.6+g);
       ctx.restore();
       ctx.restore(); } } }
-function render(){
+function tmpTarget(){ if(tool!=='select'||moveSel.size||selJoint||editGrp) return null; const S=selIds(); if(S.size!==1) return null;
+  const it=doc.items.find(i=>i.id===selId); return it&&it.t==='line'&&!isArc(it)&&!it.g?it:null; }
+function tmpBox(txt,x,y,rot){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.font='600 12px '+FNUM; const w=ctx.measureText(txt).width+12;
+  ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=1.2; ctx.beginPath(); ctx.roundRect?ctx.roundRect(-w/2,-10,w,20,4):ctx.rect(-w/2,-10,w,20); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=C.sel; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt,0,0.5); ctx.restore(); }
+function drawSelTemp(){ const it=tmpTarget(); if(!it) return; const len=lineLen(it); if(len<1) return;
+  const u=unit(it.a,it.b), n=lft(u), sd=isWall(it)?(it.side||0):0, sg=sd>0?-1:1, o=isWall(it)?offs(it):{L:0,R:0}, ext=sg>0?o.L:o.R;
+  const k=1/view.scale, off=ext+26*k, P=(q,f)=>({x:q.x+n.x*sg*f,y:q.y+n.y*sg*f});
+  const A=P(it.a,off), B=P(it.b,off);
+  ctx.save(); ctx.strokeStyle=C.sel; ctx.lineWidth=1;
+  line(toS(P(it.a,ext+4*k)),toS(P(it.a,off+6*k))); line(toS(P(it.b,ext+4*k)),toS(P(it.b,off+6*k)));
+  line(toS({x:A.x-u.x*6*k,y:A.y-u.y*6*k}),toS({x:B.x+u.x*6*k,y:B.y+u.y*6*k}));
+  for(const Q of [A,B]){ const t=toS(Q), d={x:(u.x+n.x)*4,y:-(u.y+n.y)*4}; line({x:t.x-d.x,y:t.y-d.y},{x:t.x+d.x,y:t.y+d.y}); }
+  // длина
+  const wm=P({x:(it.a.x+it.b.x)/2,y:(it.a.y+it.b.y)/2},off+12*k), m=toS(wm);
+  if(!(inlineH&&inlineH.id===it.id&&!inlineH.kind)) tmpBox(fmt(len),m.x,m.y,-readableAngle(u)*Math.PI/180);
+  labelHits.push({id:it.id,w:wm,x:m.x,y:m.y,val:len,one:true});
+  // угол к горизонтали у начала стены
+  let ang=Math.atan2(u.y,u.x)*180/Math.PI; const a0=toS(it.a), Rr=56;
+  ctx.setLineDash([4,3]); line(a0,{x:a0.x+Rr+14,y:a0.y}); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(a0.x,a0.y,Rr,0,-ang*Math.PI/180,ang>0); ctx.stroke();
+  const ha=-ang/2*Math.PI/180; let tp={x:a0.x+Math.cos(ha)*(Rr+22),y:a0.y+Math.sin(ha)*(Rr+22)};
+  // почти горизонтальная стена: цифру угла не кладём на саму стену
+  if(Math.abs(ang)<25||Math.abs(ang)>155){ const sgn=ang>=0?1:-1; tp={x:a0.x+(Math.abs(ang)>155?-1:1)*(Rr+10),y:a0.y+sgn*24}; }
+  const aval=Math.round(ang*100)/100;
+  if(!(inlineH&&inlineH.id===it.id&&inlineH.kind==='ang')) tmpBox(aval.toFixed(2)+'°',tp.x,tp.y,0);
+  labelHits.push({id:it.id,kind:'ang',w:toW(tp.x,tp.y),x:tp.x,y:tp.y,val:aval,one:true});
+  ctx.restore(); }
+function render(){ queueMicrotask(placePanel);
   labelHits=[]; witHits=[]; tdHits=[]; dimHits=[]; joinHits=[]; syncDims();
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.fillStyle=C.paper;ctx.fillRect(0,0,W,H);
@@ -977,7 +1049,7 @@ function render(){
   if(tool==='hole'&&chimPrev){ const g={...chimDef(),p:chimPrev,rot:0}, O=chimCorners(g).map(toS);
     ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(O); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
   if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd)))) marker(snapMark.p,snapMark.k);
-  drawTempDims(); drawJoinIcons();
+  drawTempDims(); drawSelTemp(); drawJoinIcons();
   if(tool==='merge') for(const q of mergePts()){ const t=toS(q); ctx.beginPath(); ctx.arc(t.x,t.y,8,0,Math.PI*2); ctx.fillStyle=C.tape; ctx.fill(); ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.stroke(); }
   if(tool==='split'&&splitPt){ const P=toS(splitPt.p); ctx.strokeStyle=C.dim; ctx.lineWidth=2.5; line({x:P.x-9,y:P.y-9},{x:P.x+9,y:P.y+9}); line({x:P.x-9,y:P.y+9},{x:P.x+9,y:P.y-9}); marker(splitPt.p,liveSnap||'end'); }
   if(tool==='mirror'){ const A=mirA, B=mirLive; if(A&&B&&!near(A,B,1)){ const d=unit(A,B), far=1e6;
@@ -1058,7 +1130,7 @@ cv.addEventListener('pointerdown',e=>{
     let lh=hitLabel(p.x,p.y); const h0=hit(p.x,p.y);
     // окно, дверь или дымоход под пальцем важнее чужой подписи длины
     if(lh&&h0&&(isHole(h0)||h0.t==='chim')&&lh.id!==h0.id) lh=null;
-    if(lh&&lh.kind==='td'){ press.label=lh; press.pan=false; return; }
+    if(lh&&(lh.kind==='td'||lh.one)){ press.label=lh; press.pan=false; if(lh.one){ const hh=hit(p.x,p.y), ids=selIds(); if(hh&&ids.has(hh.id)) press.sd=startObjDrag(ids,p,true); } return; }
     if(lh&&!lh.kind){ const li=doc.items.find(i=>i.id===lh.id); if(li&&li.g&&li.g!==editGrp) lh=null; }
     if(lh){ const hh=hit(p.x,p.y), ids=selIds(), dr=hh&&ids.has(hh.id)&&ids.has(lh.id)&&!isHole(hh)&&hh.t!=='chim'; if(hh&&hh.t!=='chim') armLongPress(hh);
       if(armLabel(lh)){ press.label=lh; press.pan=false; if(dr) press.sd=startObjDrag(ids,p,true); }
@@ -1199,7 +1271,7 @@ function endPtr(e,cancel){
   if(!press||press.id!==e.pointerId) return;
   const pr=press; press=null; if(pr.lpSel){ clearTimeout(pr.lpSel); pr.lpSel=null; }
   if(pr.joint){ jointDrag=null; if(pr.joint.started){persist();} liveSnap=null; alignGuide=null; panelKey=''; syncPanel();
-    if(selJoint){ const sp=toS(selJoint), lim=H-(panel.hidden?0:panel.offsetHeight)-40; if(sp.y>lim) view.cy-=(sp.y-lim+20)/view.scale; }
+    if(selJoint){ const sp=toS(selJoint), lim=H-(true||panel.hidden?0:panel.offsetHeight)-40; if(sp.y>lim) view.cy-=(sp.y-lim+20)/view.scale; }
     redraw(); return; }
   if(cancel){live=null;dragA=dragB=null;redraw();return;}
   const p=pos(e);
@@ -1289,7 +1361,7 @@ function openInline(h){
   if(h.y>H*0.42){ view.cy-=(h.y-H*0.3)/view.scale; }
   inlineH=h; selId=h.id; selJoint=null; panelKey=''; syncPanel();
   ied.inputMode=h.kind==='tx'?'text':'decimal'; ied.style.width=h.kind==='tx'?'min(260px,70vw)':'';
-  ied.value=h.kind==='tx'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
+  ied.value=h.kind==='tx'?String(h.val):h.kind==='ang'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
   ied.focus(); ied.select();
 }
 function closeInline(apply){
@@ -1303,6 +1375,9 @@ function closeInline(apply){
   const it0=doc.items.find(i=>i.id===h.id);
   if(it0&&h.kind==='tx'){ const v=ied.value.trim(); if(v&&v!==it0.s){ pushUndo(); it0.s=v; persist(); } panelKey=''; syncPanel(); redraw(); return; }
   if(it0&&it0.t==='circ'){ const v=parseNum(ied.value); if(v>0&&Math.abs(v-h.val)>0.05){ pushUndo(); it0.r=r3(v/2); persist(); toast('Диаметр: '+fmt(v)+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
+  if(it0&&h.kind==='ang'&&it0.t==='line'){ const A=parseNum(ied.value); if(isNaN(A)||Math.abs(A-h.val)<0.005){redraw();return;}
+    pushUndo(); const L=lineLen(it0), r=A*Math.PI/180, ob={...it0.b}, nb={x:r3(it0.a.x+Math.cos(r)*L),y:r3(it0.a.y+Math.sin(r)*L)};
+    it0.b=nb; moveCoincident(ob,nb,it0.id); syncDims(); persist(); panelKey=''; syncPanel(); redraw(); toast('Угол: '+(Math.round(A*100)/100)+'°'); return; }
   const L=parseNum(ied.value), it=doc.items.find(i=>i.id===h.id);
   if(it&&isHole(it)&&(h.kind==='hl'||h.kind==='hr')){
     if(!(L>=0)||Math.abs(L-h.val)<0.05){redraw();return;}
@@ -1602,7 +1677,7 @@ function sortLevels(){ const cur=doc.levels[doc.curLv]; doc.levels.sort((a,b)=>a
 let lvDelConfirm=null;
 function openLevels(){
   const L=doc.levels;
-  sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="lvT">
+  sheet.classList.remove('appm'); sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="lvT">
     <div class="sheet-head"><h2 id="lvT">Уровни</h2><button class="ib" data-s="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     ${L.map((l,i)=>`<div class="lvrow">
       <div class="fld"><label for="ln${i}">Название</label><input class="inp wide" id="ln${i}" data-lname="${i}" value="${esc(l.name)}"></div>
@@ -1782,7 +1857,7 @@ function addChainPoint(p){
   else { pts.push({x:p.x,y:p.y}); if(segMode()){ chain.pts=[]; chain.ids=[]; live=null; } }
   persist(); syncLineHint(); ensureVisible(p); redraw();
 }
-function ensureVisible(p){const s=toS(p); if(s.x<30||s.x>W-30||s.y<50||s.y>H-(panel.hidden?30:panel.offsetHeight+40)){view.cx=p.x;view.cy=p.y;}}
+function ensureVisible(p){const s=toS(p); if(s.x<30||s.x>W-30||s.y<50||s.y>H-(true||panel.hidden?30:panel.offsetHeight+40)){view.cx=p.x;view.cy=p.y;}}
 function parseNum(s){
   s=String(s||'').replace(/,/g,'.').replace(/\s/g,'');
   if(!s) return NaN;
@@ -1823,7 +1898,35 @@ function syncLineHint(){
   updateHud();
 }
 let polyN=6, polyS=0, shW=0, shH=0, shD=0, fixMode='a', moreOpen=false, lastMoveDir=0; const r1=v=>Math.round(v*10)/10;
-function sideSeg(name,v){ return `<div class="seg" role="group">${[[1,'◂ Слева'],[0,'Ось'],[-1,'Справа ▸']].map(([k,n])=>`<button data-${name}="${k}" aria-pressed="${v===k}">${n}</button>`).join('')}</div>`; }
+// линия построения и стена: стена слева, по оси, справа от линии (вид сверху, линия рисуется слева направо)
+const SIDEI={1:'<rect x="3" y="5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 13h20" stroke-dasharray="3 2"/>',
+  0:'<rect x="3" y="8.5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 12h20" stroke-dasharray="3 2"/>',
+  '-1':'<rect x="3" y="12" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 11h20" stroke-dasharray="3 2"/>'};
+const ICO={copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
+  del:'<path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
+  ungrp:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M15 3h6v6M3 15v6h6" stroke-dasharray="2 2"/>',
+  flip:'<path d="M3 9h18M3 15h18"/><path d="M8 5l-3 4 3 4M16 11l3 4-3 4"/>',
+  rot:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>',
+  all:'<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2"/><path d="M8 12l3 3 5-6"/>',
+  none:'<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2"/><path d="M9 9l6 6M15 9l-6 6"/>',
+  merge:'<path d="M3 17 12 8l9 9"/><circle cx="12" cy="8" r="2.4"/><path d="M9.5 3.5l5 5M14.5 3.5l-5 5" stroke-width="1.5"/>'};
+const IB=(act,k,t,cls)=>`<button class="ibn${cls?' '+cls:''}" data-act="${act}" title="${t}" aria-label="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg></button>`;
+const ICOPY=()=>IB('copyObj','copy','Копировать'), IDEL=()=>IB('del','del','Удалить','danger');
+function sideSeg(name,v){ return `<div class="seg" role="group">${[[1,'◂ Слева',SIDEI[1]],[0,'Ось',SIDEI[0]],[-1,'Справа ▸',SIDEI[-1]]].map(([k,n,ic])=>`<button data-${name}="${k}" aria-pressed="${v===k}" title="${n}" aria-label="${n}" class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ic}</svg></button>`).join('')}</div>`; }
+// мини-панель висит рядом с выделенным (под ним, а если места нет — над ним), не закрывая чертёж снизу
+function placePanel(){ if(panel.hidden) return;
+  const drag=press&&((press.sd&&press.sd.started)||(press.joint&&press.joint.started)||(press.hole&&press.hole.started)||(press.chim&&press.chim.started));
+  panel.style.visibility=drag?'hidden':'';
+  const S=selIds(), pts=[]; if(selJoint) pts.push(selJoint);
+  for(const it of doc.items){ if(!S.has(it.id)) continue;
+    if(it.t==='line'||it.t==='dim'||it.t==='aux'){ pts.push(it.a,it.b); if(isWall(it)){ const w=wallPoly(it); pts.push(w.aL,w.aR,w.bL,w.bR); } }
+    else if(it.t==='chim') chimCorners(it).forEach(q=>pts.push(q)); else if(it.t==='circ'){ pts.push({x:it.c.x-it.r,y:it.c.y-it.r},{x:it.c.x+it.r,y:it.c.y+it.r}); }
+    else if(isHole(it)){ const g=holeGeom(it); if(g) pts.push(g.L0,g.L1,g.R0,g.R1); } else if(it.p) pts.push(it.p); }
+  const pw=panel.offsetWidth, ph=panel.offsetHeight; let x,y;
+  if(!pts.length){ x=(W-pw)/2; y=H-ph-6; }
+  else { let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const q of pts){ const t=toS(q); x0=Math.min(x0,t.x);x1=Math.max(x1,t.x);y0=Math.min(y0,t.y);y1=Math.max(y1,t.y); }
+    x=(x0+x1)/2-pw/2; y=y1+48; if(y+ph>H-6){ y=y0-ph-64; if(y<6) y=H-ph-6; } }
+  panel.style.left=Math.max(6,Math.min(W-pw-6,x))+'px'; panel.style.top=Math.max(6,Math.min(H-ph-6,y))+'px'; panel.style.bottom='auto'; }
 function syncPanel(){
   const sel=doc.items.find(i=>i.id===selId);
   const key=tool+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'');
@@ -1877,7 +1980,7 @@ function syncPanel(){
       <div class="fld"><label for="mvLen">Сдвиг, мм</label><input class="inp" id="mvLen" inputmode="decimal" autocomplete="off" placeholder="500"></div>
       <div class="fld"><span class="lbl">Куда</span><div class="dirs" role="group" aria-label="Направление сдвига">
         <button data-mdir="180" aria-label="Влево">←</button><button data-mdir="90" aria-label="Вверх">↑</button><button data-mdir="270" aria-label="Вниз">↓</button><button data-mdir="0" aria-label="Вправо">→</button></div></div>
-      <button class="btn" data-act="copyObj" title="Копировать">⧉</button><button class="btn" data-act="selAll">Все</button><button class="btn" data-act="selNone">Снять</button><button class="btn danger" data-act="del" title="Удалить" aria-label="Удалить">✕</button>
+      ${ICOPY()}${IB('selAll','all','Выбрать все')}${IB('selNone','none','Снять выбор')}${IDEL()}
       <p class="hint">Тяните любой выбранный объект — двигаются все вместе, с магнитом. Касание другого объекта — снова один.</p>`;
   } else if((tool==='select'||tool==='hole')&&sel&&isHole(sel)){
     const g=holeGeom(sel)||{w:sel.width,s0:0,s1:0,L:0}, isW=sel.t==='win';
@@ -1891,14 +1994,14 @@ function syncPanel(){
         const fE=`<div class="fld"><label for="pHb">${aE} ${sel.refR?'до точки':'до стены'}</label><input class="inp sm" id="pHb" inputmode="decimal" value="${r1(c.dr)}"></div>`;
         return (aS==='←'||aS==='↓')?fS+fE:fE+fS; })()}
       ${isW?'':'<button class="btn" data-act="hinge" title="Петли на другую сторону" aria-label="Петли на другую сторону">⇆</button><button class="btn" data-act="swing" title="Открывание внутрь или наружу" aria-label="Открывание внутрь или наружу">⇅</button>'}
-      <button class="btn" data-act="copyObj" title="Копировать">⧉ Копия</button><button class="btn danger" data-act="del" title="Удалить" aria-label="Удалить">✕</button>`;
+      ${ICOPY()}${IDEL()}`;
   } else if((tool==='select'||tool==='hole'||tool==='move')&&sel&&sel.t==='chim'){
     h=`<div class="title">Дымоход <b>${fmt(sel.w)}×${fmt(sel.l)} мм</b><span class="lbl">${sel.th>0?'стенка '+fmt(sel.th):'сплошной'}</span></div>
       <div class="fld"><label for="pCW">Ширина (X)</label><input class="inp sm" id="pCW" inputmode="decimal" value="${r1(sel.w)}"></div>
       <div class="fld"><label for="pCL">Длина (Y)</label><input class="inp sm" id="pCL" inputmode="decimal" value="${r1(sel.l)}"></div>
       <div class="fld"><label for="pCT">Стенка</label><input class="inp sm" id="pCT" inputmode="decimal" value="${r1(sel.th||0)}"></div>
-      <button class="btn" data-act="crot" title="Повернуть на 90°" aria-label="Повернуть на 90°">↻ 90°</button>
-      <button class="btn" data-act="copyObj" title="Копировать">⧉ Копия</button><button class="btn danger" data-act="del" title="Удалить" aria-label="Удалить">✕</button>
+      ${IB('crot','rot','Повернуть на 90°')}
+      ${ICOPY()}${IDEL()}
       <p class="hint">Тяните дымоход пальцем целиком. Двойное касание или удержание открывает размеры.</p>`;
   } else if(tool==='hole'&&holeType==='chim'){
     const c=chimDef();
@@ -1917,54 +2020,46 @@ function syncPanel(){
 `;
   } else if(tool==='select'&&sel&&!selJoint){
     if(sel.g&&editGrp!==sel.g){ const n=doc.items.filter(i=>i.g===sel.g).length;
-      h=`<div class="title">Фигура <b>${n} ${n%10===1&&n!==11?'грань':(n%10>=2&&n%10<=4&&(n<10||n>20)?'грани':'граней')}</b></div>
-        <button class="btn" data-act="copyObj">Копировать</button><button class="btn" data-act="ungrp">Разбить</button>
-        <span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>
+      h=`<div class="title" style="flex-basis:auto">Фигура <b>${n} ${n%10===1&&n!==11?'грань':(n%10>=2&&n%10<=4&&(n<10||n>20)?'грани':'граней')}</b></div>
+        ${ICOPY()}${IB('ungrp','ungrp','Разбить на отдельные')}${IDEL()}
         <p class="hint">Тяните грань — двигается только она, тяните вершину — угол. Всю фигуру целиком двигает «Сдвиг». Синие цифры — расстояния до стен, коснитесь и введите.</p>`;
     } else if(sel.t==='line'){
-      const len=lineLen(sel), AG=isArc(sel)?arcG(sel):null;
-      let ang=Math.atan2(sel.b.y-sel.a.y,sel.b.x-sel.a.x)*180/Math.PI; if(ang<0) ang+=360;
-      h=`<div class="title">${AG?'Дуга':'Отрезок'} <b>${fmt(len)} мм</b><span class="lbl">${AG?'R '+fmt(AG.r):'∠ '+Math.round(ang*10)/10+'°'}</span></div>${AG?`<div class="fld"><label for="pR">Радиус</label><input class="inp sm" id="pR" inputmode="decimal" value="${r1(AG.r)}"></div>`:''}
-        <div class="fld"><label for="pLen">Длина, мм</label><input class="inp" id="pLen" inputmode="decimal" value="${r1(len)}"></div>
-        <div class="fld"><label for="pFix">Держать</label><select class="inp" id="pFix">${[['a','начало'],['b','конец'],['m','середину']].map(([k,n])=>`<option value="${k}"${fixMode===k?' selected':''}>${n}</option>`).join('')}</select></div>
-        <div class="fld"><label for="pLayer">Слой</label><select class="inp" id="pLayer">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select></div>
-        <button class="btn" data-act="copyObj">Копировать</button>
-        ${sel.L==='walls'?`<div class="fld"><label for="pW">Толщина</label><input class="inp sm" id="pW" inputmode="decimal" value="${r3(sel.w||0)}"></div>
-          <div class="fld"><span class="lbl">Стена от линии</span>${sideSeg('pside',sel.side||0)}</div>`:''}<span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>
-        <p class="hint">Примыкающие стены и размеры подтягиваются вместе с концами.</p>`;
+      // мини-панель стены/линии: длина и угол — прямо на чертеже (касание синей цифры), тут только свойства
+      const AG=isArc(sel)?arcG(sel):null;
+      h=`${AG?`<div class="fld inl"><label for="pR">R</label><input class="inp xs" id="pR" inputmode="decimal" value="${r1(AG.r)}"></div>`:''}
+        ${sel.L==='walls'?`<div class="fld inl"><label for="pW" title="Толщина стены">⟷</label><input class="inp xs" id="pW" inputmode="decimal" value="${r3(sel.w||0)}" title="Толщина стены, мм"></div>
+          ${sideSeg('pside',sel.side||0)}`:''}
+        <select class="inp" id="pLayer" title="Слой" style="width:auto">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select>
+        ${ICOPY()}${IDEL()}`;
     } else if(sel.t==='circ'){
       h=`<div class="title">Круг <b>Ø${fmt(sel.r*2)} мм</b></div>
         <div class="fld"><label for="pCD">Диаметр, мм</label><input class="inp" id="pCD" inputmode="decimal" value="${r1(sel.r*2)}"></div>
-        <button class="btn" data-act="copyObj">Копировать</button><span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>`;
+        ${ICOPY()}${IDEL()}`;
     } else if(sel.t==='aux'){
-      h=`<div class="title">Конструкционная линия</div><button class="btn" data-act="copyObj">Копировать</button><span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>`;
+      h=`<div class="title">Конструкционная линия</div>${ICOPY()}${IDEL()}`;
     } else if(sel.t==='dim'){
       h=`<div class="title">Размер <b>${fmt(dimGeom(sel).len)} мм</b></div>
         <div class="fld"><label for="pOff">Отступ от линии, мм</label><input class="inp" id="pOff" inputmode="decimal" value="${r3(sel.off)}"></div>
         <div class="fld"><span class="lbl">Тип размера</span><div class="seg" role="group">${[['h','Гориз.'],['v','Верт.'],['a','По наклону']].map(([k,n])=>`<button data-dtype="${k}" aria-pressed="${(sel.dir||'a')===k}">${n}</button>`).join('')}</div></div>
-        <button class="btn" data-act="flip">На другую сторону</button>
-        <button class="btn" data-act="copyObj">Копировать</button><span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>`;
+        ${IB('flip','flip','На другую сторону')}${ICOPY()}${IDEL()}`;
     } else {
       h=`<div class="fld"><label for="pText">Текст</label><input class="inp wide" id="pText" value="${esc(sel.s)}"></div>
         <div class="fld"><label for="pH">Высота, мм</label><input class="inp sm" id="pH" inputmode="decimal" value="${r3(sel.h)}"></div>
-        <button class="btn" data-act="copyObj">Копировать</button><span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>`;
+        ${ICOPY()}${IDEL()}`;
     }
   } else if(tool==='select'&&selJoint){
     const jl=jointLines(selJoint);
-    h=`<div class="title">Узел <span class="lbl">${jl.length} ${jl.length===1?'линия':'линии'}</span></div>
-      <div class="fld"><label for="jX">X, мм</label><input class="inp" id="jX" inputmode="decimal" value="${r1(selJoint.x)}"></div>
-      <div class="fld"><label for="jY">Y, мм</label><input class="inp" id="jY" inputmode="decimal" value="${r1(selJoint.y)}"></div>
-      <div class="rows">${jl.map(([it,k],i)=>{const o=it[k==='a'?'b':'a'];const d=unit(o,it[k]);
-        const ar=Math.abs(d.x)>Math.abs(d.y)?(d.x>0?'→':'←'):(d.y>0?'↑':'↓');
-        return `<div class="fld"><label for="jl_${i}">Линия ${ar}, мм</label><input class="inp" id="jl_${i}" data-lid="${it.id}" inputmode="decimal" value="${r1(Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y))}"></div>`;}).join('')}</div>
-      ${mergePair(selJoint)?'<button class="btn" data-act="mergeJ">Убрать вершину</button>':''}
+    h=`
+      <div class="fld inl"><label for="jX">X</label><input class="inp xs" id="jX" inputmode="decimal" value="${r1(selJoint.x)}"></div>
+      <div class="fld inl"><label for="jY">Y</label><input class="inp xs" id="jY" inputmode="decimal" value="${r1(selJoint.y)}"></div>
+      ${mergePair(selJoint)?IB('mergeJ','merge','Убрать вершину'):''}
       <p class="hint">Тяните узел пальцем или введите длину. Значки-звенья на концах выделенной стены: соединить / отсоединить.</p>`;
   } else if(tool==='text'&&pendingText){
     h=`<div class="fld"><label for="tText">Текст</label><input class="inp wide" id="tText" autocomplete="off" placeholder="Санузел, h=2700"></div>
       <div class="fld"><label for="tH">Высота, мм</label><input class="inp sm" id="tH" inputmode="decimal" value="${doc.settings.textH}"></div>
       <span class="sp"></span><button class="btn" data-act="cancelText">Отмена</button><button class="btn go" data-act="placeText">Поставить</button>`;
   }
-  panel.innerHTML=h; panel.hidden=!h; syncLineHint(); if(tool==='move') syncMoveInfo(); redraw();
+  panel.innerHTML=h; panel.hidden=!h; syncLineHint(); if(tool==='move') syncMoveInfo(); redraw(); placePanel();
 }
 panel.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
@@ -2088,11 +2183,25 @@ document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',(
 /* ---------- раскрывающиеся меню инструментов ---------- */
 let menuFor=null, arcWall=true, mirrorSel=new Set(), editSel=new Set();
 function closeToolMenu(){ $('#toolMenu').hidden=true; menuFor=null; }
+// значки режимов (как символы на ленте Revit/AutoCAD)
+const MICO={
+  chain:'<path d="M3 19 9 8l6 7 6-10"/><circle cx="3" cy="19" r="1.6" fill="currentColor"/><circle cx="9" cy="8" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="21" cy="5" r="1.6" fill="currentColor"/>',
+  seg:'<path d="M4 20 20 4"/><circle cx="4" cy="20" r="1.8" fill="currentColor"/><circle cx="20" cy="4" r="1.8" fill="currentColor"/>',
+  rect:'<rect x="3.5" y="6" width="17" height="12" rx=".5"/>',
+  arc:'<path d="M4 18Q12 0 20 18"/><circle cx="4" cy="18" r="1.6" fill="currentColor"/><circle cx="12" cy="9" r="1.6" fill="currentColor"/><circle cx="20" cy="18" r="1.6" fill="currentColor"/>',
+  circ:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  poly:'<path d="M12 3.5 19.5 8v8L12 20.5 4.5 16V8z"/>',
+  aux:'<path d="M2 20 22 4" stroke-dasharray="5 2.5 1 2.5"/>',
+  split:'<path d="M3 12h7M14 12h7"/><path d="M10 7v10M14 7v10" stroke-width="1.6"/>',
+  merge:'<path d="M3 17 12 8l9 9"/><circle cx="12" cy="8" r="2.4"/><path d="M9.5 3.5l5 5M14.5 3.5l-5 5" stroke-width="1.5"/>',
+  mirrorc:'<path d="M12 2v20" stroke-dasharray="3 2"/><path d="M9 6 3 18h6z" fill="currentColor"/><path d="M15 6l6 12h-6z"/>',
+  mirrorm:'<path d="M12 2v20" stroke-dasharray="3 2"/><path d="M9 6 3 18h6z" stroke-dasharray="2 1.6"/><path d="M15 6l6 12h-6z" fill="currentColor"/>'};
+const MTIP={mirrorc:'Зеркало (копия)',mirrorm:'Зеркало (перенести)',aux:'Конструкционная линия',chain:'Цепочка',seg:'Отрезок',rect:'Прямоугольник',arc:'Дуга по 3 точкам',circ:'Круг',poly:'Многоугольник',split:'Разделить',merge:'Убрать вершину'};
 function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
-  const mb=(k,cur,attr)=>`<button data-${attr}="${k}" aria-pressed="${k===cur}">${MODEN[k]}${k==='mirrorc'?' (копия)':k==='mirrorm'?' (перенести)':''}</button>`;
+  const mb=(k,cur,attr)=>`<button data-${attr}="${k}" aria-pressed="${k===cur}" title="${MTIP[k]||MODEN[k]}" aria-label="${MTIP[k]||MODEN[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MICO[k]}</svg></button>`;
   if(t==='line'){ h=`<div class="mh">Стены</div><div class="mg">${['chain','seg','rect','arc'].map(k=>mb(k,wallMode,'wm')).join('')}</div>
-      <div class="mr"><div class="fld"><label for="inW">Толщина, мм</label><input class="inp sm" id="inW" inputmode="decimal" value="${doc.settings.wallW}"></div>
-      <div class="fld"><span class="lbl">Стена от линии</span>${sideSeg('wside',doc.settings.wallSide)}</div></div>`; }
+      <div class="mr"><div class="fld"><label for="inW">Толщина</label><input class="inp sm" id="inW" inputmode="decimal" value="${doc.settings.wallW}"></div>
+      <div class="fld"><span class="lbl">Ось стены</span>${sideSeg('wside',doc.settings.wallSide)}</div></div>`; }
   else if(t==='draw'){ h=`<div class="mh">Линии</div><div class="mg">${['chain','seg','rect','circ','poly','arc','aux'].map(k=>mb(k,lineMode,'lm')).join('')}</div>`;
     if(lineMode==='poly') h+=`<div class="mr"><div class="fld"><label for="pgN">Граней</label><input class="inp sm" id="pgN" inputmode="numeric" value="${polyN}"></div>
       <div class="dirs">${[3,4,6,8].map(n=>`<button data-pgn="${n}">${n}</button>`).join('')}</div><div class="fld"><label for="pgS">Сторона, мм</label><input class="inp sm" id="pgS" inputmode="decimal" placeholder="пальцем" value="${polyS||''}"></div></div>`;
@@ -2148,7 +2257,7 @@ function placeAxPick(){
   if(!a||W<1){ el.hidden=true; return; }
   el.hidden=false; const al=$('#axAlign'); if(al) al.hidden=!(tool==='select'&&selJoint); const w=el.offsetWidth||180;
   el.style.left=Math.max(w/2+8,Math.min(W-w/2-8,(a.right!==undefined?a.right+w/2+16:a.x)+gripOff.ax.x))+'px';
-  el.style.top=Math.max(el.offsetHeight+70,Math.min(H-(panel.hidden?16:panel.offsetHeight+24),a.y+gripOff.ax.y))+'px';
+  el.style.top=Math.max(el.offsetHeight+70,Math.min(H-(true||panel.hidden?16:panel.offsetHeight+24),a.y+gripOff.ax.y))+'px';
   el.querySelectorAll('[data-ax]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ax===axisMode)));
 }
 function syncLabelsBtn(){ const b=$('#tgLabels'); if(b) b.setAttribute('aria-pressed',String(!!doc.settings.wallLabels)); }
@@ -2204,7 +2313,7 @@ function placeDyn(){
   const r=dynDir()*Math.PI/180, nx=-Math.sin(r), ny=-Math.cos(r); // экранная нормаль «вверх» от линии
   dynEl.hidden=false; const w=dynEl.offsetWidth||300, h=dynEl.offsetHeight||46;
   let x=m.x+nx*0+0, y=m.y-(Math.abs(Math.cos(r))>0.5?h/2+18:0); if(Math.abs(Math.cos(r))<=0.5) x=m.x+w/2+22;
-  const lim=H-(panel.hidden?10:panel.offsetHeight+16); x+=gripOff.dyn.x; y+=gripOff.dyn.y;
+  const lim=H-(true||panel.hidden?10:panel.offsetHeight+16); x+=gripOff.dyn.x; y+=gripOff.dyn.y;
   dynEl.style.left=Math.max(w/2+6,Math.min(W-w/2-6,x))+'px'; dynEl.style.top=Math.max(h/2+60,Math.min(lim-h/2,y))+'px';
   if(document.activeElement!==dynLen) dynLen.placeholder=lineKind==='arc'&&arcB?(live&&bulge3(last,arcB,live)?'R '+fmt(arcG({a:last,b:arcB,bg:bulge3(last,arcB,live)}).r):'радиус'):live&&!near(live,last,0.5)?fmt(Math.hypot(live.x-last.x,live.y-last.y)):'длина';
   if(document.activeElement!==dynAng) dynAng.placeholder=fmt(dynDir())+'°';
@@ -2247,7 +2356,7 @@ function docHasContent(){ return doc.levels.some(l=>l.items.length>0); }
 function createNew(){ const d=newDoc(); store.docs[d.id]=d; openDoc(d.id); sheet.hidden=true; setTool('line'); }
 function askNew(){
   const nm=(doc.num?'№'+doc.num+' ':'')+(doc.name||'Без названия');
-  sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="nwT">
+  sheet.classList.remove('appm'); sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="nwT">
     <div class="sheet-head"><h2 id="nwT">Сохранить текущий чертёж?</h2></div>
     <p class="note">Перед созданием нового чертежа сохраните «${esc(nm)}» файлом ${exExt.toUpperCase()} в «Загрузки». В списке «Чертежи» он останется в любом случае.</p>
     <button class="btn go" data-s="newSave">Сохранить ${exExt.toUpperCase()} и создать новый</button>
@@ -2264,16 +2373,24 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-function renderSheet(){
+let appView='recent';
+// главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
+function renderSheet(view){ if(view) appView=view;
   const docs=Object.values(store.docs).sort((a,b)=>b.updated-a.updated);
-  sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="shT">
-    <div class="sheet-head"><h2 id="shT">Чертежи</h2><button class="ib" data-s="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-    <div class="docs">${docs.map(d=>`<div class="docrow${d.id===doc.id?' cur':''}">
-      <button class="nm" data-s="open" data-id="${d.id}"><strong>${d.num?'№'+esc(d.num)+' · ':''}${esc(d.name||'Без названия')}</strong><small>${d.items.length} объектов · ${new Date(d.updated).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></button>
-      ${docs.length>1?`<button class="btn danger" data-s="del" data-id="${d.id}">${confirmDel===d.id?'Точно удалить?':'Удалить'}</button>`:''}
-    </div>`).join('')}</div>
-    <button class="btn go" data-s="new">Новый чертёж</button>
-    <div class="sheet-head"><h2>Настройки чертежа</h2></div>
+  const L=(s,ic,t,more)=>`<button class="am" data-s="${s}"${appView===s?' aria-pressed="true"':''}>${ic}<span>${t}</span>${more?'<i>▸</i>':''}</button>`;
+  sheet.classList.add('appm');
+  sheet.innerHTML=`<div class="sheet-body appbody" role="dialog" aria-modal="true" aria-label="Главное меню">
+    <div class="amcol">
+      ${L('new','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14h6"/></svg>','Создать')}
+      ${L('recent','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10H3z"/></svg>','Открыть',1)}
+      ${L('save','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/></svg>','Сохранить')}
+      ${L('export','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h10v16H4z"/><path d="M11 12h10M17 8l4 4-4 4"/></svg>','Экспорт',1)}
+      ${L('levels','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 16l9 4 9-4"/></svg>','Уровни',1)}
+      ${L('settings','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>','Параметры',1)}
+      <span class="sp"></span>
+      ${L('close','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>','Закрыть')}
+    </div>
+    <div class="ampane">${appView==='settings'?`<div class="amh">Параметры чертежа</div>
     <div class="set">
       <label for="sGrid">Шаг привязки</label>
       <select class="inp" id="sGrid">${[1,5,10,25,50,100].map(g=>`<option value="${g}"${doc.settings.grid===g?' selected':''}>${g} мм</option>`).join('')}</select>
@@ -2289,15 +2406,27 @@ function renderSheet(){
       <input type="checkbox" class="chk" id="sNatDim"${doc.settings.nativeDims!==false?' checked':''}>
     </div>
     <button class="btn" data-s="allW">Задать всем стенам толщину ${fmt(doc.settings.wallW)} мм</button>
-    <p class="note">«Наружу» значит: нарисованная линия — внутренняя грань комнаты, по ней вы и меряете рулеткой. Единицы — миллиметры, ось Y направлена вверх. В DXF слои: WALLS, OPENINGS, MISC, DIMS, TEXT. Чертежи хранятся на этом устройстве в браузере.</p>
+    <p class="note">«Наружу» значит: нарисованная линия — внутренняя грань комнаты, по ней вы и меряете рулеткой. Единицы — миллиметры, ось Y направлена вверх. В DXF слои: WALLS, OPENINGS, MISC, DIMS, TEXT. Чертежи хранятся на этом устройстве в браузере.</p>`
+    :`<div class="amh">Последние чертежи</div>
+    <div class="docs">${docs.map(d=>`<div class="docrow${d.id===doc.id?' cur':''}">
+      <button class="nm" data-s="open" data-id="${d.id}"><strong>${d.num?'№'+esc(d.num)+' · ':''}${esc(d.name||'Без названия')}</strong><small>${d.items.length} объектов · ${new Date(d.updated).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></button>
+      ${docs.length>1?`<button class="btn danger" data-s="del" data-id="${d.id}">${confirmDel===d.id?'Точно удалить?':'Удалить'}</button>`:''}
+    </div>`).join('')}</div>
+    `}
+    <div class="amfoot"><button class="btn" data-s="settings">Параметры</button><button class="btn" data-s="close">Выход из меню</button></div></div>
   </div>`;
 }
-$('#btnMenu').addEventListener('click',()=>{confirmDel=null;renderSheet();sheet.hidden=false;});
+$('#btnMenu').addEventListener('click',()=>{ if(!sheet.hidden&&sheet.classList.contains('appm')){ sheet.hidden=true; return; } confirmDel=null;renderSheet('recent');sheet.hidden=false;});
 sheet.addEventListener('click',e=>{
   if(e.target===sheet){sheet.hidden=true;return;}
   const b=e.target.closest('[data-s]'); if(!b) return; const id=b.dataset.id;
   switch(b.dataset.s){
     case 'close':sheet.hidden=true;break;
+    case 'recent':renderSheet('recent');break;
+    case 'settings':renderSheet('settings');break;
+    case 'save':sheet.hidden=true; saveCurrentFile(); break;
+    case 'export':sheet.hidden=true; openExport(); break;
+    case 'levels':openLevels(); break;
     case 'lvadd':{const last=doc.levels[doc.levels.length-1]; doc.levels.push({id:uid(),name:'Этаж '+(doc.levels.length+1),elev:(last?last.elev:0)+3000,items:[]});
       persist(); renderLevels(); openLevels(); break;}
     case 'lvdel':{const i=+b.dataset.i; if(lvDelConfirm!==i){lvDelConfirm=i;openLevels();break;}
@@ -2527,7 +2656,7 @@ function openExport(){
   if(inClaude()){ showDxfSheet(buildDXF(doc),name+'.dxf',true); return; }
   let canFiles=NATIVE; if(!canFiles) try{canFiles=!!(navigator.canShare&&navigator.canShare({files:[new File(['x'],'t.png',{type:'image/png'})]}));}catch(e){}
   const X=()=>exExt; // выбранное расширение: dwg или dxf
-  sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="exT">
+  sheet.classList.remove('appm'); sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="exT">
     <div class="sheet-head"><h2 id="exT">Экспорт</h2><button class="ib" data-s="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div class="fld"><span class="lbl">Формат чертежа</span><div class="seg" role="group" aria-label="Формат">
       <button data-ext="dwg" aria-pressed="${exExt==='dwg'}">DWG</button><button data-ext="dxf" aria-pressed="${exExt==='dxf'}">DXF</button></div></div>
