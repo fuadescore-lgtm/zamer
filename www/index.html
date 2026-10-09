@@ -1264,7 +1264,7 @@ cv.addEventListener('pointerdown',e=>{
   if(jv){ let ic=null; for(const h of joinHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<10&&d<jv.d){ ic=h; } } if(!ic) press.forceJoint=jv.j; }
   if((tool==='select'||tool==='hole')&&!press.forceJoint){
     let wb=null,wd=22; for(const w of witHits){ const d=Math.hypot(w.x-p.x,w.y-p.y); if(d<wd){wd=d;wb=w;} }
-    if(wb&&wb.kind==='ld'){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.ldDrag={it,started:false}; return; } }
+    if(wb&&(wb.kind==='ld'||wb.kind==='ldE')){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.ldDrag={it,elbow:wb.kind==='ldE',started:false}; return; } }
     if(wb){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.wit={it,kind:wb.kind,key:wb.kind==='hl'?'refL':'refR',started:false}; return; } }
     if(tool==='select'){ let jb=null,jd=18; for(const h of joinHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<jd){jd=d;jb=h;} }
       if(jb){ const it=doc.items.find(i=>i.id===jb.id); if(it){ press.pan=false; press.noop=true; pushUndo(); const linked=!nj(it,jb.k)&&endLinked(it,jb.k);
@@ -1390,7 +1390,9 @@ cv.addEventListener('pointermove',e=>{
     const pt=snapPoint(p.x,p.y,null,{exclude:selIds()}); tdDrag={dir:T.dir,pt}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
   if(press.wit){ const Wt=press.wit; if(!press.moved) return; if(!Wt.started){ Wt.started=true; pushUndo(); }
     const pt=snapPoint(p.x,p.y,null,{exclude:new Set([Wt.it.id])}); Wt.it[Wt.key]={x:pt.x,y:pt.y}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
-  if(press.ldDrag){ const D=press.ldDrag; if(!press.moved) return; if(!D.started){ D.started=true; pushUndo(); } D.it.ld.pt=snapPoint(p.x,p.y,null); redraw(); return; }
+  if(press.ldDrag){ const D=press.ldDrag; if(!press.moved) return; if(!D.started){ D.started=true; pushUndo(); } if(D.elbow){ // колено: полка остаётся горизонтальной, тянем её длину (и сторону)
+      const w=toW(p.x,p.y), it=D.it, tw=textW(it), sg=it.ld.pt.x>=it.p.x?1:-1, sx=it.p.x+sg*(tw/2+it.h*0.3); it.ld.sh=r3(Math.max(it.h*0.3,(w.x-sx)*sg)); }
+    else D.it.ld.pt=snapPoint(p.x,p.y,null); redraw(); return; }
   if(press.ghost){ holeGhost=holePreview(p)||holeGhost; redraw(); return; }
   if(press.stair){ stairLive=snapPoint(p.x,p.y,press.stair.from); redraw(); return; }
   if(press.dimOff){ const D=press.dimOff; if(!press.moved) return; if(!D.started){ D.started=true; pushUndo(); }
@@ -1912,7 +1914,7 @@ let holeGhost=null;
 let textMode='plain', ldPick=null;
 function textW(it){ ctx.save(); ctx.font='500 100px '+FTXT; const w=ctx.measureText(it.s).width/100*it.h; ctx.restore(); return w; }
 function leaderGeom(it){ if(!it.ld) return null; const P=it.ld.pt, w=textW(it), right=P.x>=it.p.x, sg=right?1:-1, h=it.h;
-  const S={x:it.p.x+sg*(w/2+h*0.3),y:it.p.y-h*0.65}, E={x:S.x+sg*h*1.5,y:S.y};      // полка — по низу текста
+  const S={x:it.p.x+sg*(w/2+h*0.3),y:it.p.y-h*0.65}, E={x:S.x+sg*(it.ld.sh==null?h*1.5:it.ld.sh),y:S.y};      // полка — по низу текста
   const T={x:it.p.x-sg*(w/2+h*0.3),y:S.y};                                           // подчёркивание под текстом
   return {T,S,E,P,end:it.ld.end||'arrow'}; }
 function drawLeader(it,sel){ const g=leaderGeom(it); if(!g) return; const T=toS(g.T),E=toS(g.E),P=toS(g.P);
@@ -1921,7 +1923,7 @@ function drawLeader(it,sel){ const g=leaderGeom(it); if(!g) return; const T=toS(
   const d=Math.hypot(P.x-E.x,P.y-E.y)||1, ux=(P.x-E.x)/d, uy=(P.y-E.y)/d;
   if(g.end==='arrow'){ ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x-ux*11-uy*4,P.y-uy*11+ux*4); ctx.lineTo(P.x-ux*11+uy*4,P.y-uy*11-ux*4); ctx.closePath(); ctx.fill(); }
   else if(g.end==='dot'){ ctx.beginPath(); ctx.arc(P.x,P.y,3.5,0,Math.PI*2); ctx.fill(); }
-  if(sel){ ctx.fillStyle=C.surface; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(P.x,P.y,7,0,Math.PI*2); ctx.fill(); ctx.stroke(); witHits.push({id:it.id,kind:'ld',x:P.x,y:P.y}); }
+  if(sel){ ctx.fillStyle=C.surface; ctx.lineWidth=1.6; for(const Q of [P,E]){ ctx.beginPath(); ctx.arc(Q.x,Q.y,7,0,Math.PI*2); ctx.fill(); ctx.stroke(); } witHits.push({id:it.id,kind:'ld',x:P.x,y:P.y}); witHits.push({id:it.id,kind:'ldE',x:E.x,y:E.y}); }
   ctx.restore(); }
 /* ---------- лестницы: прямая, угловая, П-образная, по траектории ---------- */
 let stairKind='str', stairDraw=null, stairLive=null;
@@ -2213,7 +2215,7 @@ function delSel(){ if(!selId) return; const S=selIds(); pushUndo(); doc.items=do
 function placeText(){
   const s=($('#tText').value||'').trim(); const h=parseNum($('#tH').value)||doc.settings.textH;
   if(!s){toast('Введите текст');return;}
-  pushUndo(); const it={id:uid(),t:'text',p:{...pendingText},s,h,L:'text'}; if(textMode==='leader'&&ldPick) it.ld={pt:{...ldPick},end:doc.settings.ldEnd||'arrow'}; doc.items.push(it); pendingText=null; ldPick=null; persist(); syncPanel(); redraw();
+  pushUndo(); const it={id:uid(),t:'text',p:{...pendingText},s,h,L:'text'}; if(textMode==='leader'&&ldPick) it.ld={pt:{...ldPick},end:doc.settings.ldEnd||'arrow'}; doc.items.push(it); selId=it.id; pendingText=null; ldPick=null; persist(); syncPanel(); redraw();
 }
 
 /* ---------- panel ---------- */
@@ -2657,7 +2659,7 @@ function syncTop(){ $('#btnUndo').disabled=!undoS.length; $('#btnRedo').disabled
 // ✓ и ✕ видны в режимах рисования и вставки
 function syncModeBtns(){ const on=tool!=='select'; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
 syncModeBtns();
-$('#btnOk').addEventListener('click',()=>{ if(stairDraw){ finishStair(); return; } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
+$('#btnOk').addEventListener('click',()=>{ if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
 $('#btnCancel').addEventListener('click',()=>{
   if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
   chain.pts=[]; chain.ids=[]; live=null; arcB=null; dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); redraw(); });
