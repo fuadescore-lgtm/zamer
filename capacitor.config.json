@@ -1,6 +1,9 @@
 {
   "appId": "com.zamer.app",
-  "appName": "Замер",
+  "appName": "EasyCAD",
   "webDir": "www",
-  "android": { "allowMixedContent": false, "captureInput": true }
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  }
 }

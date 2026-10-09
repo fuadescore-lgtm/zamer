@@ -32,6 +32,10 @@ jobs:
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
           mkdir -p ~/.android && cp keystore/debug.keystore ~/.android/debug.keystore
+      - name: Номер версии
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
       - name: Сборка
         run: |
           cd android
@@ -41,14 +45,14 @@ jobs:
             -Pandroid.injected.signing.store.password=zamer2026 \
             -Pandroid.injected.signing.key.alias=zamer \
             -Pandroid.injected.signing.key.password=zamer2026
-          cp app/build/outputs/apk/release/app-release.apk ../Zamer.apk
+          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Zamer-apk
-          path: Zamer.apk
+          name: EasyCAD-apk
+          path: EasyCAD.apk
       - name: Выпуск для скачивания
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: Замер ${{ github.run_number }}
-          files: Zamer.apk
+          name: EasyCAD 1.${{ github.run_number }}
+          files: EasyCAD.apk
