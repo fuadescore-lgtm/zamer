@@ -222,7 +222,7 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
     </select>
     <button class="tool tg" id="tgOrtho" aria-pressed="true" title="Направление: Орто, только X, только Y или свободно">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4v15h15"/><path d="M5 14h5v5" stroke-width="1.4"/></svg><span id="axLbl">Орто</span></button>
-    <button class="tool tg" id="tgAttach" aria-pressed="true" title="Примыкание: соседние стены тянутся следом">
+    <button class="tool tg" id="tgAttach" aria-pressed="true" title="Показать кнопки соединить/отсоединить на концах">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h8V6"/><path d="M12 6h8" stroke-dasharray="2 2.5"/><circle cx="12" cy="18" r="2.2" fill="currentColor"/></svg><span id="atLbl">Примык.</span></button>
     <button class="tool tg" id="tgOsnap" aria-pressed="true" title="Магнит: прилипание к вершинам, серединам граней и линиям объектов">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v8a6 6 0 0 0 12 0V4"/><path d="M6 8h4M14 8h4" stroke-width="1.4"/><path d="M10 4v8a2 2 0 0 0 4 0V4"/></svg><span id="osLbl">Магнит</span></button>
@@ -616,7 +616,7 @@ function faceParts(Y,p0,p1,gaps){
   if(cur<s1) out.push([at(cur),p1]);
   return out;
 }
-function joints(){ const out=[], SJ=tool==='select'&&!editLine&&!editGrp?selIds():null; for(const it of doc.items){ if(it.t!=='line'||(it.g?it.g!==editGrp:(it.id!==editLine&&!(SJ&&SJ.has(it.id)&&SJ.size<=8)))) continue;
+function joints(){ const out=[], SJ=tool==='select'&&!editLine&&!editGrp?selIds():null; for(const it of doc.items){ if(it.t!=='line'||(it.g&&it.g===editGrp?false:(it.id!==editLine&&!(SJ&&SJ.has(it.id)&&SJ.size<=24)))) continue;
     for(const p of [it.a,it.b]) if(!out.some(q=>near(q,p))) out.push(p); } return out; }
 function jointLines(P){ const r=[]; for(const it of doc.items){ if(it.t!=='line') continue;
     if(near(it.a,P)) r.push([it,'a']); else if(near(it.b,P)) r.push([it,'b']); } return r; }
@@ -896,17 +896,35 @@ function endLinked(it,k){ const P=it[k];
   for(const o of doc.items){ if(o===it||o.t!=='line') continue; if(near(o.a,P)||near(o.b,P)) return true; if(onBody(P,o)) return true; }
   for(const o of doc.items){ if(o===it||o.t!=='line') continue; for(const kk of ['a','b']) if(onBody(o[kk],it)) { const ob=onBody(o[kk],it); if(ob&&ob.end===k) return true; } }
   return false; }
+// «Соединить» на свободном конце: дотянуть (или укоротить) по оси до ближайшей стены, как «Обрезать/удлинить» в Revit
+function extendEnd(it,k){ if(it.t!=='line'||isArc(it)) return false; const o=k==='a'?'b':'a', P=it[o], Q=it[k], L0=Math.hypot(Q.x-P.x,Q.y-P.y); if(L0<1) return false;
+  const u=unit(P,Q), eI=isWall(it)?Math.max(offs(it).L,offs(it).R):0; let best=null;
+  for(const Y of doc.items){ if(Y===it||Y.t!=='line'||isArc(Y)||isWall(Y)!==isWall(it)) continue;
+    const LY=Math.hypot(Y.b.x-Y.a.x,Y.b.y-Y.a.y); if(LY<1) continue; const v=unit(Y.a,Y.b), den=u.x*v.y-u.y*v.x; if(Math.abs(den)<0.05) continue;
+    const wx=Y.a.x-P.x, wy=Y.a.y-P.y, sP=(wx*v.y-wy*v.x)/den, tY=(wx*u.y-wy*u.x)/den; if(sP<Math.max(50,eI*2)) continue;
+    const eY=(isWall(Y)?Math.max(offs(Y).L,offs(Y).R):0)+eI+1, I={x:r3(P.x+u.x*sP),y:r3(P.y+u.y*sP)};
+    let yk=null, cost=Math.abs(sP-L0);
+    if(tY<=eY) yk='a'; else if(tY>=LY-eY) yk='b';
+    if(yk){ const yFree=!nj(Y,yk)&&!doc.items.some(Z=>Z!==Y&&Z!==it&&Z.t==='line'&&(near(Z.a,Y[yk])||near(Z.b,Y[yk])));
+      const out=yk==='a'?-tY:tY-LY; if(out>0&&!yFree) continue; if(!yFree) yk=null; else cost+=Math.abs(yk==='a'?tY:LY-tY); }
+    if(!best||cost<best.cost) best={Y,yk,I,cost}; }
+  if(!best) return false;
+  it[k]=best.I; if(best.yk) best.Y[best.yk]={...best.I}; return true; }
 function drawJoinIcons(){
   if(tool!=='select'||!attachOn||editLine||editGrp) return; const S=selIds(); if(!S.size||S.size>8) return;
   for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line'||it.g) continue;
-    for(const k of ['a','b']){ const off=nj(it,k); if(!off&&!endLinked(it,k)) continue;
-      const P=it[k], Q=it[k==='a'?'b':'a'], d=unit(P,Q), n=lft(d), half=isWall(it)?Math.max(offs(it).L,offs(it).R):0;
-      const sh=(isWall(it)?(offs(it).L-offs(it).R)/2:0), w={x:P.x+d.x*(half+30/view.scale)+n.x*sh,y:P.y+d.y*(half+30/view.scale)+n.y*sh}, c=toS(w);
+    for(const k of ['a','b']){ const off=nj(it,k)||!endLinked(it,k);
+      const P=it[k], Q=it[k==='a'?'b':'a'], d=unit(P,Q), n=lft(unit(it.a,it.b)), o=isWall(it)?offs(it):{L:0,R:0};
+      // значок сбоку от конца, снаружи грани (снизу/справа, чтобы не прятался под панелью X/Y/XY)
+      const sd=(n.y<-1e-6||(Math.abs(n.y)<=1e-6&&n.x>0))?1:-1, w={x:P.x+d.x*(Math.max(o.L,o.R)+16/view.scale)+n.x*sd*((sd>0?o.L:o.R)+20/view.scale),y:P.y+d.y*(Math.max(o.L,o.R)+16/view.scale)+n.y*sd*((sd>0?o.L:o.R)+20/view.scale)}, c=toS(w);
       joinHits.push({id:it.id,k,x:c.x,y:c.y});
-      ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=off?C.dim:C.sel; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.roundRect?ctx.roundRect(c.x-10,c.y-10,20,20,4):ctx.rect(c.x-10,c.y-10,20,20); ctx.fill(); ctx.stroke();
-      ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(c.x-5,c.y+5); ctx.lineTo(c.x-5,c.y-5); ctx.lineTo(c.x+(off?0:5),c.y-5); ctx.stroke();
-      if(off){ ctx.beginPath(); ctx.moveTo(c.x+3,c.y-7); ctx.lineTo(c.x+3,c.y-3); ctx.moveTo(c.x+3,c.y+1); ctx.lineTo(c.x+6,c.y+6); ctx.stroke(); }
+      ctx.save(); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(c.x,c.y,11,0,Math.PI*2);
+      ctx.fillStyle=off?C.surface:C.sel; ctx.fill(); ctx.strokeStyle=off?C.dim:C.sel; ctx.stroke();
+      // звенья цепи: целые — соединено, разорванные — отсоединено
+      ctx.strokeStyle=off?C.dim:'#fff'; ctx.lineWidth=2; ctx.translate(c.x,c.y); ctx.rotate(-Math.PI/4);
+      const g=off?2.2:0, lk=(x)=>{ ctx.beginPath(); ctx.roundRect?ctx.roundRect(x-3.6,-2.6,7.2,5.2,2.6):ctx.rect(x-3.6,-2.6,7.2,5.2); ctx.stroke(); };
+      lk(-2.6-g); lk(2.6+g);
+      ctx.restore();
       ctx.restore(); } } }
 function render(){
   labelHits=[]; witHits=[]; tdHits=[]; dimHits=[]; joinHits=[]; syncDims();
@@ -990,7 +1008,7 @@ function updateHud(){
     const d=axisMode==='x'?'h':axisMode==='y'?'v':axisMode==='free'?'a':(dx>=dy?'h':'v');
     txt=(d==='h'?'↔ '+fmt(dx):d==='v'?'↕ '+fmt(dy):fmt(Math.hypot(dx,dy)))+' мм'+sn;isLive=true;}
   else txt={
-    select:'Касание — выбрать · тянуть — двигать · удержать — добавить · 2× — правка',
+    select:'Касание — выбрать · грань — двигать · кружок — вершина · удержать — добавить',
     line:lineKind==='arc'?(arcB?'Дуга: третья точка задаёт изгиб, или введите радиус в окошке':chain.pts.length?'Дуга: конечная точка':'Дуга: начальная точка'):chain.pts.length?'Тяните от последней точки и отпустите, или введите длину в окошке.':(lineKind==='poly'?'Многоугольник: коснитесь центра и тяните до вершины':lineKind==='rect'?'Прямоугольник: тяните от угла до угла':lineKind==='circ'?'Круг: коснитесь центра и тяните':lineKind==='aux'?'Конструкционная линия: поставьте две точки, она пройдёт через весь лист':lineKind==='line'?'Коснитесь, чтобы начать линию':doc.items.length?'Коснитесь, чтобы поставить первую точку стены':'Коснитесь начальной точки или сразу введите длину в окошке — стена пойдёт от нулевой точки'),
     rect:'Протяните пальцем по диагонали',
     split:'Разделить: коснитесь стены или линии в месте разреза (работает магнит). ✓ — выйти',
@@ -1020,9 +1038,13 @@ cv.addEventListener('pointerdown',e=>{
     let wb=null,wd=22; for(const w of witHits){ const d=Math.hypot(w.x-p.x,w.y-p.y); if(d<wd){wd=d;wb=w;} }
     if(wb){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.wit={it,kind:wb.kind,key:wb.kind==='hl'?'refL':'refR',started:false}; return; } }
     if(tool==='select'){ let jb=null,jd=18; for(const h of joinHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<jd){jd=d;jb=h;} }
-      if(jb){ const it=doc.items.find(i=>i.id===jb.id); if(it){ press.pan=false; press.noop=true; pushUndo(); const v=!nj(it,jb.k);
-        it.nj={...(it.nj||{}),[jb.k]:v}; if(!it.nj.a&&!it.nj.b) delete it.nj; persist(); redraw();
-        toast(v?'Конец отсоединён: стены не стыкуются и не тянутся вместе':'Конец снова соединён'); return; } } }
+      if(jb){ const it=doc.items.find(i=>i.id===jb.id); if(it){ press.pan=false; press.noop=true; pushUndo(); const linked=!nj(it,jb.k)&&endLinked(it,jb.k);
+        if(linked){ it.nj={...(it.nj||{}),[jb.k]:true}; toast('Отсоединено: этот конец двигается свободно, соседи его не тянут'); }
+        else { if(it.nj){ delete it.nj[jb.k]; if(!it.nj.a&&!it.nj.b) delete it.nj; }
+          if(endLinked(it,jb.k)) toast('Соединено: конец двигается вместе с соседней стеной');
+          else if(extendEnd(it,jb.k)){ syncDims(); toast('Соединено: конец дотянут до стены'); }
+          else toast('По направлению этой '+(isWall(it)?'стены':'линии')+' нет '+(isWall(it)?'стены':'линии')+' для соединения'); }
+        persist(); panelKey=''; syncPanel(); redraw(); return; } } }
     if(tool==='select'){ let db=null,dd=20; for(const h of dimHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<dd){dd=d;db=h;} }
       if(db){ const it=doc.items.find(i=>i.id===db.id); if(it){ press.pan=false; press.dimEnd={it,k:db.k,started:false}; return; } } }
     if(tool==='select'&&!hitJoint(p.x,p.y,press.mouse?14:24)){ let tb=null,td=20; for(const t of tdHits){ const d=Math.hypot(t.x-p.x,t.y-p.y)+(t.kind==='near'?8:0); if(d<td){td=d;tb=t;} }
@@ -1034,25 +1056,30 @@ cv.addEventListener('pointerdown',e=>{
     if(lh&&lh.kind==='td'){ press.label=lh; press.pan=false; return; }
     if(lh&&!lh.kind){ const li=doc.items.find(i=>i.id===lh.id); if(li&&li.g&&li.g!==editGrp) lh=null; }
     if(lh){ const hh=hit(p.x,p.y), ids=selIds(), dr=hh&&ids.has(hh.id)&&ids.has(lh.id)&&!isHole(hh)&&hh.t!=='chim'; if(hh&&hh.t!=='chim') armLongPress(hh);
-      if(armLabel(lh)){ press.label=lh; press.pan=false; if(dr) press.sd=startObjDrag(ids,p,attachOn); }
-      else if(dr){ press.pan=false; press.sd=startObjDrag(ids,p,attachOn); }
+      if(armLabel(lh)){ press.label=lh; press.pan=false; if(dr) press.sd=startObjDrag(ids,p,true); }
+      else if(dr){ press.pan=false; press.sd=startObjDrag(ids,p,true); }
       else { press.labelArm=true; selectByLabel(lh); } return; }
     const j=hitJoint(p.x,p.y,editLine||editGrp?30:(press.mouse?14:22));
-    if(j){ let refs=[]; const ex=new Set();
+    if(j){ let refs=[]; const ex=new Set(), S=selIds();
       for(const it of doc.items){ if(it.t!=='line'&&it.t!=='dim') continue;
         for(const k of ['a','b']) if(near(it[k],j)) refs.push([it,k]); }
-      if(!attachOn){ // отдельно: тянем только ближайшую к пальцу стену
-        let best=null,bd=Infinity;
-        for(const [it,k] of refs){ if(it.t!=='line') continue; const d=segDist(p.x,p.y,toS(it.a),toS(it.b)); if(d<bd){bd=d;best=[it,k];} }
-        if(best) refs=[best]; }
+      // своя вершина (у выделенного) едет всегда; соседние концы — только если оба «соединены»
+      const own=refs.filter(([it])=>S.has(it.id)&&it.t==='line');
+      if(own.length){ const freeOwn=own.some(([it,k])=>nj(it,k));
+        refs=refs.filter(([it,k])=>(S.has(it.id)&&it.t==='line')||(!freeOwn&&!nj(it,k))); }
       for(const [it] of refs) ex.add(it.id);
-      const js=toS(j); press.pan=false; press.joint={refs,ex,orig:{x:j.x,y:j.y},dx:js.x-p.x,dy:js.y-p.y,started:false};
-      selJoint={x:j.x,y:j.y}; selId=null; moveSel.clear(); syncPanel(); redraw(); return; }
+      // Т-примыкания: концы чужих стен на теле двигаемых стен скользят по своей оси
+      const tj=[]; for(const [W] of refs){ if(W.t!=='line'||isArc(W)) continue;
+        for(const X of doc.items){ if(X.t!=='line'||ex.has(X.id)||isArc(X)) continue;
+          for(const k of ['a','b']){ if(nj(X,k)) continue; const ob=onBody(X[k],W); if(!ob||ob.end) continue; tj.push({X,k,W,s:ob.s,o:{...X[k]}}); } } }
+      for(const T of tj) ex.add(T.X.id);
+      const js=toS(j); press.pan=false; press.joint={refs,ex,tj,orig:{x:j.x,y:j.y},dx:js.x-p.x,dy:js.y-p.y,started:false};
+      selJoint={x:j.x,y:j.y}; if(!own.length){ selId=null; moveSel.clear(); } panelKey=''; syncPanel(); redraw(); return; }
   }
   if(tool==='hole'){ const lh=hitLabel(p.x,p.y); if(lh&&(lh.kind==='hl'||lh.kind==='hr')){ press.pan=true; if(armLabel(lh)){ press.label=lh; press.pan=false; } else press.labelArm=true; return; } }
   if(tool==='select'||tool==='hole'){
     const hc=hit(p.x,p.y);
-    if(hc&&hc.t==='chim'&&tool==='select'&&moveSel.size&&selIds().has(hc.id)){ press.pan=false; armLongPress(hc); press.sd=startObjDrag(selIds(),p,attachOn); redraw(); return; }
+    if(hc&&hc.t==='chim'&&tool==='select'&&moveSel.size&&selIds().has(hc.id)){ press.pan=false; armLongPress(hc); press.sd=startObjDrag(selIds(),p,true); redraw(); return; }
     if(hc&&hc.t==='chim'){ const w=toW(p.x,p.y); press.pan=false; const prevMulti=new Set(moveSel), prevSel=selId, wasMulti=tool==='select'&&(moveSel.size>0||(selId&&selId!==hc.id&&!isHole(doc.items.find(i=>i.id===selId)||{})));
       const now=Date.now(), dbl=lastChimTap&&lastChimTap.id===hc.id&&now-lastChimTap.t<380; lastChimTap={id:hc.id,t:now};
       press.chim={it:hc,off:{x:w.x-hc.p.x,y:w.y-hc.p.y},start:{...hc.p},started:false};
@@ -1071,15 +1098,12 @@ cv.addEventListener('pointerdown',e=>{
     const h=hit(p.x,p.y);
     if(h&&!isHole(h)&&h.t!=='chim'){
       const key=h.g||h.id, now=Date.now(), dbl=lastObjTap&&lastObjTap.id===key&&now-lastObjTap.t<420; lastObjTap={id:key,t:now};
-      if(dbl){ lastObjTap=null;
-        if(h.g&&editGrp!==h.g){ editGrp=h.g; selId=h.id; selJoint=null; press.pan=false; press.noop=true; panelKey=''; syncPanel(); redraw();
-          toast('Правка фигуры: тяните вершины и грани, двойное касание по цифре — размер. Пустое место — выход.'); return; }
-        if(h.t==='circ'){ const lh=labelHits.find(l=>l.id===h.id&&l.kind==='cd'); if(lh){ press.label=lh; press.pan=false; return; } }
-        if(h.t==='line'&&!h.g){ editLine=h.id; editGrp=null; selId=h.id; selJoint=null; moveSel.clear(); press.pan=false; press.noop=true; panelKey=''; syncPanel(); redraw();
-          toast('Правка вершин: тяните кружки на концах. Пустое место — выход.'); return; }
-      }
+      if(dbl&&h.t==='circ'){ lastObjTap=null; const lh=labelHits.find(l=>l.id===h.id&&l.kind==='cd'); if(lh){ press.label=lh; press.pan=false; return; } }
       armLongPress(h); const ids=selIds();
-      if(ids.has(h.id)){ press.pan=false; press.sd=startObjDrag(ids,p,attachOn); redraw(); return; }
+      // у выделенной фигуры тянем одну грань — соседние грани фигуры подстраиваются
+      if(ids.has(h.id)&&selJoint){ selJoint=null; panelKey=''; syncPanel(); }
+      if(h.g&&!moveSel.size&&ids.has(h.id)){ press.pan=false; press.sd=startObjDrag(new Set([h.id]),p,true); press.sd.grp=h.g; redraw(); return; }
+      if(ids.has(h.id)){ press.pan=false; press.sd=startObjDrag(ids,p,true); redraw(); return; }
     }
   }
   if(tool==='move'){
@@ -1133,14 +1157,14 @@ cv.addEventListener('pointermove',e=>{
     H.it.pos=r3(Math.max(g.w/2,Math.min(g.L-g.w/2,sp))); holeDrag=H.it; redraw(); return; }
   if(press.dimEnd){ const D=press.dimEnd; if(!press.moved) return; if(!D.started){ D.started=true; pushUndo(); delete D.it['r'+D.k]; }
     const pt=snapPoint(p.x,p.y,null,{exclude:new Set([D.it.id])}); D.it[D.k]={x:pt.x,y:pt.y}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
-  if(press.tdh&&press.tdh.kind==='near'&&press.moved){ press.tdh=null; press.sd=startObjDrag(selIds(),{x:press.sx,y:press.sy},attachOn); }
+  if(press.tdh&&press.tdh.kind==='near'&&press.moved){ press.tdh=null; press.sd=startObjDrag(selIds(),{x:press.sx,y:press.sy},true); }
   if(press.tdh){ const T=press.tdh; if(!press.moved||T.kind!=='far') return; if(!T.started){ T.started=true; pushUndo(); }
     const pt=snapPoint(p.x,p.y,null,{exclude:selIds()}); tdDrag={dir:T.dir,pt}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
   if(press.wit){ const Wt=press.wit; if(!press.moved) return; if(!Wt.started){ Wt.started=true; pushUndo(); }
     const pt=snapPoint(p.x,p.y,null,{exclude:new Set([Wt.it.id])}); Wt.it[Wt.key]={x:pt.x,y:pt.y}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
   if(press.sd){ if(!press.moved) return; stepObjDrag(press.sd,p); redraw(); return; }
   if(press.mv){ const M=press.mv; if(!press.moved) return;
-    if(!M.started){ M.started=true; if(M.wasNew) moveSel=new Set(M.gi); pushUndo(); if(copyOn) cloneSel(); M.refs=buildRefs(attachOn&&!copyOn); syncMoveInfo(); }
+    if(!M.started){ M.started=true; if(M.wasNew) moveSel=new Set(M.gi); pushUndo(); if(copyOn) cloneSel(); M.refs=buildRefs(!copyOn); syncMoveInfo(); }
     const w=toW(p.x,p.y); let dx=w.x-M.start.x, dy=w.y-M.start.y;
     ({dx,dy}=constrain(dx,dy));
     const g=doc.settings.grid; if(snapOn){dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g;}
@@ -1152,7 +1176,10 @@ cv.addEventListener('pointermove',e=>{
     if(!J.started){J.started=true;pushUndo();jointDrag=true;}
     const np=snapPoint(p.x+J.dx,p.y+J.dy,J.orig,{exclude:J.ex,strict:true});
     for(const [it,k] of J.refs) it[k]={x:np.x,y:np.y};
-    selJoint=np; redraw(); return; }
+    for(const T of J.tj){ const X=T.X, W=T.W, Q=X[T.k==='a'?'b':'a'], u=unit(Q,T.o), v=unit(W.a,W.b), n=lft(v), A={x:W.a.x+n.x*T.s,y:W.a.y+n.y*T.s};
+      const den=u.x*v.y-u.y*v.x; if(Math.abs(den)<1e-6) continue; const wx=A.x-Q.x, wy=A.y-Q.y, t=(wx*v.y-wy*v.x)/den; if(t<1) continue;
+      X[T.k]={x:r3(Q.x+u.x*t),y:r3(Q.y+u.y*t)}; }
+    syncDims(); selJoint=np; redraw(); return; }
   if(press.pan){ view.cx-=(p.x-press.lx)/view.scale; view.cy+=(p.y-press.ly)/view.scale; press.lx=p.x;press.ly=p.y; redraw(); return; }
   if(tool==='line'&&isShape()){ if(dragA) dragB=snapPoint(p.x,p.y,null); }
   else if(tool==='line') live=snapPoint(p.x,p.y,drawFrom());
@@ -1195,7 +1222,7 @@ function endPtr(e,cancel){
       else toast((Wt.key==='refL'?'Левый':'Правый')+' размер привязан к выбранной точке. Касание кружка — вернуть авто.');
       persist(); }
     panelKey=''; syncPanel(); redraw(); return; }
-  if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.grp&&editGrp===pr.sd.grp) editGrp=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.label&&!pr.moved){ openInline(pr.label); return; }
   if(pr.labelArm){ return; }
   if(pr.lp) clearTimeout(pr.lp);
@@ -1265,7 +1292,7 @@ function closeInline(apply){
   if(!apply) {redraw();return;}
   if(h.kind==='td'){ const L=parseNum(ied.value); if(!(L>=0)||Math.abs(L-h.val)<0.05){redraw();return;}
     const d=L-h.val, v={'+x':[-d,0],'-x':[d,0],'+y':[0,-d],'-y':[0,d]}[h.dir]; pushUndo();
-    const R=buildRefs(attachOn,selIds()); applyRefs(R,r3(v[0]),r3(v[1]));
+    const R=buildRefs(true,selIds()); applyRefs(R,r3(v[0]),r3(v[1]));
     const moved=R.some(r=>selIds().has(r.it.id)&&!near(r.it[r.k],r.o,0.05));
     persist(); panelKey=''; syncPanel(); redraw(); toast(moved?'Расстояние: '+fmt(L)+' мм':'В эту сторону стена держится соседними стенами. Включите «Отдельно» или тяните узел'); return; }
   const it0=doc.items.find(i=>i.id===h.id);
@@ -1286,7 +1313,7 @@ function closeInline(apply){
     else { const u=unit(it.a,it.b); nb={x:r3(it.a.x+u.x*L),y:r3(it.a.y+u.y*L)}; }
     const dx=nb.x-ob.x, dy=nb.y-ob.y, side=it.rb?'b':it.ra?'a':null;
     if(side){ const W=doc.items.find(i=>i.id===it['r'+side].id), sg=side==='b'?1:-1;
-      const R=buildRefs(attachOn,new Set([W.id])); applyRefs(R,r3(dx*sg),r3(dy*sg)); syncDims();
+      const R=buildRefs(true,new Set([W.id])); applyRefs(R,r3(dx*sg),r3(dy*sg)); syncDims();
       const got=dimGeom(it).len; if(Math.abs(got-L)>0.5){ persist(); panelKey=''; syncPanel(); redraw(); toast('Стена держится соседними: размер '+fmt(got)+'. Включите «Отдельно» или тяните узел'); return; } }
     else moveCoincident(ob,nb,null); }
   persist(); panelKey=''; syncPanel(); redraw(); toast('Длина: '+fmt(L)+' мм');
@@ -1350,23 +1377,25 @@ function buildRefs(attach,SEL){ SEL=SEL||moveSel;
         // угол: чужая стена только удлиняется по своей оси, без перекоса; продолжение по прямой — едет целиком
         const ux=it.t==='line'?unit(it.a,it.b):null, uw=unit(q.W.a,q.W.b);
         if(!ux||it.g||q.g||Math.abs(ux.x*uw.y-ux.y*uw.x)<0.05) add(it,k,{full:true});
-        else { add(it,k,{par:ux}); const r=seen.get(q.W.id+q.k); if(r&&!r.par) r.par=ux; } } }
+        else { const nW=lft(uw); add(it,k,{par:ux,n:nW}); const r=seen.get(q.W.id+q.k); if(r&&!r.par){ r.par=ux; r.n=nW; } } } }
     // стыки «в грань» и Т-образные: конец чужой стены на теле перемещаемой
     for(const X of doc.items){ if(SEL.has(X.id)||X.t!=='line'||X.g) continue;
       for(const k of ['a','b']){ if(seen.has(X.id+k)||nj(X,k)) continue;
         for(const W of movL){ const ob=onBody(X[k],W); if(!ob||(ob.end&&nj(W,ob.end))) continue;
-          if(ob.end) add(X,k,{par:unit(X.a,X.b)}); else add(X,k,{perp:ob.u}); break; } } }
+          add(X,k,{par:unit(X.a,X.b),n:lft(ob.u)}); break; } } }
     // конец перемещаемой стены на теле неподвижной: скользит вдоль неё, а у её конца — тянет её за собой
     for(const W of movL) for(const k of ['a','b']){ if(nj(W,k)) continue;
       for(const Y of doc.items){ if(SEL.has(Y.id)||Y.t!=='line'||Y.g||near(Y.a,W[k])||near(Y.b,W[k])) continue; const ob=onBody(W[k],Y); if(!ob||(ob.end&&nj(Y,ob.end))) continue;
-        const r=seen.get(W.id+k); if(r&&!r.par) r.par=ob.u;
-        if(ob.end&&!seen.has(Y.id+ob.end)) add(Y,ob.end,{par:ob.u});
+        const nW=lft(unit(W.a,W.b)), r=seen.get(W.id+k); if(r&&!r.par){ r.par=ob.u; r.n=nW; }
+        if(ob.end&&!seen.has(Y.id+ob.end)) add(Y,ob.end,{par:ob.u,n:nW});
         break; } }
   }
   return refs;
 }
 function applyRefs(refs,dx,dy){ for(const r of refs){ let ex=dx,ey=dy;
-    if(r.par){ const k=dx*r.par.x+dy*r.par.y; ex=k*r.par.x; ey=k*r.par.y; }
+    // конец скользит по оси (своей или соседней) и встаёт точно в пересечение с новым положением стены
+    if(r.par&&r.n&&Math.abs(r.par.x*r.n.x+r.par.y*r.n.y)>0.1){ const t=(dx*r.n.x+dy*r.n.y)/(r.par.x*r.n.x+r.par.y*r.n.y); ex=t*r.par.x; ey=t*r.par.y; }
+    else if(r.par){ const k=dx*r.par.x+dy*r.par.y; ex=k*r.par.x; ey=k*r.par.y; }
     else if(r.perp){ const k=dx*r.perp.x+dy*r.perp.y; ex=dx-k*r.perp.x; ey=dy-k*r.perp.y; }
     r.it[r.k]={x:r3(r.o.x+ex),y:r3(r.o.y+ey)}; } }
 // точки-«щупы» перемещаемых объектов: вершины, середины граней, центры
@@ -1424,7 +1453,7 @@ function startObjDrag(ids,p,attach){ const items=doc.items.filter(i=>ids.has(i.i
   snapMark=g?{p:g,k:'end'}:null;
   return {ids,items,start:w,grab:g,attach,started:false}; }
 function stepObjDrag(D,p){
-  if(!D.started){ D.started=true; pushUndo(); for(const it of doc.items) if(D.ids.has(it.id)&&it.t==='dim'){ delete it.ra; delete it.rb; } D.refs=buildRefs(D.attach,D.ids); }
+  if(!D.started){ D.started=true; pushUndo(); if(D.grp){ editGrp=D.grp; selId=[...D.ids][0]; } for(const it of doc.items) if(D.ids.has(it.id)&&it.t==='dim'){ delete it.ra; delete it.rb; } D.refs=buildRefs(D.attach,D.ids); }
   const w=toW(p.x,p.y); let dx=w.x-D.start.x, dy=w.y-D.start.y; ({dx,dy}=constrain(dx,dy));
   if(D.grab){ dx=D.grab.x+dx; dy=D.grab.y+dy; const gr=doc.settings.grid; if(snapOn){dx=Math.round(dx/gr)*gr; dy=Math.round(dy/gr)*gr;} dx-=D.grab.x; dy-=D.grab.y; ({dx,dy}=constrain(dx,dy)); }
   else { const gr=doc.settings.grid; if(snapOn){dx=Math.round(dx/gr)*gr; dy=Math.round(dy/gr)*gr;} }
@@ -1525,7 +1554,7 @@ function moveBy(ang){
   const S=selIds(); if(!S.size){toast('Сначала выберите объекты');return;}
   if(!(L>0)){toast('Введите расстояние в мм');inp.focus();return;}
   const r=ang*Math.PI/180; pushUndo(); const dms=doc.items.filter(i=>S.has(i.id)&&i.t==='dim'); for(const d of dms){ delete d.ra; delete d.rb; }
-  applyRefs(buildRefs(attachOn,S),r3(Math.cos(r)*L),r3(Math.sin(r)*L)); for(const d of dms) attachDim(d);
+  applyRefs(buildRefs(true,S),r3(Math.cos(r)*L),r3(Math.sin(r)*L)); for(const d of dms) attachDim(d);
   persist(); redraw(); toast('Сдвинуто на '+fmt(L)+' мм');
 }
 function syncMoveInfo(){ const e=$('#mvInfo'); if(e) e.textContent=moveSel.size?('Выбрано: '+moveSel.size):'Ничего не выбрано'; updateHud(); }
@@ -1864,12 +1893,12 @@ function syncPanel(){
       <div class="fld"><label for="hH">Высота, мм</label><input class="inp sm" id="hH" inputmode="decimal" value="${d.h}"></div>
       <div class="fld"><label for="hS">${holeType==='win'?'Подоконник':'Низ'}, мм</label><input class="inp sm" id="hS" inputmode="decimal" value="${d.sill}"></div>
 `;
-  } else if(tool==='select'&&sel){
+  } else if(tool==='select'&&sel&&!selJoint){
     if(sel.g&&editGrp!==sel.g){ const n=doc.items.filter(i=>i.g===sel.g).length;
       h=`<div class="title">Фигура <b>${n} ${n%10===1&&n!==11?'грань':(n%10>=2&&n%10<=4&&(n<10||n>20)?'грани':'граней')}</b></div>
-        <button class="btn" data-act="grpEdit">Править вершины</button><button class="btn" data-act="copyObj">Копировать</button><button class="btn" data-act="ungrp">Разбить</button>
+        <button class="btn" data-act="copyObj">Копировать</button><button class="btn" data-act="ungrp">Разбить</button>
         <span class="sp"></span><button class="btn danger" data-act="del">Удалить</button>
-        <p class="hint">Тяните фигуру пальцем: она прилипает вершиной или серединой грани, за которую взяли. Синие цифры — расстояния до стен, коснитесь и введите. Двойное касание — правка вершин и граней.</p>`;
+        <p class="hint">Тяните грань — двигается только она, тяните вершину — угол. Всю фигуру целиком двигает «Сдвиг». Синие цифры — расстояния до стен, коснитесь и введите.</p>`;
     } else if(sel.t==='line'){
       const len=lineLen(sel), AG=isArc(sel)?arcG(sel):null;
       let ang=Math.atan2(sel.b.y-sel.a.y,sel.b.x-sel.a.x)*180/Math.PI; if(ang<0) ang+=360;
@@ -2102,8 +2131,8 @@ function placeAxPick(){
 function syncLabelsBtn(){ const b=$('#tgLabels'); if(b) b.setAttribute('aria-pressed',String(!!doc.settings.wallLabels)); }
 $('#tgLabels').addEventListener('click',()=>{ doc.settings.wallLabels=!doc.settings.wallLabels; persist(); syncLabelsBtn(); redraw();
   toast(doc.settings.wallLabels?'Цифры длин показаны':'Цифры длин скрыты. У выделенного объекта цифра видна всегда'); });
-function setAttach(v){attachOn=v; const t=$('#tgAttach'); t.setAttribute('aria-pressed',String(v)); $('#atLbl').textContent=v?'Примык.':'Отдельно';}
-$('#tgAttach').addEventListener('click',()=>{setAttach(!attachOn); redraw(); toast(attachOn?'Примыкание: соседние стены тянутся следом':'Отдельно: двигается только выбранная стена или её конец');});
+function setAttach(v){attachOn=v; const t=$('#tgAttach'); t.setAttribute('aria-pressed',String(v)); $('#atLbl').textContent='Примык.';}
+$('#tgAttach').addEventListener('click',()=>{setAttach(!attachOn); redraw(); toast(attachOn?'Кнопки соединить/отсоединить на концах показаны':'Кнопки соединить/отсоединить скрыты'); });
 function setOsnap(v){ osnapOn=v; $('#tgOsnap').setAttribute('aria-pressed',String(v)); $('#osLbl').textContent=v?'Магнит':'Без магн.'; try{localStorage.setItem('zamer-osnap',v?'1':'0');}catch(e){} }
 setOsnap(osnapOn);
 $('#tgOsnap').addEventListener('click',()=>{ setOsnap(!osnapOn); toast(osnapOn?'Магнит включён: вершины, середины граней, линии и окружности':'Магнит выключен: только орто и шаг сетки'); });
