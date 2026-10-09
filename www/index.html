@@ -863,6 +863,7 @@ function snapBuzz(){ const k=liveSnap||null; if(k&&k!==lastSnapK&&press&&!press.
 const LW=[0.13,0.18,0.25,0.35,0.5,0.7,1.0], LT={solid:'Сплошная',dash:'Штриховая',dot:'Точечная',dashdot:'Штрихпунктир'};
 const lwPx=(it,def)=>it.lw?1+it.lw*3.5:def;
 function ltDash(it){ const k=Math.max(1,lwPx(it,1.5)/1.5); return it.lt==='dash'?[10*k,6*k]:it.lt==='dot'?[1.5*k,4*k]:it.lt==='dashdot'?[12*k,4*k,2*k,4*k]:[]; }
+cv.addEventListener('pointerdown',()=>{ const ae=document.activeElement; if(ae&&panel.contains(ae)&&ae.matches('input,select')) ae.blur(); },{capture:true});
 let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
@@ -1829,6 +1830,7 @@ function importImage(file){ if(!file) return; const fr=new FileReader();
 function cloneItems(ids){ const idm={}, gm={}, out=new Set(), src=doc.items.filter(i=>ids.has(i.id)&&!isHole(i));
   for(const it of src){ const c=JSON.parse(JSON.stringify(it)); c.id=uid(); idm[it.id]=c.id; if(c.g) c.g=gm[c.g]||(gm[c.g]=uid()); delete c.tref; delete c.tface; doc.items.push(c); out.add(c.id); }
   for(const h of doc.items.filter(i=>isHole(i)&&idm[i.wall])){ const c=JSON.parse(JSON.stringify(h)); c.id=uid(); c.wall=idm[h.wall]; delete c.refL; delete c.refR; doc.items.push(c); }
+  for(const c of doc.items) if(out.has(c.id)&&c.t==='grid'){ c.lab=gridNextLab(c.lab); delete c.gs; }
   for(const c of doc.items) if(out.has(c.id)&&c.t==='dim') for(const k of ['ra','rb']) if(c[k]){ if(idm[c[k].id]) c[k]={...c[k],id:idm[c[k].id]}; else delete c[k]; }
   return out; }
 function copyObj(){
@@ -1842,6 +1844,12 @@ function copyObj(){
     pushUndo(); const c=JSON.parse(JSON.stringify(sel)); c.id=uid(); c.pos=r3(np); doc.items.push(c); selId=c.id; persist(); panelKey=''; syncPanel(); redraw();
     toast('Копия '+(sel.t==='win'?'окна':'двери')+' поставлена рядом. Тяните её или введите расстояния. Для другой стены: «Вставка» и касание стены — размеры те же.'); return; }
   const S=selIds(), items=doc.items.filter(i=>S.has(i.id)); if(!items.length) return;
+  if(items.length===1&&items[0].t==='grid'){ const A=items[0], u=unit(A.a,A.b); let n=lft(u); if(n.x+n.y<0) n={x:-n.x,y:-n.y};
+    const par=doc.items.filter(o=>o!==A&&o.t==='grid'&&Math.abs(unit(o.a,o.b).x*u.y-unit(o.a,o.b).y*u.x)<1e-3).map(o=>(o.a.x-A.a.x)*n.x+(o.a.y-A.a.y)*n.y);
+    const behind=par.filter(d=>d<-1).sort((x,y)=>y-x)[0], ahead=par.filter(d=>d>1).sort((x,y)=>x-y)[0];
+    let step=behind!=null?-behind:3000; if(ahead!=null&&ahead<=step) step=ahead/2;
+    pushUndo(); const c=JSON.parse(JSON.stringify(A)); c.id=uid(); delete c.gs; for(const k of ['a','b']) c[k]={x:r3(A[k].x+n.x*step),y:r3(A[k].y+n.y*step)}; c.lab=gridNextLab(A.lab);
+    doc.items.push(c); selId=c.id; persist(); panelKey=''; syncPanel(); redraw(); toast('Ось '+c.lab+' через '+fmt(step)+' мм'); return; }
   const pr=probesOf(items,(it,k)=>it[k]); let x0=Infinity,x1=-Infinity; for(const q of pr){x0=Math.min(x0,q.x);x1=Math.max(x1,q.x);}
   if(items.some(i=>i.t==='text')) x1=Math.max(x1,x0+1000);
   const gr=doc.settings.grid||10, dx=Math.ceil(((x1-x0)+300)/gr)*gr; pushUndo();
@@ -1961,6 +1969,7 @@ function axLabel(start,i){ start=String(start||'').trim()||'1';
   return start+(i?'.'+i:''); }
 const gridDef=()=>Object.assign({nV:4,nH:3,sV:6000,sH:6000,labV:'А',labH:'1',ext:1500},doc.settings.grid2||{});
 let gridGhost=null;
+function gridNextLab(lab){ const used=new Set(doc.items.filter(i=>i.t==='grid').map(i=>i.lab)); for(let i=1;i<400;i++){ const L=axLabel(lab,i); if(!used.has(L)) return L; } return lab+'*'; }
 function gridSet(O){ const d=gridDef(), out=[], g=uid(), Lx=(d.nV-1)*d.sV, Ly=(d.nH-1)*d.sH, e=d.ext;
   for(let i=0;i<d.nV;i++){ const x=O.x+i*d.sV; out.push({id:uid(),t:'grid',a:{x:r3(x),y:r3(O.y-e)},b:{x:r3(x),y:r3(O.y+Ly+e)},lab:axLabel(d.labV,i),gs:g}); }
   for(let j=0;j<d.nH;j++){ const y=O.y+j*d.sH; out.push({id:uid(),t:'grid',a:{x:r3(O.x-e),y:r3(y)},b:{x:r3(O.x+Lx+e),y:r3(y)},lab:axLabel(d.labH,j),gs:g}); }
@@ -2334,7 +2343,8 @@ function placePanel(){ /* панель свойств закреплена на�
 function syncPanel(){
   const sel=doc.items.find(i=>i.id===selId);
   const key=tool+'|'+selMode+'|'+(rotC?1:0)+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'');
-  if(key===panelKey) return; if(styleEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')) styleEnd(true); panelKey=key;
+  if(key===panelKey) return; if(barEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')){ barEdit=null; setTimeout(syncModeBtns,0); }
+  if(styleEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')) styleEnd(true); panelKey=key;
   let h='';
   const kindSeg=`<div class="seg" role="group" aria-label="Вид линии"><button data-dkind="line" aria-pressed="${lineKind==='line'}">Прямая</button><button data-dkind="rect" aria-pressed="${lineKind==='rect'}">Прямоуг.</button><button data-dkind="circ" aria-pressed="${lineKind==='circ'}">Круг</button><button data-dkind="poly" aria-pressed="${lineKind==='poly'}">Многоуг.</button><button data-dkind="aux" aria-pressed="${lineKind==='aux'}">Конструкц.</button></div>`;
   if(tool==='line'||tool==='rect'){ h=''; }
@@ -2768,16 +2778,19 @@ $('#docNum').addEventListener('input',e=>{doc.num=e.target.value;persist();});
 function syncTop(){ $('#btnUndo').disabled=!undoS.length; $('#btnRedo').disabled=!redoS.length; }
 // ✓ и ✕ видны в режимах рисования и вставки
 // правка цвета/штриховки: ✓ — применить, ✕ — вернуть как было до начала правки
-let styleEdit=null;
+let styleEdit=null, barEdit=null;
+panel.addEventListener('focusin',e=>{ if(e.target.matches('input,select')&&!barEdit){ barEdit={snap:JSON.stringify(doc.items),und:undoS.length}; syncModeBtns(); } });
 function styleBegin(){ if(styleEdit) return; const S=selIds(), snap={}; for(const it of doc.items) if(S.has(it.id)) snap[it.id]={lc:it.lc,fc:it.fc,hp:it.hp,lt:it.lt,lw:it.lw}; pushUndo(); styleEdit={snap}; syncModeBtns(); }
 function styleSet(key,val){ styleBegin(); const S=selIds(); for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line') continue; if((key==='fc'||key==='hp')&&!isWall(it)) continue; if((key==='hp'&&val==='none')||(key==='lt'&&val==='solid')||(key==='lw'&&!val)) delete it[key]; else it[key]=key==='lw'?+val:val; } redraw(); }
 function styleEnd(apply){ if(!styleEdit) return; const E=styleEdit; styleEdit=null;
   if(!apply) for(const it of doc.items){ const o=E.snap[it.id]; if(!o) continue; for(const k of ['lc','fc','hp','lt','lw']){ if(o[k]===undefined) delete it[k]; else it[k]=o[k]; } }
   persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Применено':'Отменено'); }
-function syncModeBtns(){ const on=tool!=='select'||!!styleEdit; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
+function syncModeBtns(){ const on=tool!=='select'||!!styleEdit||!!barEdit; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
 syncModeBtns();
-$('#btnOk').addEventListener('click',()=>{ if(styleEdit){ styleEnd(true); return; } if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
-$('#btnCancel').addEventListener('click',()=>{ if(styleEdit){ styleEnd(false); return; }
+$('#btnOk').addEventListener('click',()=>{ if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)) ae.blur(); const had=!!barEdit; barEdit=null; if(styleEdit) styleEnd(true); else { syncModeBtns(); if(had) toast('Сохранено'); } return; } if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
+$('#btnCancel').addEventListener('click',()=>{ if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)){ if('defaultValue' in ae) ae.value=ae.defaultValue; ae.blur(); }
+    if(barEdit){ doc.items=JSON.parse(barEdit.snap); if(undoS.length>barEdit.und) undoS.length=barEdit.und; } barEdit=null;
+    if(styleEdit) styleEnd(false); else { persist(); panelKey=''; syncPanel(); redraw(); syncModeBtns(); toast('Отменено'); } return; }
   if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
   chain.pts=[]; chain.ids=[]; live=null; arcB=null; dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); redraw(); });
 /* ---------- перетаскиваемые окошки ---------- */
@@ -2871,7 +2884,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER='4.0.1'; // версия: 4.0.1, затем 4.0.2, 4.0.3… — меняется при каждом выпуске APK
+const APP_VER='4.0.2'; // версия: 4.0.1, затем 4.0.2, 4.0.3… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
