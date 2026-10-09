@@ -1,0 +1,9 @@
+{
+  "appId": "com.easycad.cad3d",
+  "appName": "EasyCAD 3D",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  }
+}

@@ -1,14 +1,17 @@
-name: Сборка APK
+name: Сборка APK EasyCAD 3D
 on:
   push:
     branches: [main]
-    paths-ignore: ['app3d/**', '.github/workflows/android3d.yml']
+    paths: ['app3d/**', '.github/workflows/android3d.yml']
   workflow_dispatch: {}
 permissions:
   contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app3d
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,7 +35,7 @@ jobs:
             done
           done
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p ~/.android && cp keystore/debug.keystore ~/.android/debug.keystore
+          mkdir -p ~/.android && cp ../keystore/debug.keystore ~/.android/debug.keystore
       - name: Номер версии
         run: |
           V=$(tr -d ' \r\n' < VERSION)
@@ -48,14 +51,15 @@ jobs:
             -Pandroid.injected.signing.store.password=zamer2026 \
             -Pandroid.injected.signing.key.alias=zamer \
             -Pandroid.injected.signing.key.password=zamer2026
-          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD.apk
+          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD-3D.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: EasyCAD-apk
-          path: EasyCAD.apk
+          name: EasyCAD-3D-apk
+          path: app3d/EasyCAD-3D.apk
       - name: Выпуск для скачивания
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.APP_VER }}
-          name: EasyCAD ${{ env.APP_VER }}
-          files: EasyCAD.apk
+          tag_name: v3d-${{ env.APP_VER }}
+          name: EasyCAD 3D ${{ env.APP_VER }}
+          files: app3d/EasyCAD-3D.apk
+          make_latest: false
