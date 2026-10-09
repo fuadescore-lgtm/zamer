@@ -840,7 +840,18 @@ function resize(){
   const r=stage.getBoundingClientRect(); DPR=window.devicePixelRatio||1; W=r.width; H=r.height;
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); redraw();
 }
-let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();}); }
+// лупа: увеличенный участок под пальцем — палец не закрывает точку
+function drawLoupe(){ if(!press||press.mouse) return; let P=null;
+  if(press.joint&&press.joint.started&&selJoint) P=selJoint; else if(tool==='line'&&live&&!isShape()) P=live; else if(press.dimEnd&&press.dimEnd.started) P=press.dimEnd.it[press.dimEnd.k]; else if(press.stair&&stairLive) P=stairLive;
+  if(!P) return; const c=toS(P), R0=62, Z=2.6; let lx=c.x>W*0.5?c.x-125:c.x+125, ly=c.y-95; if(ly<R0+60) ly=c.y+95; lx=Math.max(R0+6,Math.min(W-R0-70,lx)); ly=Math.min(H-R0-6,ly);
+  ctx.save(); ctx.beginPath(); ctx.arc(lx,ly,R0,0,Math.PI*2); ctx.closePath(); ctx.fillStyle=C.paper; ctx.fill(); ctx.clip();
+  const sr=R0/Z; try{ ctx.drawImage(cv,(c.x-sr)*DPR,(c.y-sr)*DPR,2*sr*DPR,2*sr*DPR,lx-R0,ly-R0,2*R0,2*R0); }catch(e){}
+  ctx.strokeStyle=C.dim; ctx.lineWidth=1.2; line({x:lx-R0,y:ly},{x:lx-6,y:ly}); line({x:lx+6,y:ly},{x:lx+R0,y:ly}); line({x:lx,y:ly-R0},{x:lx,y:ly-6}); line({x:lx,y:ly+6},{x:lx,y:ly+R0});
+  ctx.restore(); ctx.save(); ctx.beginPath(); ctx.arc(lx,ly,R0,0,Math.PI*2); ctx.strokeStyle=C.tape; ctx.lineWidth=3; ctx.stroke(); ctx.restore(); }
+// лёгкая вибрация, когда точка прилипла к чему-то новому
+let lastSnapK=null;
+function snapBuzz(){ const k=liveSnap||null; if(k&&k!==lastSnapK&&press&&!press.mouse){ try{navigator.vibrate&&navigator.vibrate(8);}catch(e){} } lastSnapK=k; }
+let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
 const FNUM='"IBM Plex Mono", ui-monospace, monospace';
@@ -1051,7 +1062,7 @@ function drawJoinIcons(){
     for(const k of ['a','b']){ const off=nj(it,k)||!endLinked(it,k);
       const P=it[k], Q=it[k==='a'?'b':'a'], d=unit(P,Q), n=lft(unit(it.a,it.b)), o=isWall(it)?offs(it):{L:0,R:0};
       // значок сбоку от конца, снаружи грани (снизу/справа, чтобы не прятался под панелью X/Y/XY)
-      const sd=(n.y<-1e-6||(Math.abs(n.y)<=1e-6&&n.x>0))?1:-1, w={x:P.x+d.x*Math.min(Math.max(o.L,o.R)+16/view.scale,lineLen(it)*.3)+n.x*sd*((sd>0?o.L:o.R)+20/view.scale),y:P.y+d.y*Math.min(Math.max(o.L,o.R)+16/view.scale,lineLen(it)*.3)+n.y*sd*((sd>0?o.L:o.R)+20/view.scale)}, c=toS(w);
+      const sd=(n.y<-1e-6||(Math.abs(n.y)<=1e-6&&n.x>0))?1:-1, w={x:P.x+d.x*Math.min(Math.max(o.L,o.R)+40/view.scale,lineLen(it)*.4)+n.x*sd*((sd>0?o.L:o.R)+26/view.scale),y:P.y+d.y*Math.min(Math.max(o.L,o.R)+40/view.scale,lineLen(it)*.4)+n.y*sd*((sd>0?o.L:o.R)+26/view.scale)}, c=toS(w);
       joinHits.push({id:it.id,k,x:c.x,y:c.y});
       ctx.save(); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(c.x,c.y,11,0,Math.PI*2);
       ctx.fillStyle=off?C.surface:C.sel; ctx.fill(); ctx.strokeStyle=off?C.dim:C.sel; ctx.stroke();
@@ -1112,7 +1123,7 @@ function render(){ queueMicrotask(placePanel);
     for(const [A,B] of polarGuide){ const a=toS(A), b=toS(B), d=Math.hypot(b.x-a.x,b.y-a.y)||1, k=Math.max(1,(Math.max(W,H))/d); line(a,{x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k}); }
     ctx.restore(); ctx.setLineDash([]); }
   if(tool==='select'){
-    const big=!!(editLine||editGrp); for(const j of joints()){const s=toS(j);ctx.beginPath();ctx.arc(s.x,s.y,big?9:6,0,Math.PI*2);ctx.fillStyle=big?C.tape:C.surface;ctx.fill();ctx.strokeStyle=big?C.ink:C.sel;ctx.lineWidth=big?2:1.6;ctx.stroke();}
+    const big=!!(editLine||editGrp); for(const j of joints()){const s=toS(j);ctx.beginPath();ctx.arc(s.x,s.y,9,0,Math.PI*2);ctx.fillStyle=C.tape;ctx.fill();ctx.strokeStyle=C.ink;ctx.lineWidth=2.2;ctx.stroke();ctx.beginPath();ctx.arc(s.x,s.y,2.2,0,Math.PI*2);ctx.fillStyle=C.ink;ctx.fill();}
     if(selJoint){
       if(alignGuide&&jointDrag){ctx.strokeStyle=C.tape;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);line(toS(alignGuide.from),toS(alignGuide.to));ctx.setLineDash([]);}
       const s=toS(selJoint);ctx.beginPath();ctx.arc(s.x,s.y,9,0,Math.PI*2);ctx.fillStyle=C.tape;ctx.fill();ctx.strokeStyle=C.sel;ctx.lineWidth=2.5;ctx.stroke();
@@ -1248,7 +1259,10 @@ cv.addEventListener('pointerdown',e=>{
   if(tool==='select'&&selMode==='copy'){ const h=hit(p.x,p.y);
     if(h&&!isHole(h)){ if(!selIds().has(h.id)){ selId=h.id; moveSel.clear(); selJoint=null; } press.pan=false; press.sd=startObjDrag(selIds(),p,false); press.sd.copy=true; panelKey=''; syncPanel(); redraw(); return; }
     press.pan=true; return; }
-  if(tool==='select'||tool==='hole'){
+  // вершина под пальцем важнее значков, цифр и ручек рядом с ней (работа в перчатках, в темноте, на крыше)
+  const JR=press.mouse?14:32; let jv=null; if(tool==='select'){ let bd=JR; for(const j of joints()){ const s2=toS(j), d=Math.hypot(s2.x-p.x,s2.y-p.y); if(d<bd){bd=d;jv={j,d};} } }
+  if(jv){ let ic=null; for(const h of joinHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<10&&d<jv.d){ ic=h; } } if(!ic) press.forceJoint=jv.j; }
+  if((tool==='select'||tool==='hole')&&!press.forceJoint){
     let wb=null,wd=22; for(const w of witHits){ const d=Math.hypot(w.x-p.x,w.y-p.y); if(d<wd){wd=d;wb=w;} }
     if(wb&&wb.kind==='ld'){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.ldDrag={it,started:false}; return; } }
     if(wb){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.wit={it,kind:wb.kind,key:wb.kind==='hl'?'refL':'refR',started:false}; return; } }
@@ -1267,7 +1281,7 @@ cv.addEventListener('pointerdown',e=>{
     if(tool==='select'&&!hitJoint(p.x,p.y,press.mouse?14:24)){ let tb=null,td=20; for(const t of tdHits){ const d=Math.hypot(t.x-p.x,t.y-p.y)+(t.kind==='near'?8:0); if(d<td){td=d;tb=t;} }
       if(tb){ press.pan=false; press.tdh={...tb,started:false}; return; } } }
   if(tool==='select'){
-    let lh=hitLabel(p.x,p.y); const h0=hit(p.x,p.y);
+    let lh=press.forceJoint?null:hitLabel(p.x,p.y); const h0=hit(p.x,p.y);
     // окно, дверь или дымоход под пальцем важнее чужой подписи длины
     if(lh&&h0&&(isHole(h0)||h0.t==='chim')&&lh.id!==h0.id) lh=null;
     if(lh&&(lh.kind==='td'||lh.one||((lh.kind==='hl'||lh.kind==='hr')&&lh.id===selId))){ press.label=lh; press.pan=false; if(lh.one){ const hh=hit(p.x,p.y), ids=selIds(); if(hh&&ids.has(hh.id)) press.sd=startObjDrag(ids,p,true); } return; }
@@ -1277,24 +1291,15 @@ cv.addEventListener('pointerdown',e=>{
       if(armLabel(lh)){ press.label=lh; press.pan=false; if(dr) press.sd=startObjDrag(ids,p,true); }
       else if(dr){ press.pan=false; press.sd=startObjDrag(ids,p,true); }
       else { press.labelArm=true; press.prev={id:selId,ms:new Set(moveSel)}; selectByLabel(lh); } return; }
-    const j=hitJoint(p.x,p.y,editLine||editGrp?30:(press.mouse?14:22));
-    if(j){ let refs=[]; const ex=new Set(), S=selIds();
-      for(const it of doc.items){ if(it.t!=='line'&&it.t!=='dim') continue;
-        for(const k of ['a','b']) if(near(it[k],j)) refs.push([it,k]); }
-      // своя вершина (у выделенного) едет всегда; соседние концы — только если оба «соединены»
-      const own=refs.filter(([it])=>S.has(it.id)&&it.t==='line');
-      if(own.length){ const freeOwn=own.some(([it,k])=>nj(it,k));
-        refs=refs.filter(([it,k])=>(S.has(it.id)&&it.t==='line')||(!freeOwn&&!nj(it,k))); }
-      for(const [it] of refs) ex.add(it.id);
-      // Т-примыкания: концы чужих стен на теле двигаемых стен скользят по своей оси
-      const tj=[]; for(const [W] of refs){ if(W.t!=='line'||isArc(W)) continue;
-        for(const X of doc.items){ if(X.t!=='line'||ex.has(X.id)||isArc(X)) continue;
-          for(const k of ['a','b']){ if(nj(X,k)) continue; const ob=onBody(X[k],W); if(!ob||ob.end) continue; tj.push({X,k,W,s:ob.s,o:{...X[k]}}); } } }
-      for(const T of tj) ex.add(T.X.id);
-      const js=toS(j); press.pan=false; press.joint={refs,ex,tj,orig:{x:j.x,y:j.y},dx:js.x-p.x,dy:js.y-p.y,started:false};
-      selJoint={x:j.x,y:j.y}; if(!own.length){ selId=null; moveSel.clear(); } panelKey=''; syncPanel(); redraw(); return; }
+    const j=press.forceJoint||hitJoint(p.x,p.y,editLine||editGrp?30:(press.mouse?14:22));
+    if(j) grabJoint(j,p); if(j) return;
+
   }
   if(tool==='hole'){ const lh=hitLabel(p.x,p.y); if(lh&&(lh.kind==='hl'||lh.kind==='hr')){ press.label=lh; press.pan=false; return; } }
+  if(tool==='select'&&selMode==='pick'&&!press.mouse){ let bq=null,bd=36; for(const it of doc.items){ if(it.t!=='line') continue; for(const k of ['a','b']){ const s2=toS(it[k]), d=Math.hypot(s2.x-p.x,s2.y-p.y); if(d<bd){bd=d;bq={j:{x:it[k].x,y:it[k].y},it};} } }
+    if(bq){ press.lpJoint=setTimeout(()=>{ if(!press||press.moved||press.joint||press.sd) return; if(press.lpSel){ clearTimeout(press.lpSel); press.lpSel=null; }
+        if(!selIds().has(bq.it.id)){ selId=bq.it.id; moveSel.clear(); } try{navigator.vibrate&&navigator.vibrate(25);}catch(e){}
+        const P0={x:press.lx,y:press.ly}; grabJoint(bq.j,P0); press.moved=false; toast('Вершина захвачена — тяните'); },300); } }
   if(tool==='select'||tool==='hole'){
     const hc=hit(p.x,p.y);
     if(hc&&hc.t==='chim'&&tool==='select'&&moveSel.size&&selIds().has(hc.id)){ press.pan=false; armLongPress(hc); press.sd=startObjDrag(selIds(),p,true); redraw(); return; }
@@ -1427,7 +1432,7 @@ function endPtr(e,cancel){
   if(gesture&&ptrs.size<2) gesture=null;
   if(ptrs.size===0) blockUntilUp=false;
   if(!press||press.id!==e.pointerId) return;
-  const pr=press; press=null; if(pr.lpSel){ clearTimeout(pr.lpSel); pr.lpSel=null; }
+  const pr=press; press=null; if(pr.lpSel){ clearTimeout(pr.lpSel); pr.lpSel=null; } if(pr.lpJoint) clearTimeout(pr.lpJoint);
   if(pr.joint){ jointDrag=null; if(pr.joint.started){persist();} liveSnap=null; alignGuide=null; panelKey=''; syncPanel();
     if(selJoint){ const sp=toS(selJoint), lim=H-(panel.hidden?0:panel.offsetHeight)-40; if(sp.y>lim) view.cy-=(sp.y-lim+20)/view.scale; }
     redraw(); return; }
@@ -1885,6 +1890,23 @@ function syncMoveInfo(){ const e=$('#mvInfo'); if(e) e.textContent=moveSel.size?
 function focusChim(){ panelKey=''; syncPanel(); const i=$('#pCW'); if(i){ i.focus(); i.select(); } }
 function holeDef(t){ const D={win:{w:1200,h:1400,sill:900},door:{w:900,h:2100,sill:0}};
   if(!doc.settings[t]) doc.settings[t]=D[t]; return doc.settings[t]; }
+// захват вершины: своя вершина едет всегда, соседи — если соединены; Т-примыкания скользят
+function grabJoint(j,p){
+    let refs=[]; const ex=new Set(), S=selIds();
+      for(const it of doc.items){ if(it.t!=='line'&&it.t!=='dim') continue;
+        for(const k of ['a','b']) if(near(it[k],j)) refs.push([it,k]); }
+      // своя вершина (у выделенного) едет всегда; соседние концы — только если оба «соединены»
+      const own=refs.filter(([it])=>S.has(it.id)&&it.t==='line');
+      if(own.length){ const freeOwn=own.some(([it,k])=>nj(it,k));
+        refs=refs.filter(([it,k])=>(S.has(it.id)&&it.t==='line')||(!freeOwn&&!nj(it,k))); }
+      for(const [it] of refs) ex.add(it.id);
+      // Т-примыкания: концы чужих стен на теле двигаемых стен скользят по своей оси
+      const tj=[]; for(const [W] of refs){ if(W.t!=='line'||isArc(W)) continue;
+        for(const X of doc.items){ if(X.t!=='line'||ex.has(X.id)||isArc(X)) continue;
+          for(const k of ['a','b']){ if(nj(X,k)) continue; const ob=onBody(X[k],W); if(!ob||ob.end) continue; tj.push({X,k,W,s:ob.s,o:{...X[k]}}); } } }
+      for(const T of tj) ex.add(T.X.id);
+      const js=toS(j); press.pan=false; press.joint={refs,ex,tj,orig:{x:j.x,y:j.y},dx:js.x-p.x,dy:js.y-p.y,started:false};
+      selJoint={x:j.x,y:j.y}; if(!own.length){ selId=null; moveSel.clear(); } panelKey=''; syncPanel(); redraw(); }
 let holeGhost=null;
 /* ---------- текст с выноской: полка от текста, излом к указанной точке ---------- */
 let textMode='plain', ldPick=null;
