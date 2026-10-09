@@ -555,7 +555,7 @@ function arcTrim(A,ak,Y){ if(!isWall(Y)||isArc(Y)) return null; const G=arcG(A),
 function arcEnds(W){ const G=arcG(W), o=offs(W), r={};
   for(const k of ['a','b']){ const t=k==='a'?0:1, fL=arcAt(G,t,o.L), fR=arcAt(G,t,-o.R); let E=null;
     const nb=nj(W,k)?null:wallNeighbor(W,k);
-    if(nb&&!isArc(nb[0])){ const tr=arcTrim(W,k,nb[0]); if(tr){ r[k]={cap:true,tL:tr.t.L,tR:tr.t.R,fL:tr.p.L,fR:tr.p.R,L:tr.p.L,R:tr.p.R}; continue; } }
+    if(nb&&!isArc(nb[0])){ const tr=arcTrim(W,k,nb[0]); if(tr){ r[k]={cap:true,trim:true,tL:tr.t.L,tR:tr.t.R,fL:tr.p.L,fR:tr.p.R,L:tr.p.L,R:tr.p.R}; continue; } }
     try{ E=wallEnd(W,k); }catch(e){ E=null; }
     if(E&&!E.cap&&Math.hypot(E.L.x-fL.x,E.L.y-fL.y)<Math.max(W.w,1)*6&&Math.hypot(E.R.x-fR.x,E.R.y-fR.y)<Math.max(W.w,1)*6) r[k]={cap:false,tL:t,tR:t,fL,fR,L:E.L,R:E.R};
     else r[k]={cap:true,tL:t,tR:t,fL,fR,L:fL,R:fR}; }
@@ -619,6 +619,11 @@ function faceGaps(Y){ const g={L:[],R:[]};
     for(const k of ['a','b']){ if(endCount(X,k)!==0) continue; const tj=tJoinFind(X,k); if(!tj||tj.Y!==Y) continue;
       const t1=(tj.cL.x-Y.a.x)*tj.u.x+(tj.cL.y-Y.a.y)*tj.u.y, t2=(tj.cR.x-Y.a.x)*tj.u.x+(tj.cR.y-Y.a.y)*tj.u.y;
       g[tj.side].push([Math.min(t1,t2),Math.max(t1,t2)]); } }
+  // дуга, упёртая в грань этой стены: грань под ней не рисуем — стык выглядит одной стеной
+  if(!isArc(Y)) for(const A of doc.items){ if(A===Y||!isWall(A)||!isArc(A)) continue;
+    for(const k of ['a','b']){ if(nj(A,k)) continue; const nb=wallNeighbor(A,k); if(!nb||nb[0]!==Y) continue; const tr=arcTrim(A,k,Y); if(!tr) continue;
+      const u=unit(Y.a,Y.b), n=lft(u), M=arcAt(arcG(A),.5,0), side=((M.x-Y.a.x)*n.x+(M.y-Y.a.y)*n.y)>0?'L':'R';
+      const t1=(tr.p.L.x-Y.a.x)*u.x+(tr.p.L.y-Y.a.y)*u.y, t2=(tr.p.R.x-Y.a.x)*u.x+(tr.p.R.y-Y.a.y)*u.y; g[side].push([Math.min(t1,t2)+0.5,Math.max(t1,t2)-0.5]); } }
   if(!isArc(Y)) for(const X of doc.items){ if(X===Y||!isWall(X)||isArc(X)) continue;
     for(const k of ['a','b']){ const nd=nodeJoin(X,k); if(!nd||nd.thru||!nd.pair.includes(Y)) continue;
       const u=unit(Y.a,Y.b), n=lft(u), t1=(nd.cL.x-Y.a.x)*u.x+(nd.cL.y-Y.a.y)*u.y, t2=(nd.cR.x-Y.a.x)*u.x+(nd.cR.y-Y.a.y)*u.y;
@@ -852,7 +857,7 @@ function drawArcLine(it,sel){
   if(isWall(it)){ const o=offs(it), gp=faceGaps(it); ctx.strokeStyle=col; ctx.lineWidth=sel?2.4:1.6; ctx.setLineDash([]);
     const E=arcEnds(it);
     for(const [sd,k] of [['L',o.L],['R',-o.R]]){ const s0=E.a['t'+sd]*G.L, s1=E.b['t'+sd]*G.L; let cur=s0; const gs=gp[sd].slice().sort((x,y)=>x[0]-y[0]);
-      for(const [g0,g1] of gs){ if(g1<=cur) continue; if(g0>cur) path(k,cur/G.L,Math.min(g0,s1)/G.L); cur=Math.max(cur,g1); } if(cur<s1) path(k,cur/G.L,s1/G.L); } for(const k of ['a','b']){ const e=E[k]; if(e.cap) line(toS(e.fL),toS(e.fR)); else { line(toS(e.fL),toS(e.L)); line(toS(e.fR),toS(e.R)); } }
+      for(const [g0,g1] of gs){ if(g1<=cur) continue; if(g0>cur) path(k,cur/G.L,Math.min(g0,s1)/G.L); cur=Math.max(cur,g1); } if(cur<s1) path(k,cur/G.L,s1/G.L); } for(const k of ['a','b']){ const e=E[k]; if(e.trim) continue; if(e.cap) line(toS(e.fL),toS(e.fR)); else { line(toS(e.fL),toS(e.L)); line(toS(e.fR),toS(e.R)); } }
     if(sel||!(it.side)){ ctx.lineWidth=1; ctx.setLineDash([10,3,2,3]); ctx.strokeStyle=sel?C.sel:C.muted; path(0,0,1); ctx.setLineDash([]); }
   } else { ctx.strokeStyle=col; ctx.lineWidth=it.L==='walls'?2.6:1.5; if(it.L==='open') ctx.setLineDash([6,4]); path(0,0,1); ctx.setLineDash([]); }
   if((doc.settings.wallLabels||sel)&&G.L*view.scale>42){
@@ -1125,6 +1130,8 @@ function render(){ queueMicrotask(placePanel);
       if(press&&press.rot&&press.rot.started){ const R0=60, a0=press.rot.a0, a1=a0+press.rot.ang*Math.PI/180; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(c.x,c.y,R0,-a0,-a1,a1>a0); ctx.stroke();
         ctx.font='600 13px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; haloText(press.rot.ang+'°',c.x+Math.cos((a0+a1)/2)*(R0+18),c.y-Math.sin((a0+a1)/2)*(R0+18),C.sel); }
       ctx.restore(); } }
+  if(press&&press.box&&press.moved){ const A=press.box.a,B=press.box.b, cr=selMode==='cross'; ctx.save(); ctx.fillStyle=cr?'rgba(60,180,90,.12)':'rgba(70,130,240,.12)'; ctx.strokeStyle=cr?'#3cb45a':C.sel; ctx.lineWidth=1.5; if(cr) ctx.setLineDash([6,4]);
+    ctx.fillRect(Math.min(A.x,B.x),Math.min(A.y,B.y),Math.abs(B.x-A.x),Math.abs(B.y-A.y)); ctx.strokeRect(Math.min(A.x,B.x),Math.min(A.y,B.y),Math.abs(B.x-A.x),Math.abs(B.y-A.y)); ctx.restore(); ctx.setLineDash([]); }
   if(tool==='imgcal'&&cal){ ctx.save(); ctx.strokeStyle=C.dim; ctx.lineWidth=2; for(const q of [cal.A,cal.B]) if(q){ const t=toS(q); line({x:t.x-10,y:t.y},{x:t.x+10,y:t.y}); line({x:t.x,y:t.y-10},{x:t.x,y:t.y+10}); }
     if(cal.A&&cal.B){ ctx.setLineDash([6,4]); line(toS(cal.A),toS(cal.B)); } ctx.restore(); ctx.setLineDash([]); }
   if(tool==='merge') for(const q of mergePts()){ const t=toS(q); ctx.beginPath(); ctx.arc(t.x,t.y,8,0,Math.PI*2); ctx.fillStyle=C.tape; ctx.fill(); ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.stroke(); }
@@ -1194,6 +1201,8 @@ cv.addEventListener('pointerdown',e=>{
     if(!cal.A){ cal.A={x:r3(q.x),y:r3(q.y)}; toast('Теперь коснитесь конца этого отрезка'); redraw(); return; }
     cal.B={x:r3(q.x),y:r3(q.y)}; const d=Math.hypot(cal.B.x-cal.A.x,cal.B.y-cal.A.y); if(d<1){ toast('Точки совпали — коснитесь другой точки'); return; }
     const mw={x:(cal.A.x+cal.B.x)/2,y:(cal.A.y+cal.B.y)/2}, ms=toS(mw); press.calOpen={id:cal.id,kind:'cal',w:mw,x:ms.x,y:ms.y,val:d}; redraw(); return; }
+  if(tool==='select'&&(selMode==='win'||selMode==='cross')){ const h=hit(p.x,p.y);
+    if(!(h&&selIds().has(h.id))){ press.pan=false; press.box={a:{...p},b:{...p}}; return; } }
   if(tool==='select'&&selMode==='rot'){ const h=hit(p.x,p.y), S=selIds(); press.pan=false;
     if(S.size){ const Cc=rotCenter(), cs=toS(Cc);
       if(Math.hypot(cs.x-p.x,cs.y-p.y)<24){ press.rotC=true; return; }
@@ -1333,6 +1342,7 @@ cv.addEventListener('pointermove',e=>{
     const pt=snapPoint(p.x,p.y,null,{exclude:selIds()}); tdDrag={dir:T.dir,pt}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
   if(press.wit){ const Wt=press.wit; if(!press.moved) return; if(!Wt.started){ Wt.started=true; pushUndo(); }
     const pt=snapPoint(p.x,p.y,null,{exclude:new Set([Wt.it.id])}); Wt.it[Wt.key]={x:pt.x,y:pt.y}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
+  if(press.box){ press.box.b={...p}; redraw(); return; }
   if(press.rotC){ rotC=snapPoint(p.x,p.y,null); redraw(); return; }
   if(press.rot){ const Rr=press.rot; if(!press.moved) return; if(!Rr.started){ Rr.started=true; pushUndo(); }
     const cs=toS(Rr.C); let a=(Math.atan2(-(p.y-cs.y),p.x-cs.x)-Rr.a0)*180/Math.PI; while(a>180)a-=360; while(a<=-180)a+=360;
@@ -1372,6 +1382,9 @@ function endPtr(e,cancel){
   if(pr.joint){ jointDrag=null; if(pr.joint.started){persist();} liveSnap=null; alignGuide=null; panelKey=''; syncPanel();
     if(selJoint){ const sp=toS(selJoint), lim=H-(panel.hidden?0:panel.offsetHeight)-40; if(sp.y>lim) view.cy-=(sp.y-lim+20)/view.scale; }
     redraw(); return; }
+  if(pr.box){ if(!pr.moved){ const h=hit(pr.box.a.x,pr.box.a.y); selId=h&&!isHole(h)?h.id:null; moveSel.clear(); selJoint=null; panelKey=''; syncPanel(); redraw(); return; }
+    const ids=boxSelect(pr.box.a,pr.box.b,selMode==='cross'); selJoint=null; moveSel=new Set(ids.size>1?ids:[]); selId=ids.size?[...ids][0]:null;
+    panelKey=''; syncPanel(); redraw(); toast(ids.size?'Выбрано: '+selCount():'В рамку ничего не попало'); return; }
   if(pr.rotC){ redraw(); return; }
   if(pr.rot){ if(pr.rot.started){ for(const it of doc.items) if(pr.rot.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); toast('Повёрнуто на '+pr.rot.ang+'°'); }
     else if(!pr.moved){ selId=null; moveSel.clear(); rotC=null; } panelKey=''; syncPanel(); redraw(); return; }
@@ -1646,6 +1659,30 @@ function stepObjDrag(D,p){
   const sn=dragSnap(D.grab,D.items,D.refs,dx,dy,D.ids); if(sn){dx=sn.dx;dy=sn.dy;} else snapMark=D.grab?{p:{x:D.grab.x+dx,y:D.grab.y+dy},k:'end'}:null;
   applyRefs(D.refs,dx,dy); moveDelta={dx,dy}; }
 // копии объектов (с окнами/дверями на скопированных стенах, своими группами и привязками размеров)
+/* ---------- выбор рамкой ---------- */
+function itemShape(it){ // ломаные объекта в мировых координатах: [{pts,closed}]
+  if(it.t==='line'){ if(isWall(it)) return [{pts:isArc(it)?arcPolyPts(it):(w=>[w.aL,w.bL,w.bR,w.aR])(wallPoly(it)),closed:true}]; return [{pts:isArc(it)?arcPts(arcG(it),0,0,1):[it.a,it.b]}]; }
+  if(it.t==='dim'){ const g=dimGeom(it); return [{pts:[it.a,g.A,g.B,it.b]}]; }
+  if(it.t==='aux') return [{pts:[it.a,it.b]}];
+  if(it.t==='circ'){ const P=[]; for(let i=0;i<32;i++){ const a=i/32*Math.PI*2; P.push({x:it.c.x+Math.cos(a)*it.r,y:it.c.y+Math.sin(a)*it.r}); } return [{pts:P,closed:true}]; }
+  if(it.t==='chim') return [{pts:chimCorners(it),closed:true}];
+  if(it.t==='img') return [{pts:imgCorners(it),closed:true}];
+  if(it.t==='text') return [{pts:[it.p]}];
+  return []; }
+function boxSelect(sa,sb,crossing){ const x0=Math.min(sa.x,sb.x),x1=Math.max(sa.x,sb.x),y0=Math.min(sa.y,sb.y),y1=Math.max(sa.y,sb.y);
+  const inn=q=>q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
+  const segX=(p,q)=>{ if(inn(p)||inn(q)) return true; const E=[[{x:x0,y:y0},{x:x1,y:y0}],[{x:x1,y:y0},{x:x1,y:y1}],[{x:x1,y:y1},{x:x0,y:y1}],[{x:x0,y:y1},{x:x0,y:y0}]];
+    const cr=(a,b,c,d)=>{ const d1=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x), d2=(b.x-a.x)*(d.y-a.y)-(b.y-a.y)*(d.x-a.x), d3=(d.x-c.x)*(a.y-c.y)-(d.y-c.y)*(a.x-c.x), d4=(d.x-c.x)*(b.y-c.y)-(d.y-c.y)*(b.x-c.x); return d1*d2<=0&&d3*d4<=0; };
+    return E.some(([c,d])=>cr(p,q,c,d)); };
+  const out=new Set();
+  for(const it of doc.items){ if(isHole(it)) continue; const sh=itemShape(it); if(!sh.length) continue;
+    const S=sh.map(o=>({pts:o.pts.map(toS),closed:o.closed})); let ok;
+    if(!crossing) ok=S.every(o=>o.pts.every(inn));
+    else { ok=S.some(o=>{ const P=o.pts; if(P.some(inn)) return true; for(let i=0;i<P.length-1+(o.closed?1:0);i++) if(segX(P[i],P[(i+1)%P.length])) return true;
+        if(o.closed){ const c={x:(x0+x1)/2,y:(y0+y1)/2}; let ins=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ if(((P[i].y>c.y)!==(P[j].y>c.y))&&(c.x<(P[j].x-P[i].x)*(c.y-P[i].y)/(P[j].y-P[i].y)+P[i].x)) ins=!ins; } return ins; }
+        return false; }); }
+    if(ok) for(const g of grpItems(it)) out.add(g.id); }
+  return out; }
 /* ---------- вращение ---------- */
 let rotC=null;
 function rotPt(P,C,r){ const c=Math.cos(r),s=Math.sin(r),x=P.x-C.x,y=P.y-C.y; return {x:r3(C.x+x*c-y*s),y:r3(C.y+x*s+y*c)}; }
@@ -1817,7 +1854,11 @@ function copyLevel(fi,ti){ const idm={},out=[],src=doc.levels[fi].items;
   for(const it of src){ if(!isHole(it)||!idm[it.wall]) continue; const c=JSON.parse(JSON.stringify(it)); c.id=uid(); c.wall=idm[it.wall]; out.push(c); }
   for(const c of out) if(c.t==='dim') for(const k of ['ra','rb']) if(c[k]){ if(idm[c[k].id]) c[k]={...c[k],id:idm[c[k].id]}; else delete c[k]; }
   doc.levels[ti].items.push(...out); return out.length; }
-function sortLevels(){ const cur=doc.levels[doc.curLv]; doc.levels.sort((a,b)=>a.elev-b.elev); doc.curLv=doc.levels.indexOf(cur); }
+// уровни всегда по возрастанию отметки; «Этаж N» перенумеровываются по порядку снизу вверх
+const isRoofName=n=>/крыш|кровл|чердак|покрыт/i.test(n||'');
+function sortLevels(){ const cur=doc.levels[doc.curLv]; doc.levels.sort((a,b)=>a.elev-b.elev); let n=0;
+  for(const L of doc.levels) if(/^Этаж \d+$/.test(L.name)) L.name='Этаж '+(++n);
+  doc.curLv=Math.max(0,doc.levels.indexOf(cur)); }
 let lvDelConfirm=null;
 function openLevels(){
   const L=doc.levels;
@@ -2330,7 +2371,7 @@ function setTool(t){ if(t==='move') t='select'; if(tool==='select') editSel=selI
   $('#lblWall').textContent=btnTool==='line'&&wallMode!=='chain'?MODEN[wallMode]:'Стены';
   $('#lblLine').textContent=btnTool==='draw'&&lineMode!=='chain'?MODEN[lineMode]:'Линии';
   $('#lblEdit').textContent=MODEN[editMode];
-  { const l=$('#lblSel'); if(l) l.textContent=selMode==='copy'?'Копия':selMode==='rot'?'Вращать':'Выбор'; }
+  { const l=$('#lblSel'); if(l) l.textContent=selMode==='copy'?'Копия':selMode==='rot'?'Вращать':selMode==='win'||selMode==='cross'?'Рамка':'Выбор'; }
   syncPanel(); syncModeBtns(); redraw();
 }
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{ const t=b.dataset.tool, wasOpen=!$('#toolMenu').hidden&&menuFor===t;
@@ -2339,7 +2380,7 @@ document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',(
 let selMode='pick', menuFor=null, arcWall=true, mirrorSel=new Set(), editSel=new Set();
 function closeToolMenu(){ $('#toolMenu').hidden=true; menuFor=null; }
 // значки режимов (как символы на ленте Revit/AutoCAD)
-const MICO={rot:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>',pick:'<path d="M6 3l12 9-5.5 1L15 20l-2.5 1-2.6-6.9L6 17z"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
+const MICO={win:'<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M8 10h6v4H8z" fill="currentColor" stroke="none"/>',cross:'<rect x="3" y="5" width="18" height="14" rx="1" stroke-dasharray="3 2"/><path d="M14 9l7 6"/><path d="M8 10h4v4H8z" fill="currentColor" stroke="none"/>',rot:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>',pick:'<path d="M6 3l12 9-5.5 1L15 20l-2.5 1-2.6-6.9L6 17z"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
   chain:'<path d="M3 19 9 8l6 7 6-10"/><circle cx="3" cy="19" r="1.6" fill="currentColor"/><circle cx="9" cy="8" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="21" cy="5" r="1.6" fill="currentColor"/>',
   seg:'<path d="M4 20 20 4"/><circle cx="4" cy="20" r="1.8" fill="currentColor"/><circle cx="20" cy="4" r="1.8" fill="currentColor"/>',
   rect:'<rect x="3.5" y="6" width="17" height="12" rx=".5"/>',
@@ -2351,7 +2392,7 @@ const MICO={rot:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/><circ
   merge:'<path d="M3 17 12 8l9 9"/><circle cx="12" cy="8" r="2.4"/><path d="M9.5 3.5l5 5M14.5 3.5l-5 5" stroke-width="1.5"/>',
   mirrorc:'<path d="M12 2v20" stroke-dasharray="3 2"/><path d="M9 6 3 18h6z" fill="currentColor"/><path d="M15 6l6 12h-6z"/>',
   mirrorm:'<path d="M12 2v20" stroke-dasharray="3 2"/><path d="M9 6 3 18h6z" stroke-dasharray="2 1.6"/><path d="M15 6l6 12h-6z" fill="currentColor"/>'};
-const MTIP={rot:'Вращать',pick:'Выбор и перемещение',copy:'Копировать перетаскиванием',mirrorc:'Зеркало (копия)',mirrorm:'Зеркало (перенести)',aux:'Конструкционная линия',chain:'Цепочка',seg:'Отрезок',rect:'Прямоугольник',arc:'Дуга по 3 точкам',circ:'Круг',poly:'Многоугольник',split:'Разделить',merge:'Убрать вершину'};
+const MTIP={win:'Рамка: только целиком внутри',cross:'Рамка: всё, что задевает',rot:'Вращать',pick:'Выбор и перемещение',copy:'Копировать перетаскиванием',mirrorc:'Зеркало (копия)',mirrorm:'Зеркало (перенести)',aux:'Конструкционная линия',chain:'Цепочка',seg:'Отрезок',rect:'Прямоугольник',arc:'Дуга по 3 точкам',circ:'Круг',poly:'Многоугольник',split:'Разделить',merge:'Убрать вершину'};
 function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
   const mb=(k,cur,attr)=>`<button data-${attr}="${k}" aria-pressed="${k===cur}" title="${MTIP[k]||MODEN[k]}" aria-label="${MTIP[k]||MODEN[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MICO[k]}</svg></button>`;
   if(t==='line'){ h=`<div class="mh">Стены</div><div class="mg">${['chain','seg','rect','arc'].map(k=>mb(k,wallMode,'wm')).join('')}</div>
@@ -2363,7 +2404,7 @@ function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
       <div class="dirs">${[3,4,6,8].map(n=>`<button data-pgn="${n}">${n}</button>`).join('')}</div><div class="fld"><label for="pgS">Сторона, мм</label><input class="inp sm" id="pgS" inputmode="decimal" placeholder="пальцем" value="${polyS||''}"></div></div>`;
     if(lineMode==='rect') h+=`<div class="mr"><div class="fld"><label for="shW">Ширина</label><input class="inp sm" id="shW" inputmode="decimal" placeholder="пальцем" value="${shW||''}"></div><div class="fld"><label for="shH">Высота</label><input class="inp sm" id="shH" inputmode="decimal" placeholder="пальцем" value="${shH||''}"></div></div>`;
     if(lineMode==='circ') h+=`<div class="mr"><div class="fld"><label for="shD">Диаметр</label><input class="inp sm" id="shD" inputmode="decimal" placeholder="пальцем" value="${shD||''}"></div></div>`; }
-  else if(t==='select'){ h=`<div class="mh">Выбор</div><div class="mg">${['pick','copy','rot'].map(k=>mb(k,selMode,'sm')).join('')}</div>`; }
+  else if(t==='select'){ h=`<div class="mh">Выбор</div><div class="mg">${['pick','win','cross','copy','rot'].map(k=>mb(k,selMode,'sm')).join('')}</div>`; }
   else if(t==='edit'){ h=`<div class="mh">Изменить</div><div class="mg">${['split','merge','mirrorc','mirrorm'].map(k=>mb(k,editMode,'em')).join('')}</div>`; }
   m.innerHTML=h; m.hidden=false;
   const r=btn.getBoundingClientRect(), sr=stage.getBoundingClientRect(), w=m.offsetWidth;
@@ -2372,7 +2413,7 @@ $('#toolMenu').addEventListener('click',e=>{ const b=e.target.closest('button');
   if(b.dataset.wm){ wallMode=b.dataset.wm; saveModes(); setTool('line'); closeToolMenu(); toast('Стены: '+MODEN[wallMode]); return; }
   if(b.dataset.lm){ lineMode=b.dataset.lm; saveModes(); setTool('draw'); if(lineMode==='poly'||lineMode==='rect'||lineMode==='circ') openToolMenu('draw',document.querySelector('[data-tool="draw"]')); else closeToolMenu(); toast('Линии: '+MODEN[lineMode]); return; }
   if(b.dataset.ly){ lineLayer=b.dataset.ly; $('#toolMenu').querySelectorAll('[data-ly]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); toast('Слой новых линий: '+(lineLayer==='open'?'Проёмы':'Прочее')); return; }
-  if(b.dataset.sm){ selMode=b.dataset.sm; setTool('select'); closeToolMenu(); rotC=null; toast(selMode==='copy'?'Копирование: тяните любой объект — появится его копия':selMode==='rot'?'Вращение: выберите объект, тяните вокруг центра (кружок с крестом можно передвинуть) или введите угол':'Выбор'); return; }
+  if(b.dataset.sm){ selMode=b.dataset.sm; setTool('select'); closeToolMenu(); rotC=null; toast(selMode==='win'?'Рамка: проведите пальцем по пустому месту — выберутся объекты, целиком попавшие внутрь':selMode==='cross'?'Рамка: проведите пальцем — выберутся все объекты, которых коснётся рамка':selMode==='copy'?'Копирование: тяните любой объект — появится его копия':selMode==='rot'?'Вращение: выберите объект, тяните вокруг центра (кружок с крестом можно передвинуть) или введите угол':'Выбор'); return; }
   if(b.dataset.em){ editMode=b.dataset.em; saveModes(); setTool('edit'); closeToolMenu(); return; }
   if(b.dataset.wside!==undefined){ doc.settings.wallSide=+b.dataset.wside; persist(); $('#toolMenu').querySelectorAll('[data-wside]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
   if(b.dataset.pgn!==undefined){ polyN=+b.dataset.pgn; const i=$('#pgN'); if(i) i.value=polyN; toast('Граней: '+polyN); return; } });
@@ -2591,8 +2632,12 @@ sheet.addEventListener('click',e=>{
     case 'save':sheet.hidden=true; saveCurrentFile(); break;
     case 'export':sheet.hidden=true; openExport(); break;
     case 'levels':openLevels(); break;
-    case 'lvadd':{const last=doc.levels[doc.levels.length-1]; doc.levels.push({id:uid(),name:'Этаж '+(doc.levels.length+1),elev:(last?last.elev:0)+3000,items:[]});
-      persist(); renderLevels(); openLevels(); break;}
+    case 'lvadd':{ // новый этаж встаёт под крышу: крыша поднимается на высоту этажа
+      const L=doc.levels, top=L[L.length-1], roof=top&&isRoofName(top.name)?top:null, below=roof?L[L.length-2]:top;
+      const h=below&&roof?Math.max(2500,roof.elev-below.elev):3000;
+      if(roof){ L.push({id:uid(),name:'Этаж 999',elev:roof.elev,items:[]}); roof.elev=roof.elev+h; }
+      else L.push({id:uid(),name:'Этаж 999',elev:(top?top.elev:0)+3000,items:[]});
+      sortLevels(); persist(); renderLevels(); openLevels(); break;}
     case 'lvdel':{const i=+b.dataset.i; if(lvDelConfirm!==i){lvDelConfirm=i;openLevels();break;}
       lvDelConfirm=null; const cur=doc.levels[doc.curLv]; doc.levels.splice(i,1); let ci=doc.levels.indexOf(cur); if(ci<0) ci=Math.max(0,i-1);
       doc.curLv=-1; setLevel(ci); persist(); renderLevels(); openLevels(); break;}
@@ -2652,7 +2697,7 @@ function buildDXF(d,all,rec){
         if(it.t==='line'&&isArc(it)){ const G=arcG(it);
           if(isWall(it)){ const o=offs(it), gp=faceGaps(it);
             { const E0=arcEnds(it); for(const [sd,k] of [['L',o.L],['R',-o.R]]){ const s0=E0.a['t'+sd]*G.L, s1=E0.b['t'+sd]*G.L; let cur=s0; for(const [g0,g1] of gp[sd].slice().sort((x,y)=>x[0]-y[0])){ if(g1<=cur) continue; if(g0>cur) ARCT('WALLS',G,k,cur/G.L,Math.min(g0,s1)/G.L); cur=Math.max(cur,g1); } if(cur<s1) ARCT('WALLS',G,k,cur/G.L,s1/G.L); } }
-            { const E=arcEnds(it); for(const kk of ['a','b']){ const e=E[kk]; if(e.cap) LINE('WALLS',e.fL,e.fR); else { if(Math.hypot(e.L.x-e.fL.x,e.L.y-e.fL.y)>0.5) LINE('WALLS',e.fL,e.L); if(Math.hypot(e.R.x-e.fR.x,e.R.y-e.fR.y)>0.5) LINE('WALLS',e.fR,e.R); } } }
+            { const E=arcEnds(it); for(const kk of ['a','b']){ const e=E[kk]; if(e.trim) continue; if(e.cap) LINE('WALLS',e.fL,e.fR); else { if(Math.hypot(e.L.x-e.fL.x,e.L.y-e.fL.y)>0.5) LINE('WALLS',e.fL,e.L); if(Math.hypot(e.R.x-e.fR.x,e.R.y-e.fR.y)>0.5) LINE('WALLS',e.fR,e.R); } } }
             if(!it.side) ARCT('AXIS',G,0,0,1);
           } else ARCT(LAYERS[it.L].dxf,G,0,0,1);
           if(d.settings.wallLabels&&G.L>=th){ const sd=isWall(it)?(it.side||0):0, sg=sd>0?-1:1, of=th*.9+(sd===0&&isWall(it)?it.w/2:0);
