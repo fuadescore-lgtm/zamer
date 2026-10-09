@@ -1508,7 +1508,7 @@ function openInline(h){
   inlineH=h; selId=h.id; selJoint=null; panelKey=''; syncPanel();
   ied.inputMode=h.kind==='tx'?'text':'decimal'; ied.style.width=h.kind==='tx'?'min(260px,70vw)':'';
   ied.value=h.kind==='tx'?String(h.val):h.kind==='ang'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
-  ied.focus(); ied.select();
+  inlineOpenT=Date.now(); ied.focus(); ied.select();
 }
 function closeInline(apply){
   if(!inlineH) return; const h=inlineH; inlineH=null; ied.hidden=true;
@@ -1548,7 +1548,10 @@ function closeInline(apply){
   persist(); panelKey=''; syncPanel(); redraw(); toast('Длина: '+fmt(L)+' мм');
 }
 ied.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();closeInline(true);} else if(e.key==='Escape'){e.preventDefault();closeInline(false);} });
-ied.addEventListener('blur',()=>closeInline(true));
+// на телефоне после касания браузер шлёт «эмулированные» mousedown/click — они уводят фокус и сразу закрывали ввод
+let inlineOpenT=0;
+ied.addEventListener('blur',()=>{ if(inlineH&&Date.now()-inlineOpenT<600){ setTimeout(()=>{ if(inlineH){ ied.focus(); } },0); return; } closeInline(true); });
+cv.addEventListener('touchend',e=>{ if(inlineH) e.preventDefault(); },{passive:false});
 function setLineLength(sel,L){
   if(isArc(sel)){ const k=L/lineLen(sel), F=fixMode==='a'?sel.a:fixMode==='b'?sel.b:{x:(sel.a.x+sel.b.x)/2,y:(sel.a.y+sel.b.y)/2};
     const oa={...sel.a},ob={...sel.b}; sel.a={x:r3(F.x+(sel.a.x-F.x)*k),y:r3(F.y+(sel.a.y-F.y)*k)}; sel.b={x:r3(F.x+(sel.b.x-F.x)*k),y:r3(F.y+(sel.b.y-F.y)*k)};
