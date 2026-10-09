@@ -1154,7 +1154,7 @@ function render(){ queueMicrotask(placePanel);
   }
   if(tool==='dim'&&dragA&&dragB){ctx.strokeStyle=C.dim;ctx.lineWidth=1.5;ctx.setLineDash([6,4]);line(toS(dragA),toS(dragB));ctx.setLineDash([]);marker(dragB,liveSnap);}
   if(tool==='text'&&pendingText) marker(pendingText,null);
-  if(tool==='text'&&ldPick){ marker(ldPick,null); if(pendingText){ const g=leaderGeom({p:pendingText,s:'Текст',h:doc.settings.textH,ld:{pt:ldPick,end:doc.settings.ldEnd||'arrow'}}); ctx.save(); ctx.setLineDash([5,4]); ctx.strokeStyle=C.sel; line(toS(g.E),toS(g.P)); ctx.restore(); ctx.setLineDash([]); } }
+  if(tool==='text'&&ldPick){ marker(ldPick,null); if(pendingText){ const g=leaderGeom({p:pendingText,s:'Текст',h:doc.settings.noteH||doc.settings.textH,ld:{pt:ldPick,end:doc.settings.ldEnd||'arrow'}}); ctx.save(); ctx.setLineDash([5,4]); ctx.strokeStyle=C.sel; line(toS(g.E),toS(g.P)); ctx.restore(); ctx.setLineDash([]); } }
   if(tool==='hole'&&chimPrev){ const g={...chimDef(),p:chimPrev,rot:0}, O=chimCorners(g).map(toS);
     ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(O); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
   if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd)))) marker(snapMark.p,snapMark.k);
@@ -2213,7 +2213,7 @@ function moveCoincident(oldP,newP,skipId){
 }
 function delSel(){ if(!selId) return; const S=selIds(); pushUndo(); doc.items=doc.items.filter(i=>!S.has(i.id)&&!S.has(i.wall)); selId=null; editGrp=null; moveSel.clear(); persist(); panelKey=''; syncPanel(); redraw(); }
 function placeText(){
-  const s=($('#tText').value||'').trim(); const h=parseNum($('#tH').value)||doc.settings.textH;
+  const s=($('#tText').value||'').trim(); const h=parseNum($('#tH').value)||doc.settings.noteH||doc.settings.textH; doc.settings.noteH=h; // запоминаем высоту для следующих надписей
   if(!s){toast('Введите текст');return;}
   pushUndo(); const it={id:uid(),t:'text',p:{...pendingText},s,h,L:'text'}; if(textMode==='leader'&&ldPick) it.ld={pt:{...ldPick},end:doc.settings.ldEnd||'arrow'}; doc.items.push(it); selId=it.id; pendingText=null; ldPick=null; persist(); syncPanel(); redraw();
 }
@@ -2403,7 +2403,7 @@ function syncPanel(){
       <p class="hint">Тяните узел пальцем или введите длину. Значки-звенья на концах выделенной стены: соединить / отсоединить.</p>`;
   } else if(tool==='text'&&pendingText){
     h=`<div class="fld"><label for="tText">Текст</label><input class="inp wide" id="tText" autocomplete="off" placeholder="Санузел, h=2700"></div>
-      <div class="fld"><label for="tH">Высота, мм</label><input class="inp sm" id="tH" inputmode="decimal" value="${doc.settings.textH}"></div>
+      <div class="fld"><label for="tH">Высота, мм</label><input class="inp sm" id="tH" inputmode="decimal" value="${doc.settings.noteH||doc.settings.textH}"></div>
       <span class="sp"></span><button class="btn" data-act="cancelText">Отмена</button><button class="btn go" data-act="placeText">Поставить</button>`;
   }
   panel.innerHTML=h; panel.hidden=!h; syncLineHint(); if(tool==='move') syncMoveInfo(); redraw(); placePanel();
@@ -2515,7 +2515,7 @@ function applyProp(t){
   else if(t.id==='pW'){ const v=parseNum(t.value); if(!(v>=0)) return; pushUndo(); sel.w=v; } else if(t.id==='pLayer'){ pushUndo(); sel.L=t.value; }
   else if(t.id==='pOff'){ const v=parseNum(t.value); if(isNaN(v)) return; pushUndo(); sel.off=v; }
   else if(t.id==='pText'){ const s=t.value.trim(); if(!s) return; pushUndo(); sel.s=s; }
-  else if(t.id==='pH'){ const v=parseNum(t.value); if(!(v>0)) return; pushUndo(); sel.h=v; }
+  else if(t.id==='pH'){ const v=parseNum(t.value); if(!(v>0)) return; pushUndo(); sel.h=v; doc.settings.noteH=v; }
   else return;
   persist(); panelKey=''; syncPanel(); redraw();
 }
