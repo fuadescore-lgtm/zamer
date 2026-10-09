@@ -61,6 +61,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 #stage{position:relative;overflow:hidden;min-height:0}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.okb{background:var(--tape)!important;color:#111!important}.cxb{color:var(--dim)!important}
 #hud{position:absolute;top:10px;left:16px;right:64px;display:flex;justify-content:flex-start;pointer-events:none}
 #hud span{max-width:100%;background:color-mix(in srgb,var(--surface) 88%,transparent);border:1px solid var(--rule);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--muted);line-height:1.25}
 #hud span.live{background:var(--tape);border-color:transparent;color:var(--tape-ink);font-family:var(--f-num);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;padding:4px 12px}
@@ -167,6 +168,12 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
     </button>
     <button class="ib fb" id="btnFit" aria-label="Показать весь чертёж" title="Показать весь чертёж">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button class="ib fb okb" id="btnOk" aria-label="Готово — выйти из режима" title="Готово" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    </button>
+    <button class="ib fb cxb" id="btnCancel" aria-label="Отмена — убрать незаконченное и выйти" title="Отмена" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
     </div>
     <div id="dynIn" class="dyn" role="group" aria-label="Ввод длины и угла" hidden>
@@ -411,17 +418,19 @@ const lft=d=>({x:-d.y,y:d.x}), rgt=d=>({x:d.y,y:-d.x});
 function xLines(p1,d1,p2,d2){ const den=d1.x*d2.y-d1.y*d2.x; if(Math.abs(den)<1e-6) return null;
   const t=((p2.x-p1.x)*d2.y-(p2.y-p1.y)*d2.x)/den; return {x:p1.x+d1.x*t,y:p1.y+d1.y*t}; }
 // away-from-joint view of a wall end: direction pointing into the wall, and face offsets relative to it
+const nj=(it,k)=>!!(it&&it.nj&&it.nj[k]);   // «не соединять» на конце k
 function awayInfo(it,key){ const o=offs(it);
   return key==='a'?{P:it.a,d:unit(it.a,it.b),la:o.L,ra:o.R}:{P:it.b,d:unit(it.b,it.a),la:o.R,ra:o.L}; }
 function wallNeighbor(it,key){
-  const P=it[key]; let found=null,n=0;
+  const P=it[key]; let found=null,n=0; if(nj(it,key)) return null;
   for(const o of doc.items){ if(o===it||!isWall(o)) continue;
-    if(near(o.a,P)){found=[o,'a'];n++;} else if(near(o.b,P)){found=[o,'b'];n++;} }
+    if(near(o.a,P)){ if(nj(o,'a')) continue; found=[o,'a'];n++;} else if(near(o.b,P)){ if(nj(o,'b')) continue; found=[o,'b'];n++;} }
   return n===1?found:null;
 }
 function wallEnd(it,key){
   const X=awayInfo(it,key), P=X.P;
   let LA={x:P.x+lft(X.d).x*X.la,y:P.y+lft(X.d).y*X.la}, RA={x:P.x+rgt(X.d).x*X.ra,y:P.y+rgt(X.d).y*X.ra}, cap=true;
+  if(nj(it,key)) return key==='a'?{L:LA,R:RA,cap}:{L:RA,R:LA,cap};
   const nb=wallNeighbor(it,key);
   if(nb){ const Y=awayInfo(nb[0],nb[1]);
     const c1=xLines(LA,X.d,{x:P.x+rgt(Y.d).x*Y.ra,y:P.y+rgt(Y.d).y*Y.ra},Y.d);
@@ -435,8 +444,9 @@ function wallEnd(it,key){
   return key==='a'?{L:LA,R:RA,cap}:{L:RA,R:LA,cap};
 }
 function endCount(it,key){ const P=it[key]; let n=0;
-  for(const o of doc.items){ if(o!==it&&isWall(o)&&(near(o.a,P)||near(o.b,P))) n++; } return n; }
+  for(const o of doc.items){ if(o!==it&&isWall(o)&&((near(o.a,P)&&!nj(o,'a'))||(near(o.b,P)&&!nj(o,'b')))) n++; } return n; }
 function tJoinFind(X,key){
+  if(nj(X,key)) return null;
   const A=awayInfo(X,key), E=A.P, d=A.d;
   for(const Y of doc.items){ if(Y===X||!isWall(Y)) continue;
     const u=unit(Y.a,Y.b), L=Math.hypot(Y.b.x-Y.a.x,Y.b.y-Y.a.y), n=lft(u), o=offs(Y);
@@ -817,9 +827,26 @@ function drawOrigin(){
   ctx.beginPath();ctx.arc(o.x,o.y,5,0,Math.PI*2);ctx.fillStyle=C.surface;ctx.fill();ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.stroke();
   ctx.font='500 11px '+FNUM;ctx.textAlign='right';ctx.textBaseline='top';haloText('0,0',o.x-8,o.y+6,C.muted);
 }
-let witHits=[], witDrag=null, dimHits=[];
+let witHits=[], witDrag=null, dimHits=[], joinHits=[];
+// значки «соединить / отсоединить» на концах выбранных стен и линий (как Allow/Disallow Join в Revit)
+function endLinked(it,k){ const P=it[k];
+  for(const o of doc.items){ if(o===it||o.t!=='line') continue; if(near(o.a,P)||near(o.b,P)) return true; if(onBody(P,o)) return true; }
+  for(const o of doc.items){ if(o===it||o.t!=='line') continue; for(const kk of ['a','b']) if(onBody(o[kk],it)) { const ob=onBody(o[kk],it); if(ob&&ob.end===k) return true; } }
+  return false; }
+function drawJoinIcons(){
+  if(tool!=='select'||!attachOn||editLine||editGrp) return; const S=selIds(); if(!S.size||S.size>8) return;
+  for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line'||it.g) continue;
+    for(const k of ['a','b']){ const off=nj(it,k); if(!off&&!endLinked(it,k)) continue;
+      const P=it[k], Q=it[k==='a'?'b':'a'], d=unit(P,Q), n=lft(d), half=isWall(it)?Math.max(offs(it).L,offs(it).R):0;
+      const sh=(isWall(it)?(offs(it).L-offs(it).R)/2:0), w={x:P.x+d.x*(half+30/view.scale)+n.x*sh,y:P.y+d.y*(half+30/view.scale)+n.y*sh}, c=toS(w);
+      joinHits.push({id:it.id,k,x:c.x,y:c.y});
+      ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=off?C.dim:C.sel; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect?ctx.roundRect(c.x-10,c.y-10,20,20,4):ctx.rect(c.x-10,c.y-10,20,20); ctx.fill(); ctx.stroke();
+      ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(c.x-5,c.y+5); ctx.lineTo(c.x-5,c.y-5); ctx.lineTo(c.x+(off?0:5),c.y-5); ctx.stroke();
+      if(off){ ctx.beginPath(); ctx.moveTo(c.x+3,c.y-7); ctx.lineTo(c.x+3,c.y-3); ctx.moveTo(c.x+3,c.y+1); ctx.lineTo(c.x+6,c.y+6); ctx.stroke(); }
+      ctx.restore(); } } }
 function render(){
-  labelHits=[]; witHits=[]; tdHits=[]; dimHits=[]; syncDims();
+  labelHits=[]; witHits=[]; tdHits=[]; dimHits=[]; joinHits=[]; syncDims();
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.fillStyle=C.paper;ctx.fillRect(0,0,W,H);
   drawGrid();
@@ -862,7 +889,7 @@ function render(){
   if(tool==='hole'&&chimPrev){ const g={...chimDef(),p:chimPrev,rot:0}, O=chimCorners(g).map(toS);
     ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(O); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
   if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd)))) marker(snapMark.p,snapMark.k);
-  drawTempDims();
+  drawTempDims(); drawJoinIcons();
   drawDynGhost(); updateHud(); placeInline(); placeAxPick(); placeDyn();
 }
 function updateHud(){
@@ -914,6 +941,10 @@ cv.addEventListener('pointerdown',e=>{
   if(tool==='select'||tool==='hole'){
     let wb=null,wd=22; for(const w of witHits){ const d=Math.hypot(w.x-p.x,w.y-p.y); if(d<wd){wd=d;wb=w;} }
     if(wb){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.wit={it,kind:wb.kind,key:wb.kind==='hl'?'refL':'refR',started:false}; return; } }
+    if(tool==='select'){ let jb=null,jd=18; for(const h of joinHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<jd){jd=d;jb=h;} }
+      if(jb){ const it=doc.items.find(i=>i.id===jb.id); if(it){ press.pan=false; press.noop=true; pushUndo(); const v=!nj(it,jb.k);
+        it.nj={...(it.nj||{}),[jb.k]:v}; if(!it.nj.a&&!it.nj.b) delete it.nj; persist(); redraw();
+        toast(v?'Конец отсоединён: стены не стыкуются и не тянутся вместе':'Конец снова соединён'); return; } } }
     if(tool==='select'){ let db=null,dd=20; for(const h of dimHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<dd){dd=d;db=h;} }
       if(db){ const it=doc.items.find(i=>i.id===db.id); if(it){ press.pan=false; press.dimEnd={it,k:db.k,started:false}; return; } } }
     if(tool==='select'&&!hitJoint(p.x,p.y,press.mouse?14:24)){ let tb=null,td=20; for(const t of tdHits){ const d=Math.hypot(t.x-p.x,t.y-p.y)+(t.kind==='near'?4:0); if(d<td){td=d;tb=t;} }
@@ -1224,19 +1255,19 @@ function buildRefs(attach,SEL){ SEL=SEL||moveSel;
     if(it.t==='text'||it.t==='chim') add(it,'p'); else if(it.t==='circ') add(it,'c'); else { add(it,'a'); add(it,'b'); if(it.t==='line'&&(!it.g||it.g===editGrp)){ pts.push({...it.a,g:it.g,W:it,k:'a'},{...it.b,g:it.g,W:it,k:'b'}); if(!it.g) movL.push(it); } } }
   if(attach){
     for(const it of doc.items){ if(SEL.has(it.id)||(it.t!=='line'&&it.t!=='dim')) continue;
-      for(const k of ['a','b']){ const q=pts.find(q=>near(q,it[k])&&((q.g||it.g)?it.g===q.g:true)); if(!q) continue;
+      for(const k of ['a','b']){ if(nj(it,k)) continue; const q=pts.find(q=>near(q,it[k])&&((q.g||it.g)?it.g===q.g:true)&&!(q.W&&nj(q.W,q.k))); if(!q) continue;
         // угол: чужая стена только удлиняется по своей оси, без перекоса; продолжение по прямой — едет целиком
         const ux=it.t==='line'?unit(it.a,it.b):null, uw=unit(q.W.a,q.W.b);
         if(!ux||it.g||q.g||Math.abs(ux.x*uw.y-ux.y*uw.x)<0.05) add(it,k,{full:true});
         else { add(it,k,{par:ux}); const r=seen.get(q.W.id+q.k); if(r&&!r.par) r.par=ux; } } }
     // стыки «в грань» и Т-образные: конец чужой стены на теле перемещаемой
     for(const X of doc.items){ if(SEL.has(X.id)||X.t!=='line'||X.g) continue;
-      for(const k of ['a','b']){ if(seen.has(X.id+k)) continue;
-        for(const W of movL){ const ob=onBody(X[k],W); if(!ob) continue;
+      for(const k of ['a','b']){ if(seen.has(X.id+k)||nj(X,k)) continue;
+        for(const W of movL){ const ob=onBody(X[k],W); if(!ob||(ob.end&&nj(W,ob.end))) continue;
           if(ob.end) add(X,k,{par:unit(X.a,X.b)}); else add(X,k,{perp:ob.u}); break; } } }
     // конец перемещаемой стены на теле неподвижной: скользит вдоль неё, а у её конца — тянет её за собой
-    for(const W of movL) for(const k of ['a','b']){
-      for(const Y of doc.items){ if(SEL.has(Y.id)||Y.t!=='line'||Y.g||near(Y.a,W[k])||near(Y.b,W[k])) continue; const ob=onBody(W[k],Y); if(!ob) continue;
+    for(const W of movL) for(const k of ['a','b']){ if(nj(W,k)) continue;
+      for(const Y of doc.items){ if(SEL.has(Y.id)||Y.t!=='line'||Y.g||near(Y.a,W[k])||near(Y.b,W[k])) continue; const ob=onBody(W[k],Y); if(!ob||(ob.end&&nj(Y,ob.end))) continue;
         const r=seen.get(W.id+k); if(r&&!r.par) r.par=ob.u;
         if(ob.end&&!seen.has(Y.id+ob.end)) add(Y,ob.end,{par:ob.u});
         break; } }
@@ -1833,7 +1864,7 @@ function setTool(t){ if(t==='move') t='select'; if(t!=='select') moveSel.clear()
   panelKey='';
   document.querySelectorAll('[data-tool]').forEach(b=>{const d=b.dataset.tool;
     b.setAttribute('aria-pressed',String(d==='draw'?(tool==='line'&&lineKind!=='wall'):d==='line'?(tool==='line'&&lineKind==='wall'):d===tool));});
-  syncPanel(); redraw();
+  syncPanel(); syncModeBtns(); redraw();
 }
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
 $('#layerSel').addEventListener('change',e=>{curLayer=e.target.value;});
@@ -1880,7 +1911,7 @@ function syncLabelsBtn(){ const b=$('#tgLabels'); if(b) b.setAttribute('aria-pre
 $('#tgLabels').addEventListener('click',()=>{ doc.settings.wallLabels=!doc.settings.wallLabels; persist(); syncLabelsBtn(); redraw();
   toast(doc.settings.wallLabels?'Цифры длин показаны':'Цифры длин скрыты. У выделенного объекта цифра видна всегда'); });
 function setAttach(v){attachOn=v; const t=$('#tgAttach'); t.setAttribute('aria-pressed',String(v)); $('#atLbl').textContent=v?'Примык.':'Отдельно';}
-$('#tgAttach').addEventListener('click',()=>{setAttach(!attachOn); toast(attachOn?'Примыкание: соседние стены тянутся следом':'Отдельно: двигается только выбранная стена или её конец');});
+$('#tgAttach').addEventListener('click',()=>{setAttach(!attachOn); redraw(); toast(attachOn?'Примыкание: соседние стены тянутся следом':'Отдельно: двигается только выбранная стена или её конец');});
 function setOsnap(v){ osnapOn=v; $('#tgOsnap').setAttribute('aria-pressed',String(v)); $('#osLbl').textContent=v?'Магнит':'Без магн.'; try{localStorage.setItem('zamer-osnap',v?'1':'0');}catch(e){} }
 setOsnap(osnapOn);
 $('#tgOsnap').addEventListener('click',()=>{ setOsnap(!osnapOn); toast(osnapOn?'Магнит включён: вершины, середины граней, линии и окружности':'Магнит выключен: только орто и шаг сетки'); });
@@ -1891,6 +1922,13 @@ $('#btnFit').addEventListener('click',fitView);
 $('#docName').addEventListener('input',e=>{doc.name=e.target.value;persist();});
 $('#docNum').addEventListener('input',e=>{doc.num=e.target.value;persist();});
 function syncTop(){ $('#btnUndo').disabled=!undoS.length; $('#btnRedo').disabled=!redoS.length; }
+// ✓ и ✕ видны в режимах рисования и вставки
+function syncModeBtns(){ const on=tool!=='select'; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
+syncModeBtns();
+$('#btnOk').addEventListener('click',()=>{ if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
+$('#btnCancel').addEventListener('click',()=>{
+  if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
+  chain.pts=[]; chain.ids=[]; live=null; dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); redraw(); });
 /* ---------- перетаскиваемые окошки ---------- */
 let gripOff={dyn:{x:0,y:0},ax:{x:0,y:0}}; try{ const g0=JSON.parse(localStorage.getItem('zamer-grip')||'null'); if(g0&&g0.dyn&&g0.ax) gripOff=g0; }catch(e){}
 document.querySelectorAll('[data-grip]').forEach(g=>{ let st=null;
