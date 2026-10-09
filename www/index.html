@@ -364,7 +364,7 @@ function toggleMulti(h){ const g=grpItems(h).filter(i=>!isHole(i)).map(i=>i.id);
   if(all&&g.includes(selId)) selId=[...moveSel][0]||null; if(!all&&!selId) selId=h.id;
   editGrp=null; selJoint=null; try{navigator.vibrate&&navigator.vibrate(15);}catch(e){}
   panelKey=''; syncPanel(); redraw(); toast(moveSel.size?'Выбрано объектов: '+selCount()+'. Тяните любой — двигаются все':'Выбор снят'); }
-function armLongPress(h){ if(!h||isHole(h)) return; press.lpSel=setTimeout(()=>{ if(press&&!press.moved&&press.lpSel){ press.lpSel=null; press.noop=true; press.sd=null; press.label=null; toggleMulti(h); } },520); }
+function armLongPress(h){ if(!h||isHole(h)) return; press.lpSel=setTimeout(()=>{ if(press&&!press.moved&&press.lpSel){ press.lpSel=null; press.noop=true; press.sd=null; press.label=null; if(press.prev){ selId=press.prev.id; moveSel=press.prev.ms; } toggleMulti(h); } },520); }
 let undoS=[], redoS=[];
 let C={};
 
@@ -892,11 +892,12 @@ function drawOrigin(){
 }
 let witHits=[], witDrag=null, dimHits=[], joinHits=[];
 // значки «соединить / отсоединить» на концах выбранных стен и линий (как Allow/Disallow Join в Revit)
+// конец «соединён», если совпадает с концом другой стены или упирается в её середину (Т-стык).
+// Конец, лежащий в теле у самого угла соседней стены, — не настоящий угол: «Соединить» сделает из него угол
 function endLinked(it,k){ const P=it[k];
-  for(const o of doc.items){ if(o===it||o.t!=='line') continue; if(near(o.a,P)||near(o.b,P)) return true; if(onBody(P,o)) return true; }
-  for(const o of doc.items){ if(o===it||o.t!=='line') continue; for(const kk of ['a','b']) if(onBody(o[kk],it)) { const ob=onBody(o[kk],it); if(ob&&ob.end===k) return true; } }
+  for(const o of doc.items){ if(o===it||o.t!=='line') continue; if(near(o.a,P)||near(o.b,P)) return true; }
+  for(const o of doc.items){ if(o===it||o.t!=='line') continue; const ob=onBody(P,o); if(ob&&!ob.end) return true; }
   return false; }
-// «Соединить» на свободном конце: дотянуть (или укоротить) по оси до ближайшей стены, как «Обрезать/удлинить» в Revit
 function extendEnd(it,k){ if(it.t!=='line'||isArc(it)) return false; const o=k==='a'?'b':'a', P=it[o], Q=it[k], L0=Math.hypot(Q.x-P.x,Q.y-P.y); if(L0<1) return false;
   const u=unit(P,Q), eI=isWall(it)?Math.max(offs(it).L,offs(it).R):0; let best=null;
   for(const Y of doc.items){ if(Y===it||Y.t!=='line'||isArc(Y)||isWall(Y)!==isWall(it)) continue;
@@ -916,7 +917,7 @@ function drawJoinIcons(){
     for(const k of ['a','b']){ const off=nj(it,k)||!endLinked(it,k);
       const P=it[k], Q=it[k==='a'?'b':'a'], d=unit(P,Q), n=lft(unit(it.a,it.b)), o=isWall(it)?offs(it):{L:0,R:0};
       // значок сбоку от конца, снаружи грани (снизу/справа, чтобы не прятался под панелью X/Y/XY)
-      const sd=(n.y<-1e-6||(Math.abs(n.y)<=1e-6&&n.x>0))?1:-1, w={x:P.x+d.x*(Math.max(o.L,o.R)+16/view.scale)+n.x*sd*((sd>0?o.L:o.R)+20/view.scale),y:P.y+d.y*(Math.max(o.L,o.R)+16/view.scale)+n.y*sd*((sd>0?o.L:o.R)+20/view.scale)}, c=toS(w);
+      const sd=(n.y<-1e-6||(Math.abs(n.y)<=1e-6&&n.x>0))?1:-1, w={x:P.x+d.x*Math.min(Math.max(o.L,o.R)+16/view.scale,lineLen(it)*.3)+n.x*sd*((sd>0?o.L:o.R)+20/view.scale),y:P.y+d.y*Math.min(Math.max(o.L,o.R)+16/view.scale,lineLen(it)*.3)+n.y*sd*((sd>0?o.L:o.R)+20/view.scale)}, c=toS(w);
       joinHits.push({id:it.id,k,x:c.x,y:c.y});
       ctx.save(); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(c.x,c.y,11,0,Math.PI*2);
       ctx.fillStyle=off?C.surface:C.sel; ctx.fill(); ctx.strokeStyle=off?C.dim:C.sel; ctx.stroke();
@@ -977,6 +978,7 @@ function render(){
     ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(O); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
   if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd)))) marker(snapMark.p,snapMark.k);
   drawTempDims(); drawJoinIcons();
+  if(tool==='merge') for(const q of mergePts()){ const t=toS(q); ctx.beginPath(); ctx.arc(t.x,t.y,8,0,Math.PI*2); ctx.fillStyle=C.tape; ctx.fill(); ctx.strokeStyle=C.ink; ctx.lineWidth=2; ctx.stroke(); }
   if(tool==='split'&&splitPt){ const P=toS(splitPt.p); ctx.strokeStyle=C.dim; ctx.lineWidth=2.5; line({x:P.x-9,y:P.y-9},{x:P.x+9,y:P.y+9}); line({x:P.x-9,y:P.y+9},{x:P.x+9,y:P.y-9}); marker(splitPt.p,liveSnap||'end'); }
   if(tool==='mirror'){ const A=mirA, B=mirLive; if(A&&B&&!near(A,B,1)){ const d=unit(A,B), far=1e6;
       ctx.save(); ctx.strokeStyle=C.dim; ctx.lineWidth=1.2; ctx.setLineDash([14,4,3,4]); line(toS({x:A.x-d.x*far,y:A.y-d.y*far}),toS({x:A.x+d.x*far,y:A.y+d.y*far})); ctx.restore(); ctx.setLineDash([]);
@@ -1012,6 +1014,7 @@ function updateHud(){
     line:lineKind==='arc'?(arcB?'Дуга: третья точка задаёт изгиб, или введите радиус в окошке':chain.pts.length?'Дуга: конечная точка':'Дуга: начальная точка'):chain.pts.length?'Тяните от последней точки и отпустите, или введите длину в окошке.':(lineKind==='poly'?'Многоугольник: коснитесь центра и тяните до вершины':lineKind==='rect'?'Прямоугольник: тяните от угла до угла':lineKind==='circ'?'Круг: коснитесь центра и тяните':lineKind==='aux'?'Конструкционная линия: поставьте две точки, она пройдёт через весь лист':lineKind==='line'?'Коснитесь, чтобы начать линию':doc.items.length?'Коснитесь, чтобы поставить первую точку стены':'Коснитесь начальной точки или сразу введите длину в окошке — стена пойдёт от нулевой точки'),
     rect:'Протяните пальцем по диагонали',
     split:'Разделить: коснитесь стены или линии в месте разреза (работает магнит). ✓ — выйти',
+    merge:'Убрать вершину: коснитесь кружка между двумя стенами — они станут одной. ✓ — выйти',
     mirror:mirA?'Ось зеркала: вторая точка (Орто — строго по X или Y)':'Зеркало: первая точка оси. '+(editMode==='mirrorc'?'Оригинал останется':'Объекты перевернутся на месте'),
     dim:'Протяните от точки до точки',
     move:moveSel.size?'Тяните выбранное пальцем или введите расстояние и нажмите стрелку':'Коснитесь стен, которые нужно сдвинуть. Можно выбрать несколько.',
@@ -1033,6 +1036,8 @@ cv.addEventListener('pointerdown',e=>{
   press={id:e.pointerId,sx:p.x,sy:p.y,lx:p.x,ly:p.y,moved:false,mouse:e.pointerType==='mouse',
     pan:tool==='select'||(e.pointerType==='mouse'&&(e.button===1||e.button===2))};
   if(tool==='split'&&!press.pan){ press.split=true; updSplit(p); redraw(); return; }
+  if(tool==='merge'&&!press.pan){ press.noop=true; let best=null,bd=press.mouse?16:28; for(const q of mergePts()){ const t=toS(q),d=Math.hypot(t.x-p.x,t.y-p.y); if(d<bd){bd=d;best=q;} }
+    if(best){ const m=mergeAt(best); toast(m); } else toast('Коснитесь кружка-вершины между двумя стенами или линиями'); redraw(); return; }
   if(tool==='mirror'&&!press.pan){ press.mir=true; mirLive=snapPoint(p.x,p.y,mirA); redraw(); return; }
   if(tool==='select'||tool==='hole'){
     let wb=null,wd=22; for(const w of witHits){ const d=Math.hypot(w.x-p.x,w.y-p.y); if(d<wd){wd=d;wb=w;} }
@@ -1058,7 +1063,7 @@ cv.addEventListener('pointerdown',e=>{
     if(lh){ const hh=hit(p.x,p.y), ids=selIds(), dr=hh&&ids.has(hh.id)&&ids.has(lh.id)&&!isHole(hh)&&hh.t!=='chim'; if(hh&&hh.t!=='chim') armLongPress(hh);
       if(armLabel(lh)){ press.label=lh; press.pan=false; if(dr) press.sd=startObjDrag(ids,p,true); }
       else if(dr){ press.pan=false; press.sd=startObjDrag(ids,p,true); }
-      else { press.labelArm=true; selectByLabel(lh); } return; }
+      else { press.labelArm=true; press.prev={id:selId,ms:new Set(moveSel)}; selectByLabel(lh); } return; }
     const j=hitJoint(p.x,p.y,editLine||editGrp?30:(press.mouse?14:22));
     if(j){ let refs=[]; const ex=new Set(), S=selIds();
       for(const it of doc.items){ if(it.t!=='line'&&it.t!=='dim') continue;
@@ -1705,6 +1710,23 @@ function splitAt(W,t){
   for(const h of holesOn(W)) if(h.pos>s){ h.wall=W2.id; h.pos=r3(h.pos-s); }
   for(const d of doc.items) if(d.t==='dim') for(const k of ['ra','rb']){ const r=d[k]; if(!r||r.id!==W.id) continue; if(r.f<=t) r.f=t?r.f/t:0; else d[k]={...r,id:W2.id,f:(r.f-t)/(1-t)}; }
   persist(); return W2; }
+/* ---------- Убрать вершину: две стены (линии) подряд становятся одной ---------- */
+function mergePair(P){ const r=[]; for(const it of doc.items){ if(it.t!=='line') continue; for(const k of ['a','b']) if(near(it[k],P)) r.push([it,k]); }
+  if(r.length!==2) return null; const [[A,ka],[B,kb]]=r; if(A===B||isArc(A)||isArc(B)||isWall(A)!==isWall(B)||A.t!==B.t) return null; return {A,ka,B,kb}; }
+function mergePts(){ const out=[]; for(const it of doc.items){ if(it.t!=='line') continue; for(const k of ['a','b']){ const P=it[k]; if(out.some(q=>near(q,P))) continue; if(mergePair(P)) out.push(P); } } return out; }
+function mergeAt(P){ const m=mergePair(P); if(!m) return 'Здесь сходятся не две прямые стены одного типа';
+  const {A,ka,B,kb}=m, QB=B[kb==='a'?'b':'a'];
+  // мировые точки окон/дверей и привязок размеров — чтобы после слияния поставить их на ту же место
+  const hs=[...holesOn(A),...holesOn(B)].map(h=>{ const g=holeGeom(h); return {h,c:g?g.at(g.c,0):null}; });
+  pushUndo();
+  for(const d of doc.items) if(d.t==='dim') for(const k of ['ra','rb']){ const r=d[k]; if(r&&(r.id===A.id||r.id===B.id)){ const q=refPt(r); if(q) d[k.slice(1)]=q; delete d[k]; d._re=1; } }
+  if(ka==='b') A.b={...QB}; else A.a={...QB};
+  const nb=B.nj&&B.nj[kb==='a'?'b':'a']; if(A.nj){ delete A.nj[ka]; } if(nb) A.nj={...(A.nj||{}),[ka]:true}; if(A.nj&&!A.nj.a&&!A.nj.b) delete A.nj;
+  if(B.g&&!A.g) A.g=B.g;
+  doc.items=doc.items.filter(i=>i!==B);
+  for(const {h,c} of hs){ h.wall=A.id; if(c){ const u=unit(A.a,A.b); h.pos=r3((c.x-A.a.x)*u.x+(c.y-A.a.y)*u.y); } }
+  for(const d of doc.items) if(d._re){ delete d._re; attachDim(d); }
+  persist(); panelKey=''; syncPanel(); return 'Вершина убрана: '+(isWall(A)?'стена':'линия')+' '+fmt(lineLen(A))+' мм'; }
 /* ---------- Зеркало ---------- */
 function reflectP(P,A,B){ const d=unit(A,B), vx=P.x-A.x, vy=P.y-A.y, k=vx*d.x+vy*d.y; return {x:r3(A.x+2*k*d.x-vx),y:r3(A.y+2*k*d.y-vy)}; }
 function mirrorClone(it,A,B){ const c=JSON.parse(JSON.stringify(it));
@@ -1935,7 +1957,8 @@ function syncPanel(){
       <div class="rows">${jl.map(([it,k],i)=>{const o=it[k==='a'?'b':'a'];const d=unit(o,it[k]);
         const ar=Math.abs(d.x)>Math.abs(d.y)?(d.x>0?'→':'←'):(d.y>0?'↑':'↓');
         return `<div class="fld"><label for="jl_${i}">Линия ${ar}, мм</label><input class="inp" id="jl_${i}" data-lid="${it.id}" inputmode="decimal" value="${r1(Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y))}"></div>`;}).join('')}</div>
-      <p class="hint">Тяните узел пальцем или введите длину. «Примык./Отдельно» и «Орто/X/Y/Свободно» внизу задают, как он двигается.</p>`;
+      ${mergePair(selJoint)?'<button class="btn" data-act="mergeJ">Убрать вершину</button>':''}
+      <p class="hint">Тяните узел пальцем или введите длину. Значки-звенья на концах выделенной стены: соединить / отсоединить.</p>`;
   } else if(tool==='text'&&pendingText){
     h=`<div class="fld"><label for="tText">Текст</label><input class="inp wide" id="tText" autocomplete="off" placeholder="Санузел, h=2700"></div>
       <div class="fld"><label for="tH">Высота, мм</label><input class="inp sm" id="tH" inputmode="decimal" value="${doc.settings.textH}"></div>
@@ -1971,6 +1994,7 @@ panel.addEventListener('click',e=>{
     case 'copyObj':copyObj();break;
     case 'grpEdit':if(sel&&sel.g){editGrp=sel.g;panelKey='';syncPanel();redraw();toast('Правка фигуры: тяните вершины и грани. Пустое место — выход.');}break;
     case 'ungrp':if(sel&&sel.g){pushUndo();const gg=sel.g;for(const it of doc.items) if(it.g===gg) delete it.g;editGrp=null;persist();panelKey='';syncPanel();redraw();toast('Фигура разбита на отдельные линии');}break;
+    case 'mergeJ':if(selJoint){ const m=mergeAt(selJoint); selJoint=null; toast(m); panelKey=''; syncPanel(); redraw(); }break;
     case 'flip':if(sel){pushUndo();sel.off=-sel.off;persist();panelKey='';syncPanel();redraw();}break;
     case 'placeText':placeText();break;
     case 'cancelText':pendingText=null;syncPanel();redraw();break;
@@ -2040,14 +2064,14 @@ let wallMode='chain', lineMode='chain', editMode='split', btnTool='line';
 try{ const m=JSON.parse(localStorage.getItem('zamer-modes')||'null'); if(m){ wallMode=m.w||wallMode; lineMode=m.l||lineMode; editMode=m.e||editMode; } }catch(e){}
 function saveModes(){ try{localStorage.setItem('zamer-modes',JSON.stringify({w:wallMode,l:lineMode,e:editMode}));}catch(e){} }
 const segMode=()=>(lineKind==='wall'&&wallMode==='seg')||(lineKind==='line'&&lineMode==='seg');
-const MODEN={chain:'Цепочка',seg:'Отрезок',rect:'Прямоуг.',arc:'Дуга',circ:'Круг',poly:'Многоуг.',aux:'Конструкц.',split:'Разделить',mirrorc:'Зеркало',mirrorm:'Зеркало'};
-function setTool(t){ if(t==='move') t='select'; if(t!=='select') moveSel.clear();
+const MODEN={chain:'Цепочка',seg:'Отрезок',rect:'Прямоуг.',arc:'Дуга',circ:'Круг',poly:'Многоуг.',aux:'Конструкц.',split:'Разделить',merge:'Убрать вершину',mirrorc:'Зеркало',mirrorm:'Зеркало'};
+function setTool(t){ if(t==='move') t='select'; if(tool==='select') editSel=selIds(); const preSel=tool==='select'||['split','merge','mirror'].includes(tool)?editSel:null; if(t!=='select') moveSel.clear();
   btnTool=t; let nk, nt;
   if(t==='line'){ nt=wallMode==='rect'?'rect':'line'; nk=wallMode==='arc'?'arc':'wall'; arcWall=true; }
   else if(t==='draw'){ nt='line'; nk=lineMode==='chain'||lineMode==='seg'?'line':lineMode; arcWall=false; }
-  else if(t==='edit'){ nt=editMode==='split'?'split':'mirror'; nk=lineKind; }
+  else if(t==='edit'){ nt=editMode==='split'?'split':editMode==='merge'?'merge':'mirror'; nk=lineKind; }
   else { nt=t; nk=lineKind; }
-  if(t==='edit'&&nt==='mirror'){ const S=tool==='select'?selIds():mirrorSel; if(!S.size){ toast('Сначала выделите объекты в «Выборе» (удержание — добавить), затем Изменить → Зеркало'); btnTool='select'; nt='select'; } else mirrorSel=new Set(S); }
+  if(t==='edit'&&nt==='mirror'){ const S=preSel&&preSel.size?preSel:(tool==='mirror'?mirrorSel:new Set()); if(!S.size){ toast('Сначала выделите объекты в «Выборе» (удержание — добавить), затем Изменить → Зеркало'); btnTool='select'; nt='select'; } else mirrorSel=new Set(S); }
   drawKind=t==='draw'?nk:drawKind;
   if(tool==='line'&&(nt!=='line'||nk!==lineKind)){chain.pts=[];chain.ids=[];live=null;arcB=null;}
   tool=nt; lineKind=nk; dragA=dragB=null; pendingText=null; chimPrev=null; splitPt=null; mirA=null; mirLive=null; if(nt!=='select'){selId=null;selJoint=null;editGrp=null;editLine=null;}
@@ -2060,10 +2084,9 @@ function setTool(t){ if(t==='move') t='select'; if(t!=='select') moveSel.clear()
   syncPanel(); syncModeBtns(); redraw();
 }
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{ const t=b.dataset.tool, wasOpen=!$('#toolMenu').hidden&&menuFor===t;
-  if(t==='edit'&&btnTool==='select') mirrorSel=new Set(selIds());
   setTool(t); if(['line','draw','edit'].includes(t)&&!wasOpen) openToolMenu(t,b); else closeToolMenu(); }));
 /* ---------- раскрывающиеся меню инструментов ---------- */
-let menuFor=null, arcWall=true, mirrorSel=new Set();
+let menuFor=null, arcWall=true, mirrorSel=new Set(), editSel=new Set();
 function closeToolMenu(){ $('#toolMenu').hidden=true; menuFor=null; }
 function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
   const mb=(k,cur,attr)=>`<button data-${attr}="${k}" aria-pressed="${k===cur}">${MODEN[k]}${k==='mirrorc'?' (копия)':k==='mirrorm'?' (перенести)':''}</button>`;
@@ -2075,7 +2098,7 @@ function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
       <div class="dirs">${[3,4,6,8].map(n=>`<button data-pgn="${n}">${n}</button>`).join('')}</div><div class="fld"><label for="pgS">Сторона, мм</label><input class="inp sm" id="pgS" inputmode="decimal" placeholder="пальцем" value="${polyS||''}"></div></div>`;
     if(lineMode==='rect') h+=`<div class="mr"><div class="fld"><label for="shW">Ширина</label><input class="inp sm" id="shW" inputmode="decimal" placeholder="пальцем" value="${shW||''}"></div><div class="fld"><label for="shH">Высота</label><input class="inp sm" id="shH" inputmode="decimal" placeholder="пальцем" value="${shH||''}"></div></div>`;
     if(lineMode==='circ') h+=`<div class="mr"><div class="fld"><label for="shD">Диаметр</label><input class="inp sm" id="shD" inputmode="decimal" placeholder="пальцем" value="${shD||''}"></div></div>`; }
-  else if(t==='edit'){ h=`<div class="mh">Изменить</div><div class="mg">${['split','mirrorc','mirrorm'].map(k=>mb(k,editMode,'em')).join('')}</div>`; }
+  else if(t==='edit'){ h=`<div class="mh">Изменить</div><div class="mg">${['split','merge','mirrorc','mirrorm'].map(k=>mb(k,editMode,'em')).join('')}</div>`; }
   m.innerHTML=h; m.hidden=false;
   const r=btn.getBoundingClientRect(), sr=stage.getBoundingClientRect(), w=m.offsetWidth;
   m.style.left=Math.max(8,Math.min(sr.width-w-8,r.left-sr.left+r.width/2-w/2))+'px'; }
