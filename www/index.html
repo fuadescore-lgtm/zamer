@@ -855,6 +855,10 @@ function drawLoupe(){ if(!press||press.mouse) return; let P=null;
 // лёгкая вибрация, когда точка прилипла к чему-то новому
 let lastSnapK=null;
 function snapBuzz(){ const k=liveSnap||null; if(k&&k!==lastSnapK&&press&&!press.mouse){ try{navigator.vibrate&&navigator.vibrate(8);}catch(e){} } lastSnapK=k; }
+// толщина линии (мм на печати → пиксели на экране) и тип линии
+const LW=[0.13,0.18,0.25,0.35,0.5,0.7,1.0], LT={solid:'Сплошная',dash:'Штриховая',dot:'Точечная',dashdot:'Штрихпунктир'};
+const lwPx=(it,def)=>it.lw?1+it.lw*3.5:def;
+function ltDash(it){ const k=Math.max(1,lwPx(it,1.5)/1.5); return it.lt==='dash'?[10*k,6*k]:it.lt==='dot'?[1.5*k,4*k]:it.lt==='dashdot'?[12*k,4*k,2*k,4*k]:[]; }
 let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
@@ -888,12 +892,12 @@ function drawArcLine(it,sel){
   const G=arcG(it), col=sel?C.sel:it.lc?it.lc:it.L==='open'?C.open:it.L==='misc'?C.muted:C.ink;
   const path=(k,t0,t1)=>{ const P=arcPts(G,k,t0,t1).map(toS); ctx.beginPath(); ctx.moveTo(P[0].x,P[0].y); for(let i=1;i<P.length;i++) ctx.lineTo(P[i].x,P[i].y); ctx.stroke(); };
   ctx.lineCap='butt';
-  if(isWall(it)){ const o=offs(it), gp=faceGaps(it); ctx.strokeStyle=col; ctx.lineWidth=sel?2.4:1.6; ctx.setLineDash([]);
+  if(isWall(it)){ const o=offs(it), gp=faceGaps(it); ctx.strokeStyle=col; ctx.lineWidth=lwPx(it,1.6)+(sel?0.8:0); ctx.setLineDash([]);
     const E=arcEnds(it);
     for(const [sd,k] of [['L',o.L],['R',-o.R]]){ const s0=E.a['t'+sd]*G.L, s1=E.b['t'+sd]*G.L; let cur=s0; const gs=gp[sd].slice().sort((x,y)=>x[0]-y[0]);
       for(const [g0,g1] of gs){ if(g1<=cur) continue; if(g0>cur) path(k,cur/G.L,Math.min(g0,s1)/G.L); cur=Math.max(cur,g1); } if(cur<s1) path(k,cur/G.L,s1/G.L); } for(const k of ['a','b']){ const e=E[k]; if(e.trim) continue; if(e.cap) line(toS(e.fL),toS(e.fR)); else { line(toS(e.fL),toS(e.L)); line(toS(e.fR),toS(e.R)); } }
     if(sel||!(it.side)){ ctx.lineWidth=1; ctx.setLineDash([10,3,2,3]); ctx.strokeStyle=sel?C.sel:C.muted; path(0,0,1); ctx.setLineDash([]); }
-  } else { ctx.strokeStyle=col; ctx.lineWidth=it.L==='walls'?2.6:1.5; if(it.L==='open') ctx.setLineDash([6,4]); path(0,0,1); ctx.setLineDash([]); }
+  } else { ctx.strokeStyle=col; ctx.lineWidth=lwPx(it,it.L==='walls'?2.6:1.5); const dsh=ltDash(it); if(dsh.length) ctx.setLineDash(dsh); else if(it.L==='open') ctx.setLineDash([6,4]); path(0,0,1); ctx.setLineDash([]); }
   if((doc.settings.wallLabels||sel)&&G.L*view.scale>42){
     const sd=isWall(it)?(it.side||0):0, sgn=sd>0?-1:1, off=10/view.scale+(sd===0&&isWall(it)?it.w/2:0)+(isWall(it)&&sd!==0&&sgn<0?0:0);
     const wm=arcAt(G,.5,off*sgn), m=toS(wm), u=arcTan(G,.5);
@@ -913,15 +917,15 @@ function drawItem(it,sel){
     if(isWall(it)){
       const w=wallPoly(it),P=[w.aL,w.bL,w.bR,w.aR].map(toS);
       ctx.beginPath();ctx.moveTo(P[0].x,P[0].y);for(let i=1;i<4;i++)ctx.lineTo(P[i].x,P[i].y);ctx.closePath();
-      ctx.strokeStyle=col;ctx.lineWidth=sel?2.4:1.6;ctx.lineCap='butt';
+      ctx.strokeStyle=col;ctx.lineWidth=lwPx(it,1.6)+(sel?0.8:0);ctx.lineCap='butt';
       const gp=faceGaps(it);
       for(const [q0,q1] of faceParts(it,w.aL,w.bL,gp.L)) line(toS(q0),toS(q1));
       for(const [q0,q1] of faceParts(it,w.aR,w.bR,gp.R)) line(toS(q0),toS(q1));
       if(w.capA) line(P[0],P[3]); if(w.capB) line(P[1],P[2]);
       if(sel||!(it.side)){ctx.lineWidth=1;ctx.setLineDash([10,3,2,3]);ctx.strokeStyle=sel?C.sel:C.muted;line(a,b);ctx.setLineDash([]);}
     } else {
-      ctx.strokeStyle=col;ctx.lineWidth=it.L==='walls'?2.6:it.L==='open'?2:1.5;
-      if(it.L==='open'){ctx.setLineDash([6,4]);} line(a,b); ctx.setLineDash([]);
+      ctx.strokeStyle=col;ctx.lineWidth=lwPx(it,it.L==='walls'?2.6:it.L==='open'?2:1.5);
+      const dsh=ltDash(it); if(dsh.length) ctx.setLineDash(dsh); else if(it.L==='open'){ctx.setLineDash([6,4]);} line(a,b); ctx.setLineDash([]);
     }
     if((doc.settings.wallLabels||sel)&&tmpTarget()!==it){
       const len=Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y), sl=Math.hypot(b.x-a.x,b.y-a.y);
@@ -2273,7 +2277,9 @@ function colorBtns(it,multi){ const w=multi?true:isWall(it), cv=v=>v||'';
   const sw=(id,val,def,t)=>`<label class="csw" title="${t}"><input type="color" id="${id}" value="${val||def}"><span style="background:${val||'transparent'}"></span><i>${t.split(' ')[0]}</i></label>`;
   return `${sw('pLc',multi?'':it.lc,'#e8e6e1','Линия')}${w?sw('pFc',multi?'':it.fc,'#3a4442','Заливка'):''}
     ${w?`<select class="inp" id="pHp" title="Штриховка" style="width:auto">${Object.entries(HATCH).map(([k,n])=>`<option value="${k}"${(multi?'none':(it.hp||'none'))===k?' selected':''}>${n}</option>`).join('')}</select>`:''}
-    ${!multi&&(it.lc||it.fc||(it.hp&&it.hp!=='none'))?'<button class="btn" data-act="colReset" title="Цвета и штриховка по умолчанию">↺ цвет</button>':''}`; }
+    ${!w||multi?`<select class="inp" id="pLt" title="Тип линии" style="width:auto">${Object.entries(LT).map(([k,n])=>`<option value="${k}"${(multi?'solid':(it.lt||'solid'))===k?' selected':''}>${n}</option>`).join('')}</select>`:''}
+    <select class="inp" id="pLw" title="Толщина линии, мм" style="width:auto"><option value="">толщ. ⟂</option>${LW.map(v=>`<option value="${v}"${!multi&&it.lw===v?' selected':''}>${v} мм</option>`).join('')}</select>
+    ${!multi&&(it.lc||it.fc||(it.hp&&it.hp!=='none')||it.lt||it.lw)?'<button class="btn" data-act="colReset" title="Цвет, тип и толщина линии по умолчанию">↺</button>':''}`; }
 function sideSeg(name,v){ return `<div class="seg" role="group">${[[1,'◂ Слева',SIDEI[1]],[0,'Ось',SIDEI[0]],[-1,'Справа ▸',SIDEI[-1]]].map(([k,n,ic])=>`<button data-${name}="${k}" aria-pressed="${v===k}" title="${n}" aria-label="${n}" class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ic}</svg></button>`).join('')}</div>`; }
 // мини-панель висит рядом с выделенным (под ним, а если места нет — над ним), не закрывая чертёж снизу
 function placePanel(){ /* панель свойств закреплена над нижней панелью инструментов */ }
@@ -2394,6 +2400,9 @@ function syncPanel(){
     if(sel.g&&editGrp!==sel.g){ const n=doc.items.filter(i=>i.g===sel.g).length;
       h=`<div class="title" style="flex-basis:auto">Фигура <b>${n} ${n%10===1&&n!==11?'грань':(n%10>=2&&n%10<=4&&(n<10||n>20)?'грани':'граней')}</b></div>
         ${ICOPY()}${IB('ungrp','ungrp','Разбить на отдельные')}${IDEL()}
+        ${sel.t==='line'&&!isArc(sel)?`<div class="fld inl"><label for="pLen" title="Длина выбранной грани">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(lineLen(sel))}"></div>
+        <div class="fld inl"><label for="pAng" title="Угол выбранной грани">∠</label><input class="inp xs" id="pAng" inputmode="decimal" value="${Math.round(Math.atan2(sel.b.y-sel.a.y,sel.b.x-sel.a.x)*18000/Math.PI)/100}"></div>`:''}
+        ${colorBtns(sel)}
         <p class="hint">Тяните грань — двигается только она, тяните вершину — угол. Всю фигуру целиком двигает «Сдвиг». Синие цифры — расстояния до стен, коснитесь и введите.</p>`;
     } else if(sel.t==='line'){
       // мини-панель стены/линии: длина и угол — прямо на чертеже (касание синей цифры), тут только свойства
@@ -2469,7 +2478,7 @@ panel.addEventListener('click',e=>{
     case 'ungrp':if(sel&&sel.g){pushUndo();const gg=sel.g;for(const it of doc.items) if(it.g===gg) delete it.g;editGrp=null;persist();panelKey='';syncPanel();redraw();toast('Фигура разбита на отдельные линии');}break;
     case 'alignJ':alignJoint();break;
     case 'imgImport':$('#imgFile').click();break;
-    case 'colReset':{ styleBegin(); const S=selIds(); for(const it of doc.items) if(S.has(it.id)){ delete it.lc; delete it.fc; delete it.hp; } panelKey=''; syncPanel(); redraw(); }break;
+    case 'colReset':{ styleBegin(); const S=selIds(); for(const it of doc.items) if(S.has(it.id)){ delete it.lc; delete it.fc; delete it.hp; delete it.lt; delete it.lw; } panelKey=''; syncPanel(); redraw(); }break;
     case 'stFlip':if(sel&&sel.t==='stair'){ pushUndo(); sel.flip=!sel.flip; persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'stRev':if(sel&&sel.t==='stair'){ pushUndo(); if(sel.kind==='U'){ const g=stairGeom(sel), A=sel.pts[0],B=sel.pts[1], d=sel.w+(sel.gap||0), u=unit(A,B), nn=lft(u), sg=sel.flip?-1:1; sel.pts=[{x:r3(A.x+nn.x*d*sg),y:r3(A.y+nn.y*d*sg)},{x:r3(B.x+nn.x*d*sg),y:r3(B.y+nn.y*d*sg)}]; sel.flip=!sel.flip; } else sel.pts=sel.pts.slice().reverse(); persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'imgCal':if(sel&&sel.t==='img') startCal(sel.id);break;
@@ -2498,6 +2507,7 @@ panel.addEventListener('keydown',e=>{
 function applyProp(t){
   if(t.id==='inW'){const v=parseNum(t.value); if(v>=0){doc.settings.wallW=v;persist();const mb=$('#moreBtn');if(mb&&lineKind==='wall')mb.textContent='Стена '+fmt(v)+' ▴';toast(v?'Новые стены: '+fmt(v)+' мм':'Новые стены без толщины');} return;}
   if(t.id==='pFix'){fixMode=t.value;return;}
+  if(t.id==='pLt'||t.id==='pLw'){ styleSet(t.id==='pLt'?'lt':'lw',t.value); return; }
   if(t.id==='pLc'||t.id==='pFc'||t.id==='pHp'){ styleSet(t.id==='pLc'?'lc':t.id==='pFc'?'fc':'hp',t.value); const sw=t.parentElement&&t.parentElement.querySelector('span'); if(sw) sw.style.background=t.value; return; }
   if(t.id==='mW'){ const v=parseNum(t.value); if(!(v>=0)) return; const S=selIds(); pushUndo(); let n=0; for(const it of doc.items) if(S.has(it.id)&&isWall(it)){ it.w=v; n++; }
     persist(); panelKey=''; syncPanel(); redraw(); toast('Толщина '+fmt(v)+' мм у стен: '+n); return; }
@@ -2689,11 +2699,11 @@ function syncTop(){ $('#btnUndo').disabled=!undoS.length; $('#btnRedo').disabled
 // ✓ и ✕ видны в режимах рисования и вставки
 // правка цвета/штриховки: ✓ — применить, ✕ — вернуть как было до начала правки
 let styleEdit=null;
-function styleBegin(){ if(styleEdit) return; const S=selIds(), snap={}; for(const it of doc.items) if(S.has(it.id)) snap[it.id]={lc:it.lc,fc:it.fc,hp:it.hp}; pushUndo(); styleEdit={snap}; syncModeBtns(); }
-function styleSet(key,val){ styleBegin(); const S=selIds(); for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line') continue; if(key!=='lc'&&!isWall(it)) continue; if(key==='hp'&&val==='none') delete it.hp; else it[key]=val; } redraw(); }
+function styleBegin(){ if(styleEdit) return; const S=selIds(), snap={}; for(const it of doc.items) if(S.has(it.id)) snap[it.id]={lc:it.lc,fc:it.fc,hp:it.hp,lt:it.lt,lw:it.lw}; pushUndo(); styleEdit={snap}; syncModeBtns(); }
+function styleSet(key,val){ styleBegin(); const S=selIds(); for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line') continue; if((key==='fc'||key==='hp')&&!isWall(it)) continue; if((key==='hp'&&val==='none')||(key==='lt'&&val==='solid')||(key==='lw'&&!val)) delete it[key]; else it[key]=key==='lw'?+val:val; } redraw(); }
 function styleEnd(apply){ if(!styleEdit) return; const E=styleEdit; styleEdit=null;
-  if(!apply) for(const it of doc.items){ const o=E.snap[it.id]; if(!o) continue; for(const k of ['lc','fc','hp']){ if(o[k]===undefined) delete it[k]; else it[k]=o[k]; } }
-  persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Цвет применён':'Цвет отменён'); }
+  if(!apply) for(const it of doc.items){ const o=E.snap[it.id]; if(!o) continue; for(const k of ['lc','fc','hp','lt','lw']){ if(o[k]===undefined) delete it[k]; else it[k]=o[k]; } }
+  persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Применено':'Отменено'); }
 function syncModeBtns(){ const on=tool!=='select'||!!styleEdit; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
 syncModeBtns();
 $('#btnOk').addEventListener('click',()=>{ if(styleEdit){ styleEnd(true); return; } if(stairDraw){ finishStair(); return; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
