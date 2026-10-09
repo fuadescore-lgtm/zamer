@@ -462,10 +462,12 @@ function awayInfo(it,key){ const o=offs(it);
   if(isArc(it)){ const G=arcG(it), t=key==='a'?arcTan(G,0):arcTan(G,1); return key==='a'?{P:it.a,d:t,la:o.L,ra:o.R}:{P:it.b,d:{x:-t.x,y:-t.y},la:o.R,ra:o.L}; }
   return key==='a'?{P:it.a,d:unit(it.a,it.b),la:o.L,ra:o.R}:{P:it.b,d:unit(it.b,it.a),la:o.R,ra:o.L}; }
 function wallNeighbor(it,key){
-  const P=it[key]; let found=null,n=0; if(nj(it,key)) return null;
-  for(const o of doc.items){ if(o===it||!isWall(o)) continue;
-    if(near(o.a,P)){ if(nj(o,'a')) continue; found=[o,'a'];n++;} else if(near(o.b,P)){ if(nj(o,'b')) continue; found=[o,'b'];n++;} }
-  return n===1?found:null;
+  // прямые соседи важнее дуги: дуга, пришедшая в угол двух стен, не ломает их угол
+  const P=it[key]; let found=null,n=0,arcF=null,na=0; if(nj(it,key)) return null;
+  for(const o of doc.items){ if(o===it||!isWall(o)) continue; let f=null;
+    if(near(o.a,P)){ if(nj(o,'a')) continue; f=[o,'a']; } else if(near(o.b,P)){ if(nj(o,'b')) continue; f=[o,'b']; }
+    if(!f) continue; if(isArc(o)&&!isArc(it)){ arcF=f; na++; } else { found=f; n++; } }
+  if(n===1) return found; if(n===0&&na===1) return arcF; return null;
 }
 // узел из 3-4 стен: две стены по одной прямой идут насквозь, остальные упираются в их грань (как в Revit)
 function nodeJoin(it,key){ if(nj(it,key)||isArc(it)) return null; const P=it[key], os=[];
@@ -552,10 +554,16 @@ function arcTrim(A,ak,Y){ if(!isWall(Y)||isArc(Y)) return null; const G=arcG(A),
       if(!best||Math.abs(tp-t0)<Math.abs(best.t-t0)) best={t:tp,q}; }
     if(!best||Math.abs(best.t-t0)>0.35) return null; r.t[sd]=best.t; r.p[sd]=best.q; }
   return r; }
+// стена, в грань которой упирается конец дуги: из стен в этом узле — та, что поперечнее дуге
+function arcHost(A,k){ if(nj(A,k)) return null; const P=A[k], G=arcG(A), t=k==='a'?arcTan(G,0):arcTan(G,1); let best=null,bc=0.2;
+  for(const Y of doc.items){ if(Y===A||!isWall(Y)||isArc(Y)) continue;
+    const at=(near(Y.a,P)&&!nj(Y,'a'))||(near(Y.b,P)&&!nj(Y,'b'))||(()=>{ const ob=onBody(P,Y); return ob&&!ob.end; })(); if(!at) continue;
+    const u=unit(Y.a,Y.b), c=Math.abs(t.x*u.y-t.y*u.x); if(c>bc){ bc=c; best=Y; } }
+  return best; }
 function arcEnds(W){ const G=arcG(W), o=offs(W), r={};
   for(const k of ['a','b']){ const t=k==='a'?0:1, fL=arcAt(G,t,o.L), fR=arcAt(G,t,-o.R); let E=null;
-    const nb=nj(W,k)?null:wallNeighbor(W,k);
-    if(nb&&!isArc(nb[0])){ const tr=arcTrim(W,k,nb[0]); if(tr){ r[k]={cap:true,trim:true,tL:tr.t.L,tR:tr.t.R,fL:tr.p.L,fR:tr.p.R,L:tr.p.L,R:tr.p.R}; continue; } }
+    const hy=arcHost(W,k);
+    if(hy){ const tr=arcTrim(W,k,hy); if(tr){ r[k]={cap:true,trim:true,tL:tr.t.L,tR:tr.t.R,fL:tr.p.L,fR:tr.p.R,L:tr.p.L,R:tr.p.R}; continue; } }
     try{ E=wallEnd(W,k); }catch(e){ E=null; }
     if(E&&!E.cap&&Math.hypot(E.L.x-fL.x,E.L.y-fL.y)<Math.max(W.w,1)*6&&Math.hypot(E.R.x-fR.x,E.R.y-fR.y)<Math.max(W.w,1)*6) r[k]={cap:false,tL:t,tR:t,fL,fR,L:E.L,R:E.R};
     else r[k]={cap:true,tL:t,tR:t,fL,fR,L:fL,R:fR}; }
@@ -621,7 +629,7 @@ function faceGaps(Y){ const g={L:[],R:[]};
       g[tj.side].push([Math.min(t1,t2),Math.max(t1,t2)]); } }
   // дуга, упёртая в грань этой стены: грань под ней не рисуем — стык выглядит одной стеной
   if(!isArc(Y)) for(const A of doc.items){ if(A===Y||!isWall(A)||!isArc(A)) continue;
-    for(const k of ['a','b']){ if(nj(A,k)) continue; const nb=wallNeighbor(A,k); if(!nb||nb[0]!==Y) continue; const tr=arcTrim(A,k,Y); if(!tr) continue;
+    for(const k of ['a','b']){ if(nj(A,k)) continue; if(arcHost(A,k)!==Y) continue; const tr=arcTrim(A,k,Y); if(!tr) continue;
       const u=unit(Y.a,Y.b), n=lft(u), M=arcAt(arcG(A),.5,0), side=((M.x-Y.a.x)*n.x+(M.y-Y.a.y)*n.y)>0?'L':'R';
       const t1=(tr.p.L.x-Y.a.x)*u.x+(tr.p.L.y-Y.a.y)*u.y, t2=(tr.p.R.x-Y.a.x)*u.x+(tr.p.R.y-Y.a.y)*u.y; g[side].push([Math.min(t1,t2)+0.5,Math.max(t1,t2)-0.5]); } }
   if(!isArc(Y)) for(const X of doc.items){ if(X===Y||!isWall(X)||isArc(X)) continue;
