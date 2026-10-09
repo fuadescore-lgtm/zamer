@@ -119,6 +119,10 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
 .ibn{width:34px;height:32px;padding:0;display:inline-grid;place-items:center;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink)}
 .ibn svg{width:20px;height:20px}.ibn.danger{color:var(--dim)}
 .panel .fld.inl{flex-direction:row;align-items:center;gap:4px}.panel .fld.inl label{font-size:11px;letter-spacing:0}
+.csw{position:relative;display:inline-flex;align-items:center;gap:3px;height:32px;padding:0 6px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);cursor:pointer;flex:none}
+.csw input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.csw span{width:18px;height:18px;border-radius:4px;border:1px solid var(--muted);background-image:linear-gradient(45deg,transparent 45%,var(--dim) 45%,var(--dim) 55%,transparent 55%)}
+.csw i{font-style:normal;font-size:11px;font-family:var(--f-ui);color:var(--muted)}
 .panel .inp.xs{width:54px;padding:0 4px}
 .panel #pLayer{width:auto;max-width:84px;font-size:12px;padding:0 2px}
 .panel{padding:4px 6px!important}
@@ -881,7 +885,7 @@ function drawGrid(){
   }
 }
 function drawArcLine(it,sel){
-  const G=arcG(it), col=sel?C.sel:it.L==='open'?C.open:it.L==='misc'?C.muted:C.ink;
+  const G=arcG(it), col=sel?C.sel:it.lc?it.lc:it.L==='open'?C.open:it.L==='misc'?C.muted:C.ink;
   const path=(k,t0,t1)=>{ const P=arcPts(G,k,t0,t1).map(toS); ctx.beginPath(); ctx.moveTo(P[0].x,P[0].y); for(let i=1;i<P.length;i++) ctx.lineTo(P[i].x,P[i].y); ctx.stroke(); };
   ctx.lineCap='butt';
   if(isWall(it)){ const o=offs(it), gp=faceGaps(it); ctx.strokeStyle=col; ctx.lineWidth=sel?2.4:1.6; ctx.setLineDash([]);
@@ -904,7 +908,7 @@ function drawItem(it,sel){
   if(it.t==='line'&&isArc(it)){ drawArcLine(it,sel); return; }
   if(it.t==='line'){
     const a=toS(it.a),b=toS(it.b);
-    const col=sel?C.sel:it.L==='open'?C.open:it.L==='misc'?C.muted:C.ink;
+    const col=sel?C.sel:it.lc?it.lc:it.L==='open'?C.open:it.L==='misc'?C.muted:C.ink;
     ctx.lineCap='round';
     if(isWall(it)){
       const w=wallPoly(it),P=[w.aL,w.bL,w.bR,w.aR].map(toS);
@@ -999,9 +1003,26 @@ function marker(p,kind){
 }
 function rubber(a,b){ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.setLineDash([8,5]);line(toS(a),toS(b));ctx.setLineDash([]);}
 function poly(P){ctx.beginPath();ctx.moveTo(P[0].x,P[0].y);for(let i=1;i<P.length;i++)ctx.lineTo(P[i].x,P[i].y);ctx.closePath();}
+/* штриховки стен: узор привязан к началу координат и масштабу чертежа (не «плывёт» при сдвиге) */
+const HATCH={none:'Без штриховки',diag:'Кирпич / кладка (косая)',cross:'Бетон (сетка)',brick:'Кирпич',conc:'Бетон (точки)',ins:'Утеплитель',wood:'Дерево'};
+const hatchCache=new Map();
+function hatchPattern(type,col){ const key=type+'|'+col; let c=hatchCache.get(key);
+  if(!c){ c=document.createElement('canvas'); const N=64; c.width=c.height=N; const g=c.getContext('2d'); g.strokeStyle=col; g.fillStyle=col; g.lineWidth=2.4; g.lineCap='round';
+    const L=(a,b,c2,d)=>{ g.beginPath(); g.moveTo(a,b); g.lineTo(c2,d); g.stroke(); };
+    if(type==='diag'){ for(const o of [-N,0,N]) L(o,N,o+N,0); }
+    else if(type==='cross'){ for(const o of [-N,0,N]){ L(o,N,o+N,0); L(o,0,o+N,N); } }
+    else if(type==='brick'){ L(0,0.5,N,0.5); L(0,N/2,N,N/2); L(N/4,0,N/4,N/2); L(3*N/4,N/2,3*N/4,N); }
+    else if(type==='conc'){ for(const [x,y,r] of [[10,12,2.6],[40,8,1.8],[26,34,3.2],[54,40,2],[12,50,1.6],[44,56,2.8],[30,20,1.4]]){ g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill(); } g.lineWidth=1.6; L(4,30,12,26); L(46,22,54,28); }
+    else if(type==='ins'){ g.lineWidth=2; g.beginPath(); for(let x=0;x<=N;x+=2){ const y=N/2+Math.sin(x/N*Math.PI*4)*N*0.38; if(x===0) g.moveTo(x,y); else g.lineTo(x,y); } g.stroke(); }
+    else if(type==='wood'){ g.lineWidth=1.8; for(const y of [10,30,50]){ g.beginPath(); g.moveTo(0,y); g.bezierCurveTo(20,y-8,44,y+8,N,y); g.stroke(); } }
+    hatchCache.set(key,c); }
+  const pat=ctx.createPattern(c,'repeat'); const o=toS({x:0,y:0}), k=view.scale*300/64; // плитка узора = 300 мм
+  try{ pat.setTransform(new DOMMatrix().translate(o.x,o.y).scale(k)); }catch(e){} return pat; }
 function fillWalls(){
   ctx.fillStyle=C.wall;
-  for(const it of doc.items) if(isWall(it)){ if(isArc(it)){ poly(arcPolyPts(it).map(toS)); ctx.fill(); continue; } const w=wallPoly(it); poly([w.aL,w.bL,w.bR,w.aR].map(toS)); ctx.fill();}
+  for(const it of doc.items) if(isWall(it)){ const P=isArc(it)?arcPolyPts(it).map(toS):(w=>[w.aL,w.bL,w.bR,w.aR].map(toS))(wallPoly(it));
+    ctx.fillStyle=it.fc||C.wall; poly(P); ctx.fill();
+    if(it.hp&&it.hp!=='none'){ ctx.save(); ctx.globalAlpha=.75; ctx.fillStyle=hatchPattern(it.hp,it.lc||C.ink); poly(P); ctx.fill(); ctx.restore(); } }
   ctx.fillStyle=C.paper;
   for(const it of doc.items) if(isHole(it)){const g=holeGeom(it); if(g&&g.W.w>0){ const P=g.G?arcPts(g.G,g.oL,g.s0/g.L,g.s1/g.L).concat(arcPts(g.G,-g.oR,g.s1/g.L,g.s0/g.L)):[g.L0,g.L1,g.R1,g.R0]; poly(P.map(toS)); ctx.fill(); }}
 }
@@ -2247,6 +2268,12 @@ const IB=(act,k,t,cls)=>`<button class="ibn${cls?' '+cls:''}" data-act="${act}" 
 const ICOPY=()=>IB('copyObj','copy','Копировать'), IDEL=()=>IB('del','del','Удалить','danger');
 function ldEndSeg(name,v){ const I={arrow:'<path d="M3 12h12"/><path d="M21 12l-7-4v8z" fill="currentColor"/>',dot:'<path d="M3 12h12"/><circle cx="18" cy="12" r="3.5" fill="currentColor"/>',none:'<path d="M3 12h18"/>'}, N={arrow:'Стрелка',dot:'Точка',none:'Без знака'};
   return `<div class="seg" role="group">${['arrow','dot','none'].map(k=>`<button class="sico" data-${name}="${k}" aria-pressed="${v===k}" title="${N[k]}" aria-label="${N[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${I[k]}</svg></button>`).join('')}</div>`; }
+// цвет линии (и заливки, и штриховка — у стены); пусто = цвет слоя по умолчанию
+function colorBtns(it,multi){ const w=multi?true:isWall(it), cv=v=>v||'';
+  const sw=(id,val,def,t)=>`<label class="csw" title="${t}"><input type="color" id="${id}" value="${val||def}"><span style="background:${val||'transparent'}"></span><i>${t.split(' ')[0]}</i></label>`;
+  return `${sw('pLc',multi?'':it.lc,'#e8e6e1','Линия')}${w?sw('pFc',multi?'':it.fc,'#3a4442','Заливка'):''}
+    ${w?`<select class="inp" id="pHp" title="Штриховка" style="width:auto">${Object.entries(HATCH).map(([k,n])=>`<option value="${k}"${(multi?'none':(it.hp||'none'))===k?' selected':''}>${n}</option>`).join('')}</select>`:''}
+    ${!multi&&(it.lc||it.fc||(it.hp&&it.hp!=='none'))?'<button class="btn" data-act="colReset" title="Цвета и штриховка по умолчанию">↺ цвет</button>':''}`; }
 function sideSeg(name,v){ return `<div class="seg" role="group">${[[1,'◂ Слева',SIDEI[1]],[0,'Ось',SIDEI[0]],[-1,'Справа ▸',SIDEI[-1]]].map(([k,n,ic])=>`<button data-${name}="${k}" aria-pressed="${v===k}" title="${n}" aria-label="${n}" class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ic}</svg></button>`).join('')}</div>`; }
 // мини-панель висит рядом с выделенным (под ним, а если места нет — над ним), не закрывая чертёж снизу
 function placePanel(){ /* панель свойств закреплена над нижней панелью инструментов */ }
@@ -2307,6 +2334,7 @@ function syncPanel(){
     const mw=doc.items.filter(i=>selIds().has(i.id)&&isWall(i)), ws=[...new Set(mw.map(i=>i.w))];
     h=`<div class="title">Выбрано <b>${selCount()}</b>${mw.length?`<span class="lbl">стен: ${mw.length}</span>`:''}</div>
       ${mw.length?`<div class="fld"><label for="mW">Толщина</label><input class="inp sm" id="mW" inputmode="decimal" value="${ws.length===1?r3(ws[0]):''}" placeholder="разная"></div>`:''}
+      ${colorBtns(null,true)}
       <div class="fld"><label for="mvLen">Сдвиг, мм</label><input class="inp" id="mvLen" inputmode="decimal" autocomplete="off" placeholder="500"></div>
       <div class="fld"><span class="lbl">Куда</span><div class="dirs" role="group" aria-label="Направление сдвига">
         <button data-mdir="180" aria-label="Влево">←</button><button data-mdir="90" aria-label="Вверх">↑</button><button data-mdir="270" aria-label="Вниз">↓</button><button data-mdir="0" aria-label="Вправо">→</button></div></div>
@@ -2376,6 +2404,7 @@ function syncPanel(){
         ${AG?`<div class="fld inl"><label for="pR">R</label><input class="inp xs" id="pR" inputmode="decimal" value="${r1(AG.r)}"></div>`:''}
         ${sel.L==='walls'?`<div class="fld inl"><label for="pW" title="Толщина стены">⟷</label><input class="inp xs" id="pW" inputmode="decimal" value="${r3(sel.w||0)}" title="Толщина стены, мм"></div>
           ${sideSeg('pside',sel.side||0)}`:''}
+        ${colorBtns(sel)}
         <select class="inp" id="pLayer" title="Слой" style="width:auto">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select>`;
     } else if(sel.t==='circ'){
       h=`<div class="title">Круг <b>Ø${fmt(sel.r*2)} мм</b></div>
@@ -2440,6 +2469,7 @@ panel.addEventListener('click',e=>{
     case 'ungrp':if(sel&&sel.g){pushUndo();const gg=sel.g;for(const it of doc.items) if(it.g===gg) delete it.g;editGrp=null;persist();panelKey='';syncPanel();redraw();toast('Фигура разбита на отдельные линии');}break;
     case 'alignJ':alignJoint();break;
     case 'imgImport':$('#imgFile').click();break;
+    case 'colReset':{ pushUndo(); const S=selIds(); for(const it of doc.items) if(S.has(it.id)){ delete it.lc; delete it.fc; delete it.hp; } persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'stFlip':if(sel&&sel.t==='stair'){ pushUndo(); sel.flip=!sel.flip; persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'stRev':if(sel&&sel.t==='stair'){ pushUndo(); if(sel.kind==='U'){ const g=stairGeom(sel), A=sel.pts[0],B=sel.pts[1], d=sel.w+(sel.gap||0), u=unit(A,B), nn=lft(u), sg=sel.flip?-1:1; sel.pts=[{x:r3(A.x+nn.x*d*sg),y:r3(A.y+nn.y*d*sg)},{x:r3(B.x+nn.x*d*sg),y:r3(B.y+nn.y*d*sg)}]; sel.flip=!sel.flip; } else sel.pts=sel.pts.slice().reverse(); persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'imgCal':if(sel&&sel.t==='img') startCal(sel.id);break;
@@ -2468,6 +2498,9 @@ panel.addEventListener('keydown',e=>{
 function applyProp(t){
   if(t.id==='inW'){const v=parseNum(t.value); if(v>=0){doc.settings.wallW=v;persist();const mb=$('#moreBtn');if(mb&&lineKind==='wall')mb.textContent='Стена '+fmt(v)+' ▴';toast(v?'Новые стены: '+fmt(v)+' мм':'Новые стены без толщины');} return;}
   if(t.id==='pFix'){fixMode=t.value;return;}
+  if(t.id==='pLc'||t.id==='pFc'||t.id==='pHp'){ const S=selIds(), key=t.id==='pLc'?'lc':t.id==='pFc'?'fc':'hp'; pushUndo(); let n=0;
+    for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line') continue; if(key!=='lc'&&!isWall(it)) continue; if(key==='hp'&&t.value==='none') delete it.hp; else it[key]=t.value; n++; }
+    persist(); panelKey=''; syncPanel(); redraw(); return; }
   if(t.id==='mW'){ const v=parseNum(t.value); if(!(v>=0)) return; const S=selIds(); pushUndo(); let n=0; for(const it of doc.items) if(S.has(it.id)&&isWall(it)){ it.w=v; n++; }
     persist(); panelKey=''; syncPanel(); redraw(); toast('Толщина '+fmt(v)+' мм у стен: '+n); return; }
   if(t.id==='pCD'){ const so=doc.items.find(i=>i.id===selId), v=parseNum(t.value); if(so&&so.t==='circ'&&v>0){ pushUndo(); so.r=r3(v/2); persist(); panelKey=''; syncPanel(); redraw(); } return; }
