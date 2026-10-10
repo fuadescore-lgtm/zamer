@@ -1194,7 +1194,7 @@ function drawJoinIcons(){
       ctx.restore();
       ctx.restore(); } } }
 // длина и угол на чертеже: у отдельной стены/линии и у грани фигуры (цепочка, прямоугольник), которой коснулись
-function tmpTarget(){ if(tool!=='select'||moveSel.size||selJoint||editGrp||selMode!=='pick') return null; const it=doc.items.find(i=>i.id===selId);
+function tmpTarget(){ if(tool!=='select'||moveSel.size||selJoint||editGrp||!['pick','win','cross'].includes(selMode)) return null; const it=doc.items.find(i=>i.id===selId);
   if(!it||it.t!=='line'||isArc(it)) return null; const S=selIds(); if(!it.g&&S.size!==1) return null; return it; }
 function tmpBox(txt,x,y,rot){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.font='600 12px '+FNUM; const w=ctx.measureText(txt).width+12;
   ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=1.2; ctx.beginPath(); ctx.roundRect?ctx.roundRect(-w/2,-10,w,20,4):ctx.rect(-w/2,-10,w,20); ctx.fill(); ctx.stroke();
@@ -1389,9 +1389,11 @@ cv.addEventListener('pointerdown',e=>{
     if(!cal.A){ cal.A={x:r3(q.x),y:r3(q.y)}; toast('Теперь коснитесь конца этого отрезка'); redraw(); return; }
     cal.B={x:r3(q.x),y:r3(q.y)}; const d=Math.hypot(cal.B.x-cal.A.x,cal.B.y-cal.A.y); if(d<1){ toast('Точки совпали — коснитесь другой точки'); return; }
     const mw={x:(cal.A.x+cal.B.x)/2,y:(cal.A.y+cal.B.y)/2}, ms=toS(mw); press.calOpen={id:cal.id,kind:'cal',w:mw,x:ms.x,y:ms.y,val:d}; redraw(); return; }
-  if(tool==='select'&&(selMode==='win'||selMode==='cross')){ const h=hit(p.x,p.y);
+  // значки соединения, ручки и синие цифры работают в любом режиме выбора (рамка, вращение, копия)
+  const onCtl=tool==='select'&&selIds().size>0&&(()=>{ const chk=(L,r)=>L.some(h=>Math.hypot(h.x-p.x,h.y-p.y)<r); return chk(joinHits,18)||chk(tdHits,20)||chk(witHits,22)||chk(dimHits,20)||(()=>{ const lh=hitLabel(p.x,p.y); return !!(lh&&selIds().has(lh.id)); })(); })();
+  if(tool==='select'&&!onCtl&&(selMode==='win'||selMode==='cross')){ const h=hit(p.x,p.y);
     if(!(h&&selIds().has(h.id))){ press.pan=false; press.box={a:{...p},b:{...p}}; return; } }
-  if(tool==='select'&&selMode==='rot'){ const h=hit(p.x,p.y), S=selIds(); press.pan=false;
+  if(tool==='select'&&!onCtl&&selMode==='rot'){ const h=hit(p.x,p.y), S=selIds(); press.pan=false;
     if(S.size){ const Cc=rotCenter(), cs=toS(Cc);
       if(Math.hypot(cs.x-p.x,cs.y-p.y)<24){ press.rotC=true; return; }
       if(h&&!S.has(h.id)&&!isHole(h)){ selId=h.id; moveSel.clear(); rotC=null; selJoint=null; press.noop=true; panelKey=''; syncPanel(); redraw(); return; }
@@ -1399,7 +1401,7 @@ cv.addEventListener('pointerdown',e=>{
       press.rot={C:Cc,a0:Math.atan2(-(p.y-cs.y),p.x-cs.x),orig,ids:S,started:false,ang:0}; return; }
     if(h&&!isHole(h)){ selId=h.id; moveSel.clear(); rotC=null; selJoint=null; press.noop=true; panelKey=''; syncPanel(); redraw(); return; }
     press.pan=true; return; }
-  if(tool==='select'&&selMode==='copy'){ const h=hit(p.x,p.y);
+  if(tool==='select'&&!onCtl&&selMode==='copy'){ const h=hit(p.x,p.y);
     if(h&&!isHole(h)){ if(!selIds().has(h.id)){ selId=h.id; moveSel.clear(); selJoint=null; } press.pan=false; press.sd=startObjDrag(selIds(),p,false); press.sd.copy=true; panelKey=''; syncPanel(); redraw(); return; }
     press.pan=true; return; }
   // вершина под пальцем важнее значков, цифр и ручек рядом с ней (работа в перчатках, в темноте, на крыше)
@@ -3133,7 +3135,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.12':'4.0.12'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.13':'4.0.13'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
