@@ -94,7 +94,13 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
 .lvbtn{height:36px;max-width:132px;display:flex;align-items:center;gap:4px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden}
 .lvbtn span{overflow:hidden;text-overflow:ellipsis}.lvbtn small{font-family:var(--f-num);font-weight:500;font-size:10.5px;color:var(--muted)}
 .lvmenu{position:absolute;right:0;top:calc(100% + 4px);z-index:6;min-width:180px;display:flex;flex-direction:column;gap:2px;padding:4px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;box-shadow:0 10px 28px var(--shadow)}
-.lvmenu .lv{justify-content:space-between;border-radius:7px;border:0;height:38px;background:none;color:var(--ink)}
+.lvmenu{min-width:210px;max-width:min(300px,calc(100vw - 24px))}
+.lvmenu .lv{display:flex;align-items:center;justify-content:space-between;gap:14px;border-radius:7px;border:0;height:auto;min-height:42px;padding:5px 10px;background:none;color:var(--ink);text-align:left;white-space:nowrap;line-height:1.2}
+.lvmenu .lv .ln{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-ui);font-weight:700;font-size:15px}
+.lvmenu .lv .lm{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.lvmenu .lv .lm b{font-weight:600;color:inherit}.lvmenu .lv .lm i{font-style:normal;font-size:11px;opacity:.85}
+.lvmenu .lv[aria-pressed="true"] .lm{color:var(--paper)}
+.lvmenu .lv.cfg .ln{font-weight:500;font-size:14px;color:var(--muted)}
 .lvmenu .lv[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .lvmenu .lv.cfg{border-top:1px solid var(--rule);border-radius:0 0 7px 7px;color:var(--muted)}
 .levels{display:flex;gap:6px;align-items:center;padding-block:6px;padding-inline:16px;background:var(--surface);border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
@@ -2157,8 +2163,8 @@ function placeHole(p){
 }
 /* ---------- уровни ---------- */
 function renderLevels(){ { const before=doc.levels.map(l=>l.name).join('|'); sortLevels(); if(doc.levels.map(l=>l.name).join('|')!==before) persist(); }
-  $('#lvBar').innerHTML=doc.levels.map((l,i)=>`<button class="lv" role="menuitem" data-lv="${i}" aria-pressed="${i===doc.curLv}">${esc(l.name)}<small>${fmtElev(l.elev)}${IS3D?' · h '+fmt(lvHeight(i)):''}</small></button>`).join('')
-    +`<button class="lv cfg" role="menuitem" data-lvcfg="1">Уровни: добавить, высоты…</button>`;
+  $('#lvBar').innerHTML=doc.levels.map((l,i)=>`<button class="lv" role="menuitem" data-lv="${i}" aria-pressed="${i===doc.curLv}"><span class="ln">${esc(l.name)}</span><span class="lm"><b>${fmtElev(l.elev)}</b>${IS3D?`<i>h ${fmt(lvHeight(i))}</i>`:''}</span></button>`).join('')
+    +`<button class="lv cfg" role="menuitem" data-lvcfg="1"><span class="ln">${IS3D?'Уровни и высоты…':'Уровни…'}</span></button>`;
   const L=doc.levels[doc.curLv]; $('#lvBtn').innerHTML=`<span>${esc(L.name)}</span><small>${fmtElev(L.elev)}</small> ▾`;
 }
 function lvMenu(open){ const m=$('#lvBar'); m.hidden=!open; $('#lvBtn').setAttribute('aria-expanded',String(open)); }
@@ -3054,7 +3060,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.5':'4.0.5'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.6':'4.0.6'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3375,8 +3381,12 @@ function roofOv(r,i){ const e=r.edges&&r.edges[i]; return e&&e.ov!=null?e.ov:(r.
 function roofGeom(r,li){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, zb=roofBase(r,li), ov=r.ov==null?500:r.ov, th=r.th||250;
   const E=r.edges&&r.edges.length===n?r.edges:P.map(()=>({s:false,a:r.ang||30}));
   const O=cleanPoly(offsetConvex(P,P.map((_,i)=>roofOv(r,i)))), pl=[];
-  for(let i=0;i<n;i++){ if(!E[i].s) continue; const A=P[i],B=P[(i+1)%n], u=unit(A,B), nn={x:-u.y*sg,y:u.x*sg}, k=Math.tan(Math.min(80,Math.max(1,E[i].a||30))*Math.PI/180);
-    pl.push({i,nx:nn.x*k,ny:nn.y*k,c:zb-(nn.x*A.x+nn.y*A.y)*k,dn:nn}); }
+  // все карнизы на одной высоте (как в Revit): плоскость ската проходит через край свеса; при разных уклонах
+  // крутой скат над стеной выше, а промежуток до стены закрывается стеной (без «ступеньки» на карнизе)
+  const kOf=i=>Math.tan(Math.min(80,Math.max(1,E[i].a||30))*Math.PI/180); let drop=Infinity; for(let i=0;i<n;i++) if(E[i].s) drop=Math.min(drop,kOf(i)*roofOv(r,i)); if(!isFinite(drop)) drop=0;
+  const zE=zb-drop;
+  for(let i=0;i<n;i++){ if(!E[i].s) continue; const A=P[i],B=P[(i+1)%n], u=unit(A,B), nn={x:-u.y*sg,y:u.x*sg}, k=kOf(i), zw=zE+k*roofOv(r,i);
+    pl.push({i,nx:nn.x*k,ny:nn.y*k,c:zw-(nn.x*A.x+nn.y*A.y)*k,dn:nn}); }
   const H=q=>{ if(!pl.length) return zb; let m=1e18; for(const p of pl) m=Math.min(m,p.nx*q.x+p.ny*q.y+p.c); return m; };
   const faces=[];
   if(!pl.length) faces.push({P:O,pl:null});
@@ -3392,7 +3402,7 @@ function roofMesh(M,r,li){ const g=roofGeom(r,li), col=rgbOf(r.fc,'#b5533c'), zt
   for(let i=0;i<bp.length;i++){ const A=bp[i],B=bp[(i+1)%bp.length]; addQuad(M,[A.x,A.y,zl(A)],[B.x,B.y,zl(B)],[B.x,B.y,zt(B)],[A.x,A.y,zt(A)],col,'roof'); M.lines.push([[A.x,A.y,zl(A)],[B.x,B.y,zl(B)]],[[A.x,A.y,zl(A)],[A.x,A.y,zt(A)]]); }
   // фронтоны: над стенами без ската стена дорастает до низа крыши
   if(g.pl.length){ const P=g.P, wc=rgbOf(r.gc,'#d9d6cf'), t=r.gw||200;
-    for(let i=0;i<P.length;i++){ if(g.E[i].s) continue; const A=P[i],B=P[(i+1)%P.length], u=unit(A,B), nn={x:-u.y*g.sg,y:u.x*g.sg}, N=48, top=[];
+    for(let i=0;i<P.length;i++){ const A=P[i],B=P[(i+1)%P.length], u=unit(A,B), nn={x:-u.y*g.sg,y:u.x*g.sg}, N=48, top=[];
       for(let k=0;k<=N;k++){ const q={x:A.x+(B.x-A.x)*k/N,y:A.y+(B.y-A.y)*k/N}; top.push({q,h:zl(q)}); }
       if(!top.some(o=>o.h>g.zb+5)) continue;
       for(let k=0;k<N;k++){ const p0=top[k],p1=top[k+1]; if(p0.h<=g.zb+0.5&&p1.h<=g.zb+0.5) continue; const h0=Math.max(p0.h,g.zb), h1=Math.max(p1.h,g.zb);
@@ -3575,7 +3585,7 @@ function open3D(){ const M=buildModel(); if(!M.tri.length){ toast('Нечего 
   const sh=(t,src)=>{ const s=gl.createShader(t); gl.shaderSource(s,src); gl.compileShader(s); return s; };
   const pr=gl.createProgram(); gl.attachShader(pr,sh(gl.VERTEX_SHADER,'attribute vec3 p,n,c;uniform mat4 m;varying vec3 vc;void main(){gl_Position=m*vec4(p,1.);vec3 L=normalize(vec3(.45,-.6,.85));float d=abs(dot(n,L));vc=c*(.42+.58*d);}'));
   gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 vc;uniform float a;void main(){gl_FragColor=vec4(vc,1.);}')); gl.linkProgram(pr);
-  const pl2=gl.createProgram(); gl.attachShader(pl2,sh(gl.VERTEX_SHADER,'attribute vec3 p;uniform mat4 m;void main(){gl_Position=m*vec4(p,1.);}')); gl.attachShader(pl2,sh(gl.FRAGMENT_SHADER,'precision mediump float;void main(){gl_FragColor=vec4(.12,.12,.12,1.);}')); gl.linkProgram(pl2);
+  const pl2=gl.createProgram(); gl.attachShader(pl2,sh(gl.VERTEX_SHADER,'attribute vec3 p;uniform mat4 m;uniform vec3 e;void main(){vec3 v=e-p;float d=length(v);gl_Position=m*vec4(p+v/d*min(40.,d*.0025),1.);}')); gl.attachShader(pl2,sh(gl.FRAGMENT_SHADER,'precision mediump float;void main(){gl_FragColor=vec4(.12,.12,.12,1.);}')); gl.linkProgram(pl2);
   const buf=a=>{ const b=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,b); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(a),gl.STATIC_DRAW); return b; };
   const bP=buf(pos),bN=buf(nrm),bC=buf(col),bL=buf(lp);
   const fitD=()=>{ const a=(cvs.clientWidth||1)/(cvs.clientHeight||1); return R/Math.tan(0.4)/Math.min(1,a)*1.08; };
@@ -3583,7 +3593,7 @@ function open3D(){ const M=buildModel(); if(!M.tri.length){ toast('Нечего 
   v3={...st,keep:true,el,draw:null,R};
   const mul=(a,b)=>{ const r=new Array(16).fill(0); for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=0;k<4;k++) r[j*4+i]+=a[k*4+i]*b[j*4+k]; return r; };
   const draw=()=>{ const W2=cvs.clientWidth, H2=cvs.clientHeight, dpr=window.devicePixelRatio||1; if(cvs.width!==Math.round(W2*dpr)){ cvs.width=Math.round(W2*dpr); cvs.height=Math.round(H2*dpr); }
-    gl.viewport(0,0,cvs.width,cvs.height); const dk=matchMedia('(prefers-color-scheme: dark)').matches; gl.clearColor(dk?.09:.94,dk?.1:.94,dk?.11:.92,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5,2);
+    gl.viewport(0,0,cvs.width,cvs.height); const dk=matchMedia('(prefers-color-scheme: dark)').matches; gl.clearColor(dk?.09:.94,dk?.1:.94,dk?.11:.92,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
     const cyw=Math.cos(v3.yaw),syw=Math.sin(v3.yaw),cp=Math.cos(v3.pitch),sp=Math.sin(v3.pitch);
     const tgt=[C0[0]+v3.pan[0],C0[1]+v3.pan[1],C0[2]+v3.pan[2]], eye=[tgt[0]+v3.dist*cp*cyw,tgt[1]+v3.dist*cp*syw,tgt[2]+v3.dist*sp];
     const f=[tgt[0]-eye[0],tgt[1]-eye[1],tgt[2]-eye[2]]; const fl=Math.hypot(...f); f[0]/=fl;f[1]/=fl;f[2]/=fl; let s=[f[1]*1-f[2]*0,f[2]*0-f[0]*1,0]; const sl=Math.hypot(...s)||1; s=s.map(v=>v/sl); const u=[s[1]*f[2]-s[2]*f[1],s[2]*f[0]-s[0]*f[2],s[0]*f[1]-s[1]*f[0]];
@@ -3594,7 +3604,7 @@ function open3D(){ const M=buildModel(); if(!M.tri.length){ toast('Нечего 
     for(const [nm,b] of [['p',bP],['n',bN],['c',bC]]){ const l=gl.getAttribLocation(pr,nm); gl.bindBuffer(gl.ARRAY_BUFFER,b); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); }
     gl.drawArrays(gl.TRIANGLES,0,pos.length/3);
     for(const nm of ['n','c']){ const l=gl.getAttribLocation(pr,nm); gl.disableVertexAttribArray(l); }
-    if(v3.edges&&lp.length){ gl.useProgram(pl2); gl.uniformMatrix4fv(gl.getUniformLocation(pl2,'m'),false,new Float32Array(MV)); const l=gl.getAttribLocation(pl2,'p'); gl.bindBuffer(gl.ARRAY_BUFFER,bL); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); gl.drawArrays(gl.LINES,0,lp.length/3); } };
+    if(v3.edges&&lp.length){ gl.useProgram(pl2); gl.uniformMatrix4fv(gl.getUniformLocation(pl2,'m'),false,new Float32Array(MV)); gl.uniform3f(gl.getUniformLocation(pl2,'e'),eye[0],eye[1],eye[2]); const l=gl.getAttribLocation(pl2,'p'); gl.bindBuffer(gl.ARRAY_BUFFER,bL); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); gl.drawArrays(gl.LINES,0,lp.length/3); } };
   v3.draw=draw; draw();
   // жесты: один палец — вращать, два — масштаб и сдвиг; колесо — масштаб
   const P=new Map(); let last=null;
