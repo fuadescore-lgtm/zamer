@@ -28,6 +28,12 @@ jobs:
           grep -q ACCESS_FINE_LOCATION $M || sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-feature android:name="android.hardware.location.gps" android:required="false" />#' $M
           grep -q ACCESS_FINE_LOCATION $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n</manifest>#' $M
           grep -n "permission\|uses-feature" $M
+          MA=$(find android/app/src/main/java -name MainActivity.java | head -1)
+          PKG=$(sed -n 's/^package \(.*\);/\1/p' "$MA")
+          D=$(dirname "$MA")
+          sed "s/^package PKG;/package $PKG;/" native/CompassPlugin.java > "$D/CompassPlugin.java"
+          sed "s/^package PKG;/package $PKG;/" native/MainActivity.java > "$MA"
+          echo "compass plugin -> $D ($PKG)"; cat "$MA"
       - name: Значок и ключ подписи
         run: |
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
