@@ -48,14 +48,14 @@ jobs:
             -Pandroid.injected.signing.store.password=zamer2026 \
             -Pandroid.injected.signing.key.alias=zamer \
             -Pandroid.injected.signing.key.password=zamer2026
-          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD-${{ env.APP_VER }}.apk
+          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD${{ env.APP_VER }}.apk
       - uses: actions/upload-artifact@v4
         with:
           name: EasyCAD-apk
-          path: EasyCAD-${{ env.APP_VER }}.apk
+          path: EasyCAD${{ env.APP_VER }}.apk
       - name: Выпуск для скачивания
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.APP_VER }}
           name: EasyCAD ${{ env.APP_VER }}
-          files: EasyCAD-${{ env.APP_VER }}.apk
+          files: EasyCAD${{ env.APP_VER }}.apk
