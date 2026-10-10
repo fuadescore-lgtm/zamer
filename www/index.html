@@ -506,6 +506,13 @@ function wallEnd(it,key){
   if(nb&&!isArc(it)&&isArc(nb[0])){ const tr=arcTrim(nb[0],nb[1],it);
     if(tr){ let e=0; for(const q of [tr.p.L,tr.p.R]) e=Math.max(e,-((q.x-P.x)*X.d.x+(q.y-P.y)*X.d.y));
       LA={x:LA.x-X.d.x*e,y:LA.y-X.d.y*e}; RA={x:RA.x-X.d.x*e,y:RA.y-X.d.y*e}; return key==='a'?{L:LA,R:RA,cap:true}:{L:RA,R:LA,cap:true}; } }
+  if(nb&&!isArc(nb[0])&&!isArc(it)){ const md=cornerMode(it,key,nb[0],nb[1]);
+    if(md!=='m'){ const Y=awayInfo(nb[0],nb[1]), nL=lft(Y.d), nearL=X.d.x*nL.x+X.d.y*nL.y>0;
+      const fb=(near)=>{ const useL=near?nearL:!nearL, n=useL?nL:rgt(Y.d), off=useL?Y.la:Y.ra; return {x:P.x+n.x*off,y:P.y+n.y*off}; };
+      const base=fb(md==='s'||md==='qs'), c1=xLines(LA,X.d,base,Y.d), c2=xLines(RA,X.d,base,Y.d);
+      if(c1&&c2){ if(md==='p'||md==='s'){ LA=c1; RA=c2; }
+        else { const e=Math.max(-((c1.x-P.x)*X.d.x+(c1.y-P.y)*X.d.y),-((c2.x-P.x)*X.d.x+(c2.y-P.y)*X.d.y)); LA={x:LA.x-X.d.x*e,y:LA.y-X.d.y*e}; RA={x:RA.x-X.d.x*e,y:RA.y-X.d.y*e}; }
+        cap=md==='p'||md==='qp'; return key==='a'?{L:LA,R:RA,cap}:{L:RA,R:LA,cap}; } } }
   if(nb){ const Y=awayInfo(nb[0],nb[1]);
     const c1=xLines(LA,X.d,{x:P.x+rgt(Y.d).x*Y.ra,y:P.y+rgt(Y.d).y*Y.ra},Y.d);
     const c2=xLines(RA,X.d,{x:P.x+lft(Y.d).x*Y.la,y:P.y+lft(Y.d).y*Y.la},Y.d);
@@ -517,6 +524,20 @@ function wallEnd(it,key){
   }
   return key==='a'?{L:LA,R:RA,cap}:{L:RA,R:LA,cap};
 }
+// тип соединения двух стен в углу (как «Соединения стен» в Revit): m — скос, p/s — стык (проходит/упирается), qp/qs — срез под прямым углом
+const JT_PAIR={m:'m',p:'s',s:'p',qp:'qs',qs:'qp'};
+function cornerMode(it,key,o,k){ const v=it.jt&&it.jt[key]; if(v) return v; const w=o.jt&&o.jt[k]; if(w) return JT_PAIR[w]||'m';
+  if(IS3D){ try{ const li=doc.curLv, A=wallZ(it,li), B=wallZ(o,li); // разная высота — без острого клина: высокая проходит, низкая упирается
+    if(Math.abs(A.z1-B.z1)>1||Math.abs(A.z0-B.z0)>1){ const ha=A.z1-A.z0, hb=B.z1-B.z0; return (ha>hb+1||(Math.abs(ha-hb)<=1&&A.z1>B.z1))?'p':'s'; } }catch(e){} }
+  return 'm'; }
+// узел, где сходятся ровно две прямые стены: [стена, конец, стена, конец]
+function cornerPair(J){ const os=[]; for(const o of doc.items){ if(!isWall(o)) continue; for(const k of ['a','b']) if(near(o[k],J)&&!nj(o,k)) os.push([o,k]); }
+  if(os.length!==2||isArc(os[0][0])||isArc(os[1][0])) return null; return [os[0][0],os[0][1],os[1][0],os[1][1]]; }
+function setCorner(J,mode,passFirst){ const c=cornerPair(J); if(!c) return false; const [A,ka,B,kb]=c;
+  const put=(W,k,v)=>{ if(v==='m'||!v){ if(W.jt){ delete W.jt[k]; if(!Object.keys(W.jt).length) delete W.jt; } } else { W.jt=W.jt||{}; W.jt[k]=v; } };
+  if(mode==='m'){ for(const [W,k] of [[A,ka],[B,kb]]){ W.jt=W.jt||{}; W.jt[k]='m'; } return true; }
+  const cur=cornerMode(A,ka,B,kb), aPass=passFirst!=null?passFirst:(cur==='p'||cur==='qp'||cur==='m');
+  const pv=mode==='q'?'qp':'p', sv=mode==='q'?'qs':'s'; put(A,ka,aPass?pv:sv); put(B,kb,aPass?sv:pv); return true; }
 function endCount(it,key){ const P=it[key]; let n=0;
   for(const o of doc.items){ if(o!==it&&isWall(o)&&((near(o.a,P)&&!nj(o,'a'))||(near(o.b,P)&&!nj(o,'b')))) n++; } return n; }
 function tJoinFind(X,key){
@@ -651,6 +672,11 @@ function faceGaps(Y){ const g={L:[],R:[]};
     for(const k of ['a','b']){ const nd=nodeJoin(X,k); if(!nd||nd.thru||!nd.pair.includes(Y)) continue;
       const u=unit(Y.a,Y.b), n=lft(u), t1=(nd.cL.x-Y.a.x)*u.x+(nd.cL.y-Y.a.y)*u.y, t2=(nd.cR.x-Y.a.x)*u.x+(nd.cR.y-Y.a.y)*u.y;
       g[(nd.d.x*n.x+nd.d.y*n.y)>0?'L':'R'].push([Math.min(t1,t2),Math.max(t1,t2)]); } }
+  // угол «Стык»/«Срез»: упёртая стена прилегает к грани проходящей — шов на этой грани не рисуем
+  if(!isArc(Y)) for(const X of doc.items){ if(X===Y||!isWall(X)||isArc(X)) continue;
+    for(const k of ['a','b']){ const nb=wallNeighbor(X,k); if(!nb||nb[0]!==Y) continue; const md=cornerMode(X,k,Y,nb[1]); if(md!=='s'&&md!=='qs') continue;
+      const E=wallEnd(X,k), u=unit(Y.a,Y.b), n=lft(u), d=awayInfo(X,k).d, t1=(E.L.x-Y.a.x)*u.x+(E.L.y-Y.a.y)*u.y, t2=(E.R.x-Y.a.x)*u.x+(E.R.y-Y.a.y)*u.y;
+      g[(d.x*n.x+d.y*n.y)>0?'L':'R'].push([Math.min(t1,t2),Math.max(t1,t2)]); } }
   return g;
 }
 // Расстояния от проёма до ближайших стен по грани со стороны комнаты
@@ -2614,6 +2640,9 @@ function syncPanel(){
       <div class="fld inl"><label for="jX">X</label><input class="inp xs" id="jX" inputmode="decimal" value="${r1(selJoint.x)}"></div>
       <div class="fld inl"><label for="jY">Y</label><input class="inp xs" id="jY" inputmode="decimal" value="${r1(selJoint.y)}"></div>
       ${IB('alignJ','align','Выровнять узел: почти прямые стены — строго по X/Y')}${mergePair(selJoint)?IB('mergeJ','merge','Убрать вершину'):''}
+      ${(()=>{ const c=cornerPair(selJoint); if(!c) return ''; const md=cornerMode(c[0],c[1],c[2],c[3]), t=md==='m'?'m':(md==='p'||md==='s')?'b':'q', auto=!(c[0].jt&&c[0].jt[c[1]])&&!(c[2].jt&&c[2].jt[c[3]]);
+        return `<div class="seg" role="group" title="Соединение стен в углу (как в Revit)">${[['m','Скос','<path d="M4 20V4h16"/><path d="M4 4l6 6" stroke-dasharray="2 2"/><path d="M10 10V20M10 10h10"/>'],['b','Стык','<path d="M4 20V4h16"/><path d="M4 10h16M10 10v10"/>'],['q','Срез','<path d="M4 20V4h16v6H10v10H4z"/>']].map(([k,n,ic])=>`<button class="sico" data-jt="${k}" aria-pressed="${t===k}" title="${n}${t===k&&auto&&k!=='m'?' (авто: разная высота)':''}" aria-label="${n}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">${ic}</svg></button>`).join('')}</div>
+          ${t!=='m'?'<button class="btn" data-act="jtSwap" title="Какая стена проходит, какая упирается (Следующий)">⇄</button>':''}<span class="lbl">${t==='m'?'Скос':t==='b'?'Стык':'Срез'}${auto&&t!=='m'?' · авто':''}</span>`; })()}
       <p class="hint">Тяните узел пальцем или введите длину. Значки-звенья на концах выделенной стены: соединить / отсоединить.</p>`;
   } else if(tool==='text'&&pendingText){
     h=`<div class="fld"><label for="tText">Текст</label><input class="inp wide" id="tText" autocomplete="off" placeholder="Санузел, h=2700"></div>
@@ -2627,6 +2656,7 @@ panel.addEventListener('click',e=>{
   if(b.dataset.dir!==undefined) return addByLen(+b.dataset.dir);
   if(b.dataset.mdir!==undefined){ lastMoveDir=+b.dataset.mdir; return moveBy(lastMoveDir); }
   const sel=doc.items.find(i=>i.id===selId);
+  if(b.dataset.jt&&selJoint){ editBegin(); pushUndo(); setCorner(selJoint,b.dataset.jt); persist(); panelKey=''; syncPanel(); redraw(); toast({m:'Скос',b:'Стык',q:'Срез под прямым углом'}[b.dataset.jt]); return; }
   if(b.dataset.rtype&&sel&&sel.t==='roof'){ editBegin(); pushUndo(); roofPreset(sel,b.dataset.rtype); roofDef().type=b.dataset.rtype; roofEdge=null; persist(); panelKey=''; syncPanel(); redraw(); return; }
   if(b.dataset.wside!==undefined){doc.settings.wallSide=+b.dataset.wside;persist();
     panel.querySelectorAll('[data-wside]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));return;}
@@ -2664,6 +2694,7 @@ panel.addEventListener('click',e=>{
     case 'rfEdge':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ editBegin(); pushUndo(); undoS.pop(); roofChange(sel,r=>{ const e=r.edges[roofEdge.i]; e.s=!e.s; if(e.s&&!(e.a>0)) e.a=r.ang||30; r.type='custom'; }); }break;
     case 'wAtt':if(sel&&isWall(sel)){ editBegin(); pushUndo(); if(sel.ht) delete sel.ht; else { const z=wallZ(sel,doc.curLv); sel.ht=r3(z.z1-z.z0); } persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'v3d':open3D();break;
+    case 'jtSwap':if(selJoint){ const c=cornerPair(selJoint); if(c){ editBegin(); pushUndo(); const md=cornerMode(c[0],c[1],c[2],c[3]), aPass=md==='p'||md==='qp'; setCorner(selJoint,md==='qp'||md==='qs'?'q':'b',!aPass); persist(); panelKey=''; syncPanel(); redraw(); toast('Проходит другая стена'); } }break;
     case 'stAuto':if(sel&&sel.t==='stair'){ editBegin(); pushUndo(); sel.tm=!sel.tm; if(sel.tm) sel.tread=Math.round(stairGeom({...sel,tm:false}).tr[0]||300); persist(); panelKey=''; syncPanel(); redraw(); toast(sel.tm?'Шаг вручную: '+fmt(sel.tread)+' мм':'Шаг авто: ступени поровну, около 300 мм'); }break;
     case 'stEd':if(sel&&sel.t==='stair') stairEdit(sel);break;
     case 'gFit':if(sel&&sel.t==='grid'){ editBegin(); pushUndo(); const n=gridFit(); persist(); panelKey=''; syncPanel(); redraw(); toast(n?'Оси дотянуты до пересечений ('+n+')':'Нет пересекающихся осей'); }break;
@@ -3022,7 +3053,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.4':'4.0.4'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.5':'4.0.5'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
