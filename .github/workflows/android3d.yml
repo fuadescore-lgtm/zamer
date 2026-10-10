@@ -51,15 +51,15 @@ jobs:
             -Pandroid.injected.signing.store.password=zamer2026 \
             -Pandroid.injected.signing.key.alias=zamer \
             -Pandroid.injected.signing.key.password=zamer2026
-          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD-3D.apk
+          cp app/build/outputs/apk/release/app-release.apk ../EasyCAD-3D-${{ env.APP_VER }}.apk
       - uses: actions/upload-artifact@v4
         with:
           name: EasyCAD-3D-apk
-          path: app3d/EasyCAD-3D.apk
+          path: app3d/EasyCAD-3D-${{ env.APP_VER }}.apk
       - name: Выпуск для скачивания
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v3d-${{ env.APP_VER }}
           name: EasyCAD 3D ${{ env.APP_VER }}
-          files: app3d/EasyCAD-3D.apk
+          files: app3d/EasyCAD-3D-${{ env.APP_VER }}.apk
           make_latest: false
