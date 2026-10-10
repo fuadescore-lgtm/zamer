@@ -957,7 +957,7 @@ const LW=[0.13,0.18,0.25,0.35,0.5,0.7,1.0], LT={solid:'Сплошная',dash:'�
 const lwPx=(it,def)=>it.lw?1+it.lw*3.5:def;
 function ltDash(it){ const k=Math.max(1,lwPx(it,1.5)/1.5); return it.lt==='dash'?[10*k,6*k]:it.lt==='dot'?[1.5*k,4*k]:it.lt==='dashdot'?[12*k,4*k,2*k,4*k]:[]; }
 cv.addEventListener('pointerdown',()=>{ const ae=document.activeElement; if(ae&&panel.contains(ae)&&ae.matches('input,select')) ae.blur(); },{capture:true});
-function drawGeoUI(){ try{ syncDelBtn(); } catch(e){} try{ if(typeof drawMe!=='function') return; ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); drawMe(); drawNorthSym(); ctx.restore(); }catch(e){ console.warn(e); } }
+function drawGeoUI(){ try{ syncDelBtn(); } catch(e){} try{ ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); const sr=IS3D&&selId&&!moveSel.size?doc.items.find(i=>i.id===selId&&i.t==='roof'):null; if(sr) drawRoofJoinIcons(sr); else roofJoinHits=[]; ctx.restore(); }catch(e){ console.warn(e); } try{ if(typeof drawMe!=='function') return; ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); drawMe(); drawNorthSym(); ctx.restore(); }catch(e){ console.warn(e); } }
 let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawGeoUI();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
@@ -1377,6 +1377,7 @@ cv.addEventListener('pointerdown',e=>{
   press={id:e.pointerId,sx:p.x,sy:p.y,lx:p.x,ly:p.y,moved:false,mouse:e.pointerType==='mouse',
     pan:tool==='select'||(e.pointerType==='mouse'&&(e.button===1||e.button===2))};
   if(tool==='roof'&&!press.pan){ press.pan=true; press.roofTap=true; }
+  if(tool==='select'&&roofJoinTap(p)){ press.noop=true; press.pan=false; return; }
   if(tool==='select'&&roofTap(p)){ press.noop=true; press.pan=false; return; }
   if(tool==='select'&&stEd&&!hitLabel(p.x,p.y)){ const it=doc.items.find(i=>i.id===stEd&&i.t==='stair'); const hd=it&&stairEdgeHit(it,p);
     if(hd){ press.pan=false; press.stEnd={it,hd,started:false}; return; } }
@@ -1403,7 +1404,7 @@ cv.addEventListener('pointerdown',e=>{
     cal.B={x:r3(q.x),y:r3(q.y)}; const d=Math.hypot(cal.B.x-cal.A.x,cal.B.y-cal.A.y); if(d<1){ toast('Точки совпали — коснитесь другой точки'); return; }
     const mw={x:(cal.A.x+cal.B.x)/2,y:(cal.A.y+cal.B.y)/2}, ms=toS(mw); press.calOpen={id:cal.id,kind:'cal',w:mw,x:ms.x,y:ms.y,val:d}; redraw(); return; }
   // значки соединения, ручки и синие цифры работают в любом режиме выбора (рамка, вращение, копия)
-  const onCtl=tool==='select'&&selIds().size>0&&(()=>{ const chk=(L,r)=>L.some(h=>Math.hypot(h.x-p.x,h.y-p.y)<r); return chk(joinHits,18)||chk(tdHits,20)||chk(witHits,22)||chk(dimHits,20)||(()=>{ const lh=hitLabel(p.x,p.y); return !!(lh&&selIds().has(lh.id)); })(); })();
+  const onCtl=tool==='select'&&selIds().size>0&&(()=>{ const chk=(L,r)=>L.some(h=>Math.hypot(h.x-p.x,h.y-p.y)<r); return chk(joinHits,18)||chk(roofJoinHits,20)||chk(tdHits,20)||chk(witHits,22)||chk(dimHits,20)||(()=>{ const lh=hitLabel(p.x,p.y); return !!(lh&&selIds().has(lh.id)); })(); })();
   const onHole=tool==='select'&&(()=>{ const h=hit(p.x,p.y); if(h&&isHole(h)) return true; if(!holeMv) return false; const hm=doc.items.find(i=>i.id===holeMv), g=hm&&holeGeom(hm); if(!g) return false; const w=toW(p.x,p.y), sp=g.proj(w), q=toS(g.at(Math.max(0,Math.min(g.L,sp)),0)); return Math.abs(sp-g.c)<=g.w/2+44/view.scale&&Math.hypot(q.x-p.x,q.y-p.y)<34; })();
   if(tool==='select'&&!onCtl&&!onHole&&(selMode==='win'||selMode==='cross')){ const h=hit(p.x,p.y);
     if(!(h&&selIds().has(h.id))){ press.pan=false; press.box={a:{...p},b:{...p}}; return; } }
@@ -2540,7 +2541,7 @@ function colorBtns(it,multi){ const w=multi?true:isWall(it), cv=v=>v||'';
 function sideSeg(name,v){ return `<div class="seg" role="group">${[[1,'◂ Слева',SIDEI[1]],[0,'Ось',SIDEI[0]],[-1,'Справа ▸',SIDEI[-1]]].map(([k,n,ic])=>`<button data-${name}="${k}" aria-pressed="${v===k}" title="${n}" aria-label="${n}" class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ic}</svg></button>`).join('')}</div>`; }
 // мини-панель висит рядом с выделенным (под ним, а если места нет — над ним), не закрывая чертёж снизу
 // длинная панель — в два ряда: главное (удалить, копировать, размеры) в первом, остальное во втором; ряды листаются вбок
-function layoutPanel(){ if(panel.hidden) return; panel.classList.remove('two');
+function layoutPanel(){ if(panel.hidden||panel.contains(document.activeElement)&&document.activeElement.tagName==='INPUT') return; panel.classList.remove('two');
   for(const r of [...panel.querySelectorAll(':scope>.prow')]) r.replaceWith(...r.childNodes);
   for(const sp of [...panel.children]) if(sp.tagName==='SPAN'&&sp.style.display==='contents') sp.replaceWith(...sp.childNodes);
   if(panel.scrollWidth<=panel.clientWidth+2) return;
@@ -2548,7 +2549,7 @@ function layoutPanel(){ if(panel.hidden) return; panel.classList.remove('two');
   panel.classList.add('two'); panel.append(r1,r2); let full=false;
   for(const k of kids){ if(!full){ r1.appendChild(k); if(r1.scrollWidth>r1.clientWidth+2&&r1.children.length>1){ r2.appendChild(k); full=true; } } else r2.appendChild(k); }
   if(!r2.children.length){ r2.remove(); panel.classList.remove('two'); } }
-window.addEventListener('resize',()=>{ try{ layoutPanel(); }catch(e){} });
+window.addEventListener('resize',()=>{ try{ if(panel.contains(document.activeElement)) return; layoutPanel(); }catch(e){} });
 function placePanel(){ /* панель свойств закреплена над нижней панелью инструментов */ }
 function syncPanel(){
   if(holeMv&&(selId!==holeMv||tool!=='select')) holeMv=null;
@@ -2623,11 +2624,6 @@ function syncPanel(){
       <div class="fld"><label for="pHW">Ширина</label><input class="inp sm" id="pHW" inputmode="decimal" value="${r1(sel.width)}"></div>
       <div class="fld"><label for="pHH">Высота</label><input class="inp sm" id="pHH" inputmode="decimal" value="${r1(sel.height)}"></div>
       <div class="fld"><label for="pHS">${isW?'Подокон.':'Низ'}</label><input class="inp sm" id="pHS" inputmode="decimal" value="${r1(sel.sill)}"></div>
-      ${(()=>{ const c=holeClear(sel)||{dl:0,dr:0}, u=g.u||{x:1,y:0}, ar=v=>Math.abs(v.x)>=Math.abs(v.y)?(v.x>0?'→':'←'):(v.y>0?'↑':'↓');
-        const aS=ar({x:-u.x,y:-u.y}), aE=ar(u);
-        const fS=`<div class="fld"><label for="pHa">${aS} ${sel.refL?'до точки':'до стены'}</label><input class="inp sm" id="pHa" inputmode="decimal" value="${r1(c.dl)}"></div>`;
-        const fE=`<div class="fld"><label for="pHb">${aE} ${sel.refR?'до точки':'до стены'}</label><input class="inp sm" id="pHb" inputmode="decimal" value="${r1(c.dr)}"></div>`;
-        return (aS==='←'||aS==='↓')?fS+fE:fE+fS; })()}
       ${isW?'':'<button class="btn" data-act="hinge" title="Петли на другую сторону" aria-label="Петли на другую сторону">⇆</button><button class="btn" data-act="swing" title="Открывание внутрь или наружу" aria-label="Открывание внутрь или наружу">⇅</button>'}
       ${ICOPY()}${IDEL()}`;
   } else if((tool==='select'||tool==='hole'||tool==='move')&&sel&&sel.t==='chim'){
@@ -3173,7 +3169,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.17':'4.0.17'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.18':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3598,7 +3594,7 @@ function roofGeom(r,li){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, zb=r
 // ---- крыши, врезанные друг в друга: общая поверхность = верхняя из двух (как единое тело) ----
 // треугольники крыши A, оказавшиеся под верхом другой крыши B (в её плане и выше её карниза), вырезаются;
 // по линии, где скаты равны по высоте, рисуется ендова. Высоты и типы крыш любые.
-function roofUnion(M){ const by=new Map();
+function roofUnion(M){ const by=new Map(), RB=new Map(); for(const L of doc.levels) for(const it of L.items) if(it.t==='roof') RB.set(it.id,it); const J=(x,y)=>{ const a=RB.get(x), b=RB.get(y); return !(a&&b)||roofJoined(a,b); };
   for(const t of M.tri) if(t.rid){ if(!by.has(t.rid)) by.set(t.rid,{tri:[],top:[],zmin:1e18}); const R=by.get(t.rid); R.tri.push(t); for(const p of t.v) R.zmin=Math.min(R.zmin,p[2]); }
   if(by.size<2) return M;
   const plane=v=>{ const [a,b,c]=v, ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2], wx=c[0]-a[0],wy=c[1]-a[1],wz=c[2]-a[2], nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx;
@@ -3623,7 +3619,7 @@ function roofUnion(M){ const by=new Map();
   const ov=(a,b)=>a[0]<=b[2]&&b[0]<=a[2]&&a[1]<=b[3]&&b[1]<=a[3];
   const keep=[], ids=[...by.keys()];
   for(const t of M.tri){ if(!t.rid){ keep.push(t); continue; } let pieces=[t.v]; const tb=bbOf(t.v);
-    for(const [rid,B] of by){ if(rid===t.rid) continue;
+    for(const [rid,B] of by){ if(rid===t.rid||!J(rid,t.rid)) continue;
       for(const U of B.top){ if(!ov(tb,U.bb)) continue; const C=regionOf(U,B.zmin), np=[]; for(const pc of pieces){ const q=subtract(pc,C); for(const x of q) np.push(x); } pieces=np; if(!pieces.length) break; }
       if(!pieces.length) break; }
     if(pieces.length===1&&pieces[0]===t.v){ keep.push(t); continue; }
@@ -3632,12 +3628,12 @@ function roofUnion(M){ const by=new Map();
   M.tri=keep;
   // линии: убрать куски внутри чужой крыши
   const L2=[]; for(const ln of M.lines){ if(!ln.rid){ L2.push(ln); continue; } let segs=[[0,1]]; const [A,B]=ln, P=t=>[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,A[2]+(B[2]-A[2])*t], lb=bbOf([A,B]);
-    for(const [rid,R] of by){ if(rid===ln.rid) continue; for(const U of R.top){ if(!ov(lb,U.bb)) continue; let t0=0,t1=1; const C=regionOf(U,R.zmin);
+    for(const [rid,R] of by){ if(rid===ln.rid||!J(rid,ln.rid)) continue; for(const U of R.top){ if(!ov(lb,U.bb)) continue; let t0=0,t1=1; const C=regionOf(U,R.zmin);
         for(const f of C){ const fa=fv(f,A), fb=fv(f,B); if(Math.abs(fb-fa)<1e-12){ if(fa<0){ t0=1; t1=0; } continue; } const tt=-fa/(fb-fa); if(fb>fa) t0=Math.max(t0,tt); else t1=Math.min(t1,tt); }
         if(t1-t0<1e-6) continue; const ns=[]; for(const [s0,s1] of segs){ if(t1<=s0||t0>=s1){ ns.push([s0,s1]); continue; } if(t0>s0) ns.push([s0,t0]); if(t1<s1) ns.push([t1,s1]); } segs=ns; } }
     for(const [s0,s1] of segs) if(s1-s0>1e-4){ const x=[P(s0),P(s1)]; x.rid=ln.rid; L2.push(x); } }
   // ендовы: линия равной высоты двух верхних треугольников разных крыш
-  for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){ const A=by.get(ids[i]), B=by.get(ids[j]);
+  for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){ if(!J(ids[i],ids[j])) continue; const A=by.get(ids[i]), B=by.get(ids[j]);
     for(const T of A.top) for(const U of B.top){ if(!ov(T.bb,U.bb)) continue; const da=T.pl.a-U.pl.a, db=T.pl.b-U.pl.b, dc=T.pl.c-U.pl.c; if(Math.hypot(da,db)<1e-6) continue;
       // прямая da*x+db*y+dc=0, обрезаем полуплоскостями обоих треугольников
       const p0={x:-da*dc/(da*da+db*db),y:-db*dc/(da*da+db*db)}, d={x:-db,y:da}; let t0=-1e9,t1=1e9;
@@ -3648,7 +3644,7 @@ function roofUnion(M){ const by=new Map();
 // метка крыши на её треугольниках и линиях
 // план врезанных крыш: линии общей поверхности (коньки и края, срезанные другой крышей, и ендовы)
 function roofUnionPlan(){ const li=doc.curLv, L=doc.levels[li]; if(!L) return null; const roofs=L.items.filter(i=>i.t==='roof'); if(roofs.length<2) return null;
-  const key=li+'|'+JSON.stringify(roofs.map(r=>[r.id,r.pts,r.edges,r.ov,r.ovs,r.type,r.ang,r.bo,r.th,r.onTop]))+'|'+wallsKey(li)+'|'+(doc.levels[li-1]?wallsKey(li-1):'')+'|'+doc.levels.map(l=>l.elev).join(',');
+  const key=li+'|'+JSON.stringify(roofs.map(r=>[r.id,r.pts,r.edges,r.ov,r.ovs,r.type,r.ang,r.bo,r.bl,r.th,r.onTop,r.nj]))+'|'+wallsKey(li)+'|'+(doc.levels[li-1]?wallsKey(li-1):'')+'|'+doc.levels.map(l=>l.elev).join(',');
   const C=roofUnionPlan.c; if(C&&C.key===key) return C.res;
   let res=null; try{ const M=Mesh(); for(const r of roofs) roofMeshTagged(M,r,li); const n0=M.tri.length; roofUnion(M);
     const by=new Map(); for(const r of roofs) by.set(r.id,[]); let any=false;
@@ -3659,7 +3655,8 @@ function roofUnionPlan(){ const li=doc.curLv, L=doc.levels[li]; if(!L) return nu
   roofUnionPlan.c={key,res}; return res; }
 // крыша, край которой упирается в другую крышу, продлевается внутрь неё (как «Соединить крыши» в Revit):
 // лишнее потом срезается поверхностью другой крыши, остаются ендовы
-function roofExtended(r,li){ const L=doc.levels[li]; if(!L) return r; const others=L.items.filter(i=>i.t==='roof'&&i!==r); if(!others.length) return r;
+const roofJoined=(a,b)=>!((a.nj||[]).includes(b.id)||(b.nj||[]).includes(a.id));
+function roofExtended(r,li){ const L=doc.levels[li]; if(!L) return r; const others=L.items.filter(i=>i.t==='roof'&&i!==r&&roofJoined(r,i)); if(!others.length) return r;
   const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, d=new Array(n).fill(0); let any=false;
   const topOf=g=>{ let m=-1e18; for(const f of g.faces) for(const q of f.P){ try{ m=Math.max(m,g.H(q)); }catch(e){} } return m; };
   let gA=null; try{ gA=roofGeom(r,li); }catch(e){}
@@ -3703,7 +3700,7 @@ function wallRoofMesh(M,it,li,col){ const T=wallTopProfile(it,li); if(!T) return
 function wallRoofLines(M,T){ const {Lp,Rp,z1}=T, n=Lp.length, pl=(P)=>{ for(let k=0;k<n-1;k++) M.lines.push([[P[k].x,P[k].y,P[k].z],[P[k+1].x,P[k+1].y,P[k+1].z]]); };
   pl(Lp); pl(Rp); for(const k of [0,n-1]){ M.lines.push([[Lp[k].x,Lp[k].y,Lp[k].z],[Rp[k].x,Rp[k].y,Rp[k].z]]); for(const q of [Lp[k],Rp[k]]) if(q.z>z1+0.5) M.lines.push([[q.x,q.y,z1],[q.x,q.y,q.z]]); } }
 // щёчки: где свес одной крыши висит над скатом другой — закрыть щель от карниза до ската (как у слухового окна)
-function roofCheeks(M,r,li){ const L=doc.levels[li]; if(!L) return; const others=L.items.filter(i=>i.t==='roof'&&i!==r); if(!others.length) return;
+function roofCheeks(M,r,li){ const L=doc.levels[li]; if(!L) return; const others=L.items.filter(i=>i.t==='roof'&&i!==r&&roofJoined(r,i)); if(!others.length) return;
   let gA; try{ gA=roofGeom(roofExtended(r,li),li); }catch(e){ return; } const col=rgbOf(r.gc,'#d9d6cf'), O=gA.O;
   const GB=[]; for(const B of others){ try{ GB.push(roofGeom(roofExtended(B,li),li)); }catch(e){} }
   const topB=q=>{ let z=null; for(const g of GB) if(inPoly(g.O,q)){ try{ const h=g.H(q)+g.th; if(z==null||h>z) z=h; }catch(e){} } return z; };
@@ -3713,6 +3710,27 @@ function roofCheeks(M,r,li){ const L=doc.levels[li]; if(!L) return; const others
     for(let k=0;k<n;k++){ const a=pts[k],b=pts[k+1]; if(a.zu==null||b.zu==null||a.zb==null||b.zb==null) continue; if(a.zb>a.zu-5&&b.zb>b.zu-5) continue;
       const za0=Math.min(a.zb,a.zu), zb0=Math.min(b.zb,b.zu); addQuad(M,[a.q.x,a.q.y,za0],[b.q.x,b.q.y,zb0],[b.q.x,b.q.y,b.zu],[a.q.x,a.q.y,a.zu],col,'wall');
       if(a.zb<a.zu-5) M.lines.push([[a.q.x,a.q.y,za0],[b.q.x,b.q.y,zb0]]); } } }
+// значки «Соединить/Отсоединить» в местах стыка выбранной крыши с другими
+let roofJoinHits=[];
+function roofJoinSpots(r,li){ const L=doc.levels[li]; if(!L) return []; const out=[]; let gA; try{ gA=roofGeom(r,li); }catch(e){ return out; }
+  for(const B of L.items){ if(B.t!=='roof'||B===r) continue; let gB; try{ gB=roofGeom(B,li); }catch(e){ continue; }
+    const inside=(X,Y,g)=>{ const P=X.pts, n=P.length, sg=polyArea2(P)>0?1:-1; for(let i=0;i<n;i++){ const a=P[i],b=P[(i+1)%n], u=unit(a,b), o={x:u.y*sg,y:-u.x*sg}, ov=roofOv(X,i), ea={x:a.x+o.x*ov,y:a.y+o.y*ov}, eb={x:b.x+o.x*ov,y:b.y+o.y*ov};
+        if(inPoly(g.O,ea)&&inPoly(g.O,eb)) return {x:(ea.x+eb.x)/2,y:(ea.y+eb.y)/2}; } return null; };
+    let p=inside(r,B,gB)||inside(B,r,gA);
+    if(!p){ const I=gA.O.filter(q=>inPoly(gB.O,q)).concat(gB.O.filter(q=>inPoly(gA.O,q))); if(!I.length) continue; p=I.reduce((m,q)=>({x:m.x+q.x/I.length,y:m.y+q.y/I.length}),{x:0,y:0}); }
+    out.push({B,p,on:roofJoined(r,B)}); }
+  return out; }
+function drawRoofJoinIcons(r){ roofJoinHits=[]; if(tool!=='select') return; for(const J of roofJoinSpots(r,doc.curLv)){ const c=toS(J.p);
+    roofJoinHits.push({a:r.id,b:J.B.id,x:c.x,y:c.y,on:J.on}); ctx.save(); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(c.x,c.y,13,0,Math.PI*2);
+    ctx.fillStyle=J.on?C.sel:C.surface; ctx.fill(); ctx.strokeStyle=J.on?C.sel:C.dim; ctx.stroke();
+    ctx.strokeStyle=J.on?'#fff':C.dim; ctx.lineWidth=1.8; ctx.lineCap='round'; const k=4.2;
+    ctx.beginPath(); ctx.arc(c.x-k,c.y,4.2,Math.PI*.5,Math.PI*1.5); ctx.moveTo(c.x-k,c.y-4.2); ctx.lineTo(c.x-1,c.y-4.2); ctx.moveTo(c.x-k,c.y+4.2); ctx.lineTo(c.x-1,c.y+4.2);
+    ctx.moveTo(c.x+k,c.y-4.2); ctx.arc(c.x+k,c.y,4.2,-Math.PI*.5,Math.PI*.5); ctx.moveTo(c.x+k,c.y-4.2); ctx.lineTo(c.x+1,c.y-4.2); ctx.moveTo(c.x+k,c.y+4.2); ctx.lineTo(c.x+1,c.y+4.2);
+    if(J.on){ ctx.moveTo(c.x-3,c.y); ctx.lineTo(c.x+3,c.y); } else { ctx.moveTo(c.x-2,c.y-7); ctx.lineTo(c.x+2,c.y+7); } ctx.stroke(); ctx.restore(); } }
+function roofJoinTap(p){ if(tool!=='select') return false; for(const h of roofJoinHits){ if(Math.hypot(h.x-p.x,h.y-p.y)<20){ const A=doc.items.find(i=>i.id===h.a), B=doc.items.find(i=>i.id===h.b); if(!A||!B) return false;
+      pushUndo(); if(h.on){ A.nj=[...new Set([...(A.nj||[]),B.id])]; toast('Крыши отсоединены: каждая сама по себе',true); }
+      else { A.nj=(A.nj||[]).filter(x=>x!==B.id); B.nj=(B.nj||[]).filter(x=>x!==A.id); if(!A.nj.length) delete A.nj; if(!B.nj.length) delete B.nj; toast('Крыши соединены: врезаны друг в друга, ендовы',true); }
+      persist(); redraw(); return true; } } return false; }
 function roofMeshTagged(M,r,li){ const t0=M.tri.length, l0=M.lines.length; roofMesh(M,roofExtended(r,li),li); roofCheeks(M,r,li); for(let k=t0;k<M.tri.length;k++) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) M.lines[k].rid=r.id; }
 function roofMesh(M,r,li){ const g=roofGeom(r,li), col=rgbOf(r.fc,'#b5533c'), zt=q=>g.H(q)+g.th, zl=q=>g.H(q);
   for(const f of g.faces){ const zf=f.pl?(q=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c):zl, zft=q=>zf(q)+g.th;
