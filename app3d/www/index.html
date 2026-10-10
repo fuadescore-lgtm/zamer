@@ -3070,7 +3070,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.7':'4.0.7'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.8':'4.0.8'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3470,18 +3470,24 @@ function roofMesh(M,r,li){ const g=roofGeom(r,li), col=rgbOf(r.fc,'#b5533c'), zt
   for(const f of g.faces){ const zf=f.pl?(q=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c):zl, zft=q=>zf(q)+g.th;
     for(const [a,b,c] of earcut2(f.P)){ addTri(M,[a.x,a.y,zft(a)],[b.x,b.y,zft(b)],[c.x,c.y,zft(c)],col,'roof'); addTri(M,[a.x,a.y,zf(a)],[c.x,c.y,zf(c)],[b.x,b.y,zf(b)],col,'roof'); }
     for(let i=0;i<f.P.length;i++){ const A=f.P[i],B=f.P[(i+1)%f.P.length]; M.lines.push([[A.x,A.y,zft(A)],[B.x,B.y,zft(B)]]); } }
-  if(g.skel){ const wc=rgbOf(r.gc,'#d9d6cf'), zf=(f,q)=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c;
-    for(const f of g.faces) for(let i=0;i<f.P.length;i++){ const A=f.P[i],B=f.P[(i+1)%f.P.length], L=Math.hypot(B.x-A.x,B.y-A.y); if(L<2) continue;
-      const u=unit(A,B), out={x:u.y,y:-u.x}, sgp=polyArea2(f.P)>0?1:-1, o={x:out.x*sgp,y:out.y*sgp}, M2={x:(A.x+B.x)/2+o.x*3,y:(A.y+B.y)/2+o.y*3};
-      if(!inPoly(g.O,M2)) continue; const onB=(h,q)=>{ for(let k=0;k<h.P.length;k++){ const a=h.P[k],b=h.P[(k+1)%h.P.length],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.y-a.y)*dy)/l)); if(Math.hypot(q.x-a.x-dx*t,q.y-a.y-dy*t)<1) return true; } return false; };
-      const other=g.faces.find(h=>h!==f&&inPoly(h.P,M2)&&onB(h,A)&&onB(h,B)); if(!other) continue;
-      const a1=zf(f,A),b1=zf(f,B),a2=zf(other,A),b2=zf(other,B); if(!(a1>a2+5||b1>b2+5)) continue; // рисует только более высокая грань
-      addQuad(M,[A.x,A.y,Math.min(a1,a2)],[B.x,B.y,Math.min(b1,b2)],[B.x,B.y,b1+g.th],[A.x,A.y,a1+g.th],wc,'gable'); M.lines.push([[A.x,A.y,a2+g.th],[B.x,B.y,b2+g.th]]); } }
-  // торцы свеса по контуру (с изломами в местах коньков)
-  const O=g.O, bp=[]; for(let i=0;i<O.length;i++){ const A=O[i],B=O[(i+1)%O.length], u=unit(A,B), L=Math.hypot(B.x-A.x,B.y-A.y); bp.push(A);
-    const pts=[]; for(const f of g.faces) for(const q of f.P){ const s=(q.x-A.x)*u.x+(q.y-A.y)*u.y, d=Math.abs((q.x-A.x)*u.y-(q.y-A.y)*u.x); if(d<1&&s>1&&s<L-1&&!pts.some(o=>Math.abs(o.s-s)<1)) pts.push({s,q}); }
-    pts.sort((x,y)=>x.s-y.s); for(const p of pts) bp.push(p.q); }
-  for(let i=0;i<bp.length;i++){ const A=bp[i],B=bp[(i+1)%bp.length]; addQuad(M,[A.x,A.y,zl(A)],[B.x,B.y,zl(B)],[B.x,B.y,zt(B)],[A.x,A.y,zt(A)],col,'roof'); M.lines.push([[A.x,A.y,zl(A)],[B.x,B.y,zl(B)]],[[A.x,A.y,zl(A)],[A.x,A.y,zt(A)]]); }
+  // какая грань над точкой q (немного внутрь от границы): её плоскость, без двусмысленности на изломах
+  const faceAt=q=>{ for(const f of g.faces) if(inPoly(f.P,q)) return f; return null; }, zf=(f,q)=>f&&f.pl?f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c:zl(q);
+  if(g.skel){ const wc=rgbOf(r.gc,'#d9d6cf');
+    // вертикальные фронтоны внутри крыши: где соседняя грань ниже (обход кусками — соседи меняются вдоль ребра)
+    for(const f of g.faces) for(let i=0;i<f.P.length;i++){ const A0=f.P[i],B0=f.P[(i+1)%f.P.length], L=Math.hypot(B0.x-A0.x,B0.y-A0.y); if(L<2) continue;
+      const u=unit(A0,B0), sgp=polyArea2(f.P)>0?1:-1, o={x:u.y*sgp,y:-u.x*sgp}, N=Math.max(1,Math.ceil(L/250));
+      for(let k=0;k<N;k++){ const A={x:A0.x+(B0.x-A0.x)*k/N,y:A0.y+(B0.y-A0.y)*k/N}, B={x:A0.x+(B0.x-A0.x)*(k+1)/N,y:A0.y+(B0.y-A0.y)*(k+1)/N}, M2={x:(A.x+B.x)/2+o.x*3,y:(A.y+B.y)/2+o.y*3};
+        if(!inPoly(g.O,M2)) continue; const h=g.faces.find(x=>x!==f&&inPoly(x.P,M2)); if(!h) continue;
+        const a1=zf(f,A),b1=zf(f,B),a2=zf(h,A),b2=zf(h,B); if(!(a1>a2+5||b1>b2+5)) continue;
+        addQuad(M,[A.x,A.y,Math.min(a1,a2)],[B.x,B.y,Math.min(b1,b2)],[B.x,B.y,b1+g.th],[A.x,A.y,a1+g.th],wc,'gable'); } } }
+  // торцы свеса по контуру (с изломами в местах коньков); высоты — от грани над этим куском края
+  const O=g.O, so=polyArea2(O)>0?1:-1;
+  for(let i=0;i<O.length;i++){ const A0=O[i],B0=O[(i+1)%O.length], u=unit(A0,B0), L=Math.hypot(B0.x-A0.x,B0.y-A0.y), inw={x:-u.y*so,y:u.x*so};
+    const cut=[0,L]; for(const f of g.faces) for(const q of f.P){ const s=(q.x-A0.x)*u.x+(q.y-A0.y)*u.y, d=Math.abs((q.x-A0.x)*u.y-(q.y-A0.y)*u.x); if(d<1&&s>1&&s<L-1) cut.push(s); }
+    if(g.skel){ const n2=Math.ceil(L/250); for(let k=1;k<n2;k++) cut.push(L*k/n2); }
+    cut.sort((a,b)=>a-b); for(let k=0;k<cut.length-1;k++){ if(cut[k+1]-cut[k]<0.5) continue; const A={x:A0.x+u.x*cut[k],y:A0.y+u.y*cut[k]}, B={x:A0.x+u.x*cut[k+1],y:A0.y+u.y*cut[k+1]};
+      const f=faceAt({x:(A.x+B.x)/2+inw.x*3,y:(A.y+B.y)/2+inw.y*3}), za=zf(f,A), zb2=zf(f,B);
+      addQuad(M,[A.x,A.y,za],[B.x,B.y,zb2],[B.x,B.y,zb2+g.th],[A.x,A.y,za+g.th],col,'roof'); M.lines.push([[A.x,A.y,za],[B.x,B.y,zb2]]); if(k===0||!g.skel) M.lines.push([[A.x,A.y,za],[A.x,A.y,za+g.th]]); } }
   // фронтоны: над стенами без ската стена дорастает до низа крыши
   if(g.pl.length){ const P=g.P, wc=rgbOf(r.gc,'#d9d6cf'), t=r.gw||200;
     for(let i=0;i<P.length;i++){ const A=P[i],B=P[(i+1)%P.length], u=unit(A,B), nn={x:-u.y*g.sg,y:u.x*g.sg}, N=48, top=[];
