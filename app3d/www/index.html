@@ -2672,7 +2672,8 @@ function syncPanel(){
        :`<div class="fld inl"><label for="rfA" title="Уклон всех скатов">∠</label><input class="inp xs" id="rfA" inputmode="decimal" value="${Math.round((sel.ang||30)*10)/10}" title="Уклон, °"></div>`}
       <div class="fld inl"><label for="rfO" title="Свес">Свес</label><input class="inp xs" id="rfO" inputmode="decimal" value="${r1(sel.ov==null?500:sel.ov)}"></div>
       <div class="fld inl"><label for="rfT" title="Толщина">Толщ.</label><input class="inp xs" id="rfT" inputmode="decimal" value="${r1(sel.th||250)}"></div>
-      <div class="fld inl"><label for="rfB" title="Смещение низа от ${sel.onTop?'верха стен':'уровня'}">Низ</label><input class="inp xs" id="rfB" inputmode="decimal" value="${r1(sel.bo||0)}"></div>
+      ${(()=>{ const BL=roofBaseLevel(sel,doc.curLv), off=r1(roofBase(sel,doc.curLv)-BL.elev); return `<div class="fld inl"><label for="rfL" title="Базовый уровень низа крыши">Уровень</label><select class="inp" id="rfL" style="width:auto">${doc.levels.filter(l=>!l.gp).map(l=>`<option value="${l.id}"${l===BL?' selected':''}>${esc(l.name)}</option>`).join('')}</select></div>
+      <div class="fld inl"><label for="rfB" title="Смещение низа крыши от базового уровня, мм">Смещ.</label><input class="inp xs" id="rfB" inputmode="decimal" value="${off}"></div>`; })()}
       ${roofEd===sel.id?'<span class="lbl">Тяните край · цифры — свес</span>':IB('rfEd','edges','Края крыши: свесы (двойное касание по крыше)')}
       <span class="lbl">конёк ${(()=>{ try{ const g=roofGeom(sel); let m=-1e18; for(const f of g.faces) for(const q of f.P) m=Math.max(m,g.H(q)+g.th); return fmtElev(m); }catch(e){ return ''; } })()}</span>
       ${IB('v3d','box','Показать в 3D')}${ICOPY()}${IDEL()}`;
@@ -2839,7 +2840,8 @@ function applyProp(t){
     if(sr&&sr.t==='roof'&&/^rf[AOTBE]A?$/.test(t.id)){ const v=parseNum(t.value); if(isNaN(v)) return;
       roofChange(sr,r=>{ if(t.id==='rfA'){ r.ang=v; (r.edges||[]).forEach(e=>{ e.a=v; }); if(r.type==='pyr') roofPreset(r,'pyr'); if(v>=1&&v<=75) roofDef().ang=v; }
         else if(t.id==='rfEA'&&roofEdge&&r.edges&&r.edges[roofEdge.i]){ r.edges[roofEdge.i].a=v; r.type='custom'; }
-        else if(t.id==='rfO'){ r.ov=v; (r.edges||[]).forEach(e=>{ delete e.ov; }); } else if(t.id==='rfT') r.th=v; else if(t.id==='rfB') r.bo=v; }); return; }
+        else if(t.id==='rfO'){ r.ov=v; (r.edges||[]).forEach(e=>{ delete e.ov; }); } else if(t.id==='rfT') r.th=v; else if(t.id==='rfB'){ const BL=roofBaseLevel(r,doc.curLv); r.bl=BL.id; r.bo=v; } }); return; }
+    if(sr&&sr.t==='roof'&&t.id==='rfL'){ const B=doc.levels.find(l=>l.id===t.value); if(!B) return; roofChange(sr,r=>{ const off=roofBase(r,doc.curLv)-roofBaseLevel(r,doc.curLv).elev; r.bl=B.id; r.bo=r1(off); }); return; }
     if(sr&&isWall(sr)&&(t.id==='pHt'||t.id==='pBo')){ const v=parseNum(t.value); if(isNaN(v)) return; pushUndo();
       if(!fitGuard(()=>{ if(t.id==='pHt'&&v>0) sr.ht=v; else if(t.id==='pBo') sr.bo=v||0; if(!sr.bo) delete sr.bo; })){ undoS.pop(); panelKey=''; syncPanel(); redraw(); return; } persist(); panelKey=''; syncPanel(); redraw(); return; }
     if(sr&&sr.t==='chim'&&['pCH','pCR','pCZ'].includes(t.id)){ const v=parseNum(t.value); if(isNaN(v)) return;
@@ -3172,7 +3174,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.16':'4.0.16'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.17':'4.0.17'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3567,7 +3569,9 @@ function isConvexPoly(P){ let sg=0; for(let i=0;i<P.length;i++){ const a=P[i],b=
 function polySelfX(P){ const n=P.length, X=(a,b,c,d)=>{ const o=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x); return o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0; };
   for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ if(j===i+1||(i===0&&j===n-1)) continue; if(X(P[i],P[(i+1)%n],P[j],P[(j+1)%n])) return true; } return false; }
 function inPoly(P,w){ let ins=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ if(((P[i].y>w.y)!==(P[j].y>w.y))&&(w.x<(P[j].x-P[i].x)*(w.y-P[i].y)/(P[j].y-P[i].y)+P[i].x)) ins=!ins; } return ins; }
-function roofBase(r,li){ if(li==null) li=doc.curLv; const L=doc.levels[li]; return L.elev+(r.onTop?lvHeight(li):0)+(r.bo||0); }
+function roofBase(r,li){ if(li==null) li=doc.curLv; if(r.bl){ const B=doc.levels.find(l=>l.id===r.bl); if(B) return B.elev+(r.bo||0); } const L=doc.levels[li]; return L.elev+(r.onTop?lvHeight(li):0)+(r.bo||0); }
+// базовый уровень крыши (как в Revit): явно выбранный или тот, на котором сейчас низ
+function roofBaseLevel(r,li){ if(r.bl){ const B=doc.levels.find(l=>l.id===r.bl); if(B) return B; } const L=doc.levels[li]; if(r.onTop){ const N=doc.levels[li+1]; if(N&&!N.gp) return N; } return L; }
 function roofOv(r,i){ const e=r.edges&&r.edges[i]; return e&&e.ov!=null?e.ov:(r.ov==null?500:r.ov); }
 function roofGeom(r,li){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, zb=roofBase(r,li), ov=r.ov==null?500:r.ov, th=r.th||250;
   const E=r.edges&&r.edges.length===n?r.edges:P.map(()=>({s:false,a:r.ang||30}));
@@ -3658,10 +3662,13 @@ function roofUnionPlan(){ const li=doc.curLv, L=doc.levels[li]; if(!L) return nu
 // лишнее потом срезается поверхностью другой крыши, остаются ендовы
 function roofExtended(r,li){ const L=doc.levels[li]; if(!L) return r; const others=L.items.filter(i=>i.t==='roof'&&i!==r); if(!others.length) return r;
   const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, d=new Array(n).fill(0); let any=false;
-  for(const B of others){ let OB; try{ OB=roofGeom(B,li).O; }catch(e){ continue; } const cB=B.pts.reduce((m,q)=>({x:m.x+q.x/B.pts.length,y:m.y+q.y/B.pts.length}),{x:0,y:0});
+  const topOf=g=>{ let m=-1e18; for(const f of g.faces) for(const q of f.P){ try{ m=Math.max(m,g.H(q)); }catch(e){} } return m; };
+  let gA=null; try{ gA=roofGeom(r,li); }catch(e){}
+  for(const B of others){ let OB,gB; try{ gB=roofGeom(B,li); OB=gB.O; }catch(e){ continue; } const cB=B.pts.reduce((m,q)=>({x:m.x+q.x/B.pts.length,y:m.y+q.y/B.pts.length}),{x:0,y:0});
+    const through=gA&&topOf(gA)+(gA.th||0)>topOf(gB)+(gB.th||0)+1; // крыло выше конька — проходит насквозь
     for(let i=0;i<n;i++){ const A=P[i],Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+Bp.x)/2,y:(A.y+Bp.y)/2}, ov=roofOv(r,i), me={x:m.x+out.x*ov,y:m.y+out.y*ov};
       const ea={x:A.x+out.x*ov,y:A.y+out.y*ov}, eb={x:Bp.x+out.x*ov,y:Bp.y+out.y*ov}; if(!(inPoly(OB,me)&&inPoly(OB,ea)&&inPoly(OB,eb))) continue; // край целиком внутри другой крыши
-      const dd=(cB.x-m.x)*out.x+(cB.y-m.y)*out.y; if(dd>d[i]){ d[i]=dd; any=true; } } }
+      let dd=(cB.x-m.x)*out.x+(cB.y-m.y)*out.y; if(through){ for(const q of OB) dd=Math.max(dd,(q.x-m.x)*out.x+(q.y-m.y)*out.y); } if(dd>d[i]){ d[i]=dd; any=true; } } }
   if(!any) return r;
   const lines=P.map((A,i)=>{ const Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}; return {p:{x:A.x+out.x*d[i],y:A.y+out.y*d[i]},u}; });
   const NP=P.map((_,i)=>{ const a=lines[(i+n-1)%n], b=lines[i], X=xLines(a.p,a.u,b.p,b.u); return X&&Math.hypot(X.x-b.p.x,X.y-b.p.y)<50000?{x:X.x,y:X.y}:b.p; });
@@ -3696,7 +3703,18 @@ function wallRoofMesh(M,it,li,col){ const T=wallTopProfile(it,li); if(!T) return
 // линии верха присоединённой стены (без горизонтальной черты между стеной и фронтоном)
 function wallRoofLines(M,T){ const {Lp,Rp,z1}=T, n=Lp.length, pl=(P)=>{ for(let k=0;k<n-1;k++) M.lines.push([[P[k].x,P[k].y,P[k].z],[P[k+1].x,P[k+1].y,P[k+1].z]]); };
   pl(Lp); pl(Rp); for(const k of [0,n-1]){ M.lines.push([[Lp[k].x,Lp[k].y,Lp[k].z],[Rp[k].x,Rp[k].y,Rp[k].z]]); for(const q of [Lp[k],Rp[k]]) if(q.z>z1+0.5) M.lines.push([[q.x,q.y,z1],[q.x,q.y,q.z]]); } }
-function roofMeshTagged(M,r,li){ const t0=M.tri.length, l0=M.lines.length; roofMesh(M,roofExtended(r,li),li); for(let k=t0;k<M.tri.length;k++) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) M.lines[k].rid=r.id; }
+// щёчки: где свес одной крыши висит над скатом другой — закрыть щель от карниза до ската (как у слухового окна)
+function roofCheeks(M,r,li){ const L=doc.levels[li]; if(!L) return; const others=L.items.filter(i=>i.t==='roof'&&i!==r); if(!others.length) return;
+  let gA; try{ gA=roofGeom(roofExtended(r,li),li); }catch(e){ return; } const col=rgbOf(r.gc,'#d9d6cf'), O=gA.O;
+  const GB=[]; for(const B of others){ try{ GB.push(roofGeom(roofExtended(B,li),li)); }catch(e){} }
+  const topB=q=>{ let z=null; for(const g of GB) if(inPoly(g.O,q)){ try{ const h=g.H(q)+g.th; if(z==null||h>z) z=h; }catch(e){} } return z; };
+  const so=polyArea2(O)>0?1:-1;
+  for(let i=0;i<O.length;i++){ const A0=O[i],B0=O[(i+1)%O.length], Ln=Math.hypot(B0.x-A0.x,B0.y-A0.y), n=Math.max(1,Math.ceil(Ln/120)), u=unit(A0,B0), inw={x:-u.y*so*3,y:u.x*so*3};
+    const pts=[]; for(let k=0;k<=n;k++){ const q={x:A0.x+(B0.x-A0.x)*k/n,y:A0.y+(B0.y-A0.y)*k/n}, qi={x:q.x+inw.x,y:q.y+inw.y}; let zu; try{ zu=gA.H(qi); }catch(e){ zu=null; } const zb=topB(qi); pts.push({q,zu,zb}); }
+    for(let k=0;k<n;k++){ const a=pts[k],b=pts[k+1]; if(a.zu==null||b.zu==null||a.zb==null||b.zb==null) continue; if(a.zb>a.zu-5&&b.zb>b.zu-5) continue;
+      const za0=Math.min(a.zb,a.zu), zb0=Math.min(b.zb,b.zu); addQuad(M,[a.q.x,a.q.y,za0],[b.q.x,b.q.y,zb0],[b.q.x,b.q.y,b.zu],[a.q.x,a.q.y,a.zu],col,'wall');
+      if(a.zb<a.zu-5) M.lines.push([[a.q.x,a.q.y,za0],[b.q.x,b.q.y,zb0]]); } } }
+function roofMeshTagged(M,r,li){ const t0=M.tri.length, l0=M.lines.length; roofMesh(M,roofExtended(r,li),li); roofCheeks(M,r,li); for(let k=t0;k<M.tri.length;k++) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) M.lines[k].rid=r.id; }
 function roofMesh(M,r,li){ const g=roofGeom(r,li), col=rgbOf(r.fc,'#b5533c'), zt=q=>g.H(q)+g.th, zl=q=>g.H(q);
   for(const f of g.faces){ const zf=f.pl?(q=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c):zl, zft=q=>zf(q)+g.th;
     for(const [a,b,c] of earcut2(f.P)){ addTri(M,[a.x,a.y,zft(a)],[b.x,b.y,zft(b)],[c.x,c.y,zft(c)],col,'roof'); addTri(M,[a.x,a.y,zf(a)],[c.x,c.y,zf(c)],[b.x,b.y,zf(b)],col,'roof'); }
