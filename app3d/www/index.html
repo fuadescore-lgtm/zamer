@@ -64,8 +64,20 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .okb{background:var(--tape)!important;color:#111!important}.cxb{color:var(--dim)!important}
 #hud{position:absolute;top:10px;left:16px;right:64px;display:flex;justify-content:flex-start;pointer-events:none}
 #hud span{max-width:100%;background:color-mix(in srgb,var(--surface) 88%,transparent);border:1px solid var(--rule);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--muted);line-height:1.25}
+#hud span:empty{display:none}
+.nsrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap}#nsDial{width:150px;height:150px;touch-action:none;flex:none}.nscol{display:flex;flex-direction:column;gap:10px;min-width:0;flex:1}
+.nsm{display:flex;flex-wrap:wrap;gap:6px}.nslk{display:flex;gap:8px;align-items:center;font-size:14px}.nsdec{display:flex;gap:6px;align-items:center}
+#gpMap{position:fixed;inset:0;z-index:62;background:var(--paper);display:flex;flex-direction:column}#gpMap[hidden]{display:none}
+#gpMap .gptop{display:flex;gap:6px;align-items:center;padding:8px 10px calc(8px);padding-top:calc(8px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--rule)}#gpMap .gptop .inp{flex:1;min-width:0}
+#gpMap .gpres{position:absolute;z-index:3;left:10px;right:10px;top:calc(58px + env(safe-area-inset-top));max-height:50%;overflow:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 6px 20px var(--shadow)}#gpMap .gpres[hidden]{display:none}
+#gpMap .gpres .btn{text-align:left;white-space:normal;height:auto;padding:6px 8px;font-size:13px}#gpMap .gpres small{font-size:10.5px;color:var(--muted);padding:2px 4px}
+#gpMap .gpwrap{position:relative;flex:1;min-height:0}#gpMap canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#gpMap .gpattr{position:absolute;right:4px;bottom:4px;font-size:10.5px;background:rgb(255 255 255 / .75);color:#333;padding:1px 5px;border-radius:4px;pointer-events:none}
+#gpMap .v3bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--rule)}#gpMap .v3bar .sp{flex:1}
+#gpMap [data-g][aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+#btnMe[aria-pressed="true"]{color:var(--sel)}
 #hud span.live{background:var(--tape);border-color:transparent;color:var(--tape-ink);font-family:var(--f-num);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;padding:4px 12px}
-#toast{position:absolute;top:96px;pointer-events:none;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;font-size:14px;box-shadow:0 6px 20px var(--shadow);transition:opacity .2s}
+#toast{position:absolute;bottom:90px;pointer-events:none;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:color-mix(in srgb,var(--ink) 86%,transparent);color:var(--paper);padding:5px 12px;border-radius:999px;font-size:13px;box-shadow:0 6px 20px var(--shadow);transition:opacity .2s}
 #toast.off{opacity:0;pointer-events:none}
 
 .panel{position:absolute;left:6px;right:6px;bottom:6px;flex-wrap:nowrap!important;align-items:center!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;max-height:none!important;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:5px 8px;box-shadow:0 8px 28px var(--shadow);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;max-height:40vh;overflow-y:auto}
@@ -112,10 +124,10 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
 .only3d{display:none!important}html.is3d .only3d{display:revert!important}
 #v3d{position:fixed;inset:0;z-index:60;background:var(--bg,#eee);display:flex;flex-direction:column}#v3d[hidden]{display:none}
 #v3d canvas{flex:1;width:100%;min-height:0;touch-action:none;display:block}
-#elev{position:fixed;inset:0;z-index:61;background:#f7f7f2;display:flex;flex-direction:column}#elev[hidden]{display:none}
+#elev{position:fixed;inset:0;z-index:61;background:var(--paper,#f7f7f2);display:flex;flex-direction:column}#elev[hidden]{display:none}
 #elev .evwrap{position:relative;flex:1;min-height:0}#elev canvas{position:absolute;inset:0;width:100%;height:100%;display:block}#elev .evo{touch-action:none}
 #elev .evin{position:absolute;z-index:3;transform:translate(-50%,-50%);width:96px}
-#elev .evhint{position:absolute;left:10px;top:8px;right:70px;font-size:12.5px;color:#475569;pointer-events:none}
+#elev .evhint{position:absolute;left:10px;top:8px;right:70px;font-size:12.5px;color:var(--muted,#475569);pointer-events:none}
 #elev .v3bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface,#fff);border-top:1px solid var(--line,#ccc)}#elev .v3bar .sp{flex:1}
 #elev [data-ev][aria-pressed="true"]{background:var(--ink,#222);color:var(--paper,#fff)}
 #v3d .v3bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface,#fff);border-top:1px solid var(--line,#ccc)}#v3d .v3bar .sp{flex:1}
@@ -218,6 +230,12 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
     </button>
     <button class="ib fb" id="btnRedo" aria-label="Повторить" title="Повторить">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>
+    </button>
+    <button class="ib fb" id="btnHelp" aria-label="Подсказка" title="Подсказка к инструменту">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17.2h.01"/></svg>
+    </button>
+    <button class="ib fb" id="btnMe" aria-label="Где я" aria-pressed="false" title="Где я: касание — вкл/выкл, удержание — показать">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></svg>
     </button>
     <button class="ib fb" id="btnFit" aria-label="Показать весь чертёж" title="Показать весь чертёж">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
@@ -391,7 +409,7 @@ function loadStore(){
 }
 let store=loadStore();
 let doc=store.docs[store.current];
-function persist(){doc.updated=Date.now();try{localStorage.setItem(STORE,JSON.stringify(store));}catch(e){ if(!persist.warned){ persist.warned=1; setTimeout(()=>toast('Память устройства переполнена: удалите лишние картинки-подложки или старые чертежи'),50); } }}
+function persist(){ try{ if(doc&&doc.levels) syncRoofs(); }catch(e){} doc.updated=Date.now();try{localStorage.setItem(STORE,JSON.stringify(store));}catch(e){ if(!persist.warned){ persist.warned=1; setTimeout(()=>toast('Память устройства переполнена: удалите лишние картинки-подложки или старые чертежи'),50); } }}
 
 /* ---------- state ---------- */
 let tool='line', curLayer='walls', axisMode='ortho', snapOn=true, osnapOn=true, snapMark=null;
@@ -400,7 +418,7 @@ let view={cx:0,cy:0,scale:.1};
 let W=0,H=0,DPR=1;
 let chain={pts:[],ids:[]};
 let live=null;          // current preview point (world) for line tool
-let liveSnap=null;      // 'end' | 'align' | null
+let dimTapA=null, helpUntil=0, helpT=0, liveSnap=null;      // 'end' | 'align' | null
 let alignGuide=null;
 let dragA=null, dragB=null; // rect/dim draft
 let selId=null, selJoint=null, pendingText=null, lastDir=0, editGrp=null, editLine=null, lastObjTap=null;
@@ -421,9 +439,13 @@ function armLongPress(h){ if(!h||isHole(h)) return; press.lpSel=setTimeout(()=>{
 let undoS=[], redoS=[];
 let C={};
 
-function snapshot(){return JSON.stringify({items:doc.items,pts:chain.pts,ids:chain.ids});}
+// снимок для ↶/↷: все уровни (картинки-подложки по ссылке, чтобы не копировать мегабайты)
+const imgSrcCache=new Map();
+function snapshot(){ return JSON.stringify({levels:doc.levels,cur:doc.curLv,pts:chain.pts,ids:chain.ids},function(k,v){ if(k==='src'&&this&&this.t==='img'&&typeof v==='string'&&v.length>200){ imgSrcCache.set(this.id,v); return '@img:'+this.id; } return v; }); }
 function pushUndo(){undoS.push(snapshot()); if(undoS.length>150) undoS.shift(); redoS=[]; syncTop();}
-function restore(s){const o=JSON.parse(s); doc.items=o.items; chain.pts=o.pts||[]; chain.ids=o.ids||[]; selJoint=null;
+function restore(s){const o=JSON.parse(s,function(k,v){ return k==='src'&&typeof v==='string'&&v.startsWith('@img:')?(imgSrcCache.get(v.slice(5))||''):v; });
+  if(o.levels){ doc.levels=o.levels; if(!(doc.curLv>=0&&doc.curLv<doc.levels.length)) doc.curLv=Math.min(o.cur||0,doc.levels.length-1); renderLevels(); } else doc.items=o.items;
+  chain.pts=o.pts||[]; chain.ids=o.ids||[]; selJoint=null;
   if(selId&&!doc.items.some(i=>i.id===selId)) selId=null;
   moveSel=new Set([...moveSel].filter(id=>doc.items.some(i=>i.id===id))); persist(); panelKey=''; syncPanel(); redraw(); syncTop();}
 function undo(){if(!undoS.length) return; redoS.push(snapshot()); restore(undoS.pop());}
@@ -924,7 +946,8 @@ const LW=[0.13,0.18,0.25,0.35,0.5,0.7,1.0], LT={solid:'Сплошная',dash:'�
 const lwPx=(it,def)=>it.lw?1+it.lw*3.5:def;
 function ltDash(it){ const k=Math.max(1,lwPx(it,1.5)/1.5); return it.lt==='dash'?[10*k,6*k]:it.lt==='dot'?[1.5*k,4*k]:it.lt==='dashdot'?[12*k,4*k,2*k,4*k]:[]; }
 cv.addEventListener('pointerdown',()=>{ const ae=document.activeElement; if(ae&&panel.contains(ae)&&ae.matches('input,select')) ae.blur(); },{capture:true});
-let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawLoupe();snapBuzz();}); }
+function drawGeoUI(){ try{ if(typeof drawMe!=='function') return; ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); drawMe(); drawNorthSym(); ctx.restore(); }catch(e){ console.warn(e); } }
+let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawGeoUI();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
 const FNUM='"IBM Plex Mono", ui-monospace, monospace';
@@ -1191,8 +1214,9 @@ function drawSelTemp(){ const it=tmpTarget(); if(!it) return; const len=lineLen(
   labelHits.push({id:it.id,w:wm,x:m.x,y:m.y,val:len,one:true});
   // угол к горизонтали у начала стены
   let ang=Math.atan2(u.y,u.x)*180/Math.PI; const a0=toS(it.a), Rr=56;
-  ctx.setLineDash([4,3]); line(a0,{x:a0.x+Rr+14,y:a0.y}); ctx.setLineDash([]);
-  ctx.beginPath(); ctx.arc(a0.x,a0.y,Rr,0,-ang*Math.PI/180,ang>0); ctx.stroke();
+  const ortA=Math.abs(((ang%90)+90)%90)<0.01||Math.abs(((ang%90)+90)%90-90)<0.01;
+  if(!ortA){ ctx.setLineDash([4,3]); line(a0,{x:a0.x+Rr+14,y:a0.y}); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(a0.x,a0.y,Rr,0,-ang*Math.PI/180,ang>0); ctx.stroke(); }
   const ha=-ang/2*Math.PI/180; let tp={x:a0.x+Math.cos(ha)*(Rr+22),y:a0.y+Math.sin(ha)*(Rr+22)};
   // почти горизонтальная стена: цифру угла не кладём на саму стену
   if(Math.abs(ang)<25||Math.abs(ang)>155){ const sgn=ang>=0?1:-1; tp={x:a0.x+(Math.abs(ang)>155?-1:1)*(Rr+10),y:a0.y+sgn*24}; }
@@ -1253,6 +1277,7 @@ function render0(){ queueMicrotask(placePanel);
   if(tool==='rect'&&dragA&&dragB){
     const a=dragA,b=dragB; rubber(a,{x:b.x,y:a.y});rubber({x:b.x,y:a.y},b);rubber(b,{x:a.x,y:b.y});rubber({x:a.x,y:b.y},a); marker(b,liveSnap);
   }
+  if(tool==='dim'&&dimTapA&&!dragA) marker(dimTapA,'end');
   if(tool==='dim'&&dragA&&dragB){ctx.strokeStyle=C.dim;ctx.lineWidth=1.5;ctx.setLineDash([6,4]);line(toS(dragA),toS(dragB));ctx.setLineDash([]);marker(dragB,liveSnap);}
   if(tool==='text'&&pendingText) marker(pendingText,null);
   if(tool==='text'&&ldPick){ marker(ldPick,null); if(pendingText){ const g=leaderGeom({p:pendingText,s:'Текст',h:doc.settings.noteH||doc.settings.textH,ld:{pt:ldPick,end:doc.settings.ldEnd||'arrow'}}); ctx.save(); ctx.setLineDash([5,4]); ctx.strokeStyle=C.sel; line(toS(g.E),toS(g.P)); ctx.restore(); ctx.setLineDash([]); } }
@@ -1287,7 +1312,8 @@ function updateHud(){
   const h=$('#hudText'); let txt='',isLive=false;
   const deg=(a,b)=>{let d=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;if(d<0)d+=360;return Math.round(d*10)/10;};
   const sn=liveSnap&&SNAPNAME[liveSnap]?' · '+SNAPNAME[liveSnap]:'';
-  if(chimPrev&&tool==='hole'){ const d=chimDef(); txt='Дымоход '+fmt(d.w)+'×'+fmt(d.l)+' мм'+sn; isLive=true; }
+  if(typeof NS!=='undefined'&&NS.wallPick){ txt='Север: коснитесь стены северного фасада'; isLive=true; }
+  else if(chimPrev&&tool==='hole'){ const d=chimDef(); txt='Дымоход '+fmt(d.w)+'×'+fmt(d.l)+' мм'+sn; isLive=true; }
   else if(chimDrag){ txt='Дымоход '+fmt(chimDrag.w)+'×'+fmt(chimDrag.l)+' · X '+fmt(chimDrag.p.x)+' Y '+fmt(chimDrag.p.y)+sn; isLive=true; }
   else if(holeDrag){ const c=holeClear(holeDrag); if(c){ txt='← '+fmt(c.dl)+' · '+fmt(c.dr)+' → мм до стен'; isLive=true; } }
   else if(moveDelta){ const d=Math.hypot(moveDelta.dx,moveDelta.dy);
@@ -1316,13 +1342,16 @@ function updateHud(){
     split:'Разделить: коснитесь стены или линии в месте разреза (работает магнит). ✓ — выйти',
     merge:'Убрать вершину: коснитесь кружка между двумя стенами — они станут одной. ✓ — выйти',
     mirror:mirA?'Ось зеркала: вторая точка (Орто — строго по X или Y)':'Зеркало: первая точка оси. '+(editMode==='mirrorc'?'Оригинал останется':'Объекты перевернутся на месте'),
-    dim:'Протяните от точки до точки',
+    dim:dimTapA?'Коснитесь второй точки':'Коснитесь первой точки размера (или протяните)',
     move:moveSel.size?'Тяните выбранное пальцем или введите расстояние и нажмите стрелку':'Коснитесь стен, которые нужно сдвинуть. Можно выбрать несколько.',
     hole:holeType==='chim'?'Коснитесь места для дымохода — пока держите палец, видно размер. Потом тяните его целиком.':'Коснитесь стены, чтобы вставить '+(holeType==='win'?'окно':'дверь')+'. Касание проёма — выбрать, тянуть — сдвинуть.',
     text:pendingText?'Введите текст надписи':(textMode==='leader'?(ldPick?'Коснитесь места для текста':'Выноска: коснитесь точки, на которую она укажет'):'Коснитесь места для надписи')
   }[tool];
+  if(!isLive&&!hintsOn()&&!(helpUntil>Date.now())) txt='';
   h.textContent=txt;h.className=isLive?'live':'';
 }
+function hintsOn(){ try{ return localStorage.getItem('ecad.hints')==='1'; }catch(e){ return false; } }
+function setHints(v){ try{ localStorage.setItem('ecad.hints',v?'1':'0'); }catch(e){} updateHud(); }
 
 /* ---------- pointer input ---------- */
 const ptrs=new Map(); let press=null, gesture=null, blockUntilUp=false;
@@ -1462,6 +1491,7 @@ cv.addEventListener('pointerdown',e=>{
   const last=chain.pts[chain.pts.length-1];
   if(tool==='line'&&isShape()){ dragA=snapPoint(p.x,p.y,null); dragB=dragA; live=null; }
   else if(tool==='line'){ live=snapPoint(p.x,p.y,drawFrom()); }
+  else if(tool==='dim'&&dimTapA){ dragA=dimTapA; dragB=snapPoint(p.x,p.y,null); }
   else if(tool==='rect'||tool==='dim'){ dragA=snapPoint(p.x,p.y,null); dragB=dragA; }
   redraw();
 });
@@ -1651,7 +1681,8 @@ function endPtr(e,cancel){
       persist();
     }
     dragA=dragB=null;
-  } else if(tool==='dim'&&dragA&&dragB){
+  } else if(tool==='dim'&&dragA&&dragB&&!dimTapA&&near(dragA,dragB,1)){ dimTapA={...dragA}; dragA=dragB=null; redraw();
+  } else if(tool==='dim'&&dragA&&dragB){ dimTapA=null;
     if(!near(dragA,dragB,1)){ pushUndo(); const dir=axisMode==='x'?'h':axisMode==='y'?'v':axisMode==='free'?'a':(Math.abs(dragB.x-dragA.x)>=Math.abs(dragB.y-dragA.y)?'h':'v');
       const nd={id:uid(),t:'dim',dir,a:{...dragA},b:{...dragB},off:r3(Math.round(28/view.scale/10)*10||100),L:'dims'}; attachDim(nd); doc.items.push(nd); persist();
       toast(nd.ra||nd.rb?'Размер привязан к стенам: двигается вместе с ними, двойное касание по цифре — сдвинуть стену':'Размер добавлен. Смещение можно изменить в «Выборе».'); }
@@ -2187,9 +2218,10 @@ function placeHole(p){
 }
 /* ---------- уровни ---------- */
 function renderLevels(){ { const before=doc.levels.map(l=>l.name).join('|'); sortLevels(); if(doc.levels.map(l=>l.name).join('|')!==before) persist(); }
-  $('#lvBar').innerHTML=doc.levels.map((l,i)=>`<button class="lv" role="menuitem" data-lv="${i}" aria-pressed="${i===doc.curLv}"><span class="ln">${esc(l.name)}</span><span class="lm"><b>${fmtElev(l.elev)}</b>${IS3D?`<i>h ${fmt(lvHeight(i))}</i>`:''}</span></button>`).join('')
-    +`<button class="lv cfg" role="menuitem" data-lvcfg="1"><span class="ln">${IS3D?'Уровни и высоты…':'Уровни…'}</span></button>`;
-  const L=doc.levels[doc.curLv]; $('#lvBtn').innerHTML=`<span>${esc(L.name)}</span><small>${fmtElev(L.elev)}</small> ▾`;
+  $('#lvBar').innerHTML=doc.levels.map((l,i)=>`<button class="lv" role="menuitem" data-lv="${i}" aria-pressed="${i===doc.curLv}"><span class="ln">${esc(l.name)}</span><span class="lm">${l.gp?'<b>план участка</b>':`<b>${fmtElev(l.elev)}</b>${IS3D?`<i>h ${fmt(lvHeight(i))}</i>`:''}`}</span></button>`).join('')
+    +`<button class="lv cfg" role="menuitem" data-lvcfg="1"><span class="ln">${IS3D?'Уровни и высоты…':'Уровни…'}</span></button>`
+    +`<button class="lv cfg" role="menuitem" data-gpmap="1"><span class="ln">Генплан: карта участка…</span></button>`;
+  const L=doc.levels[doc.curLv]; $('#lvBtn').innerHTML=`<span>${esc(L.name)}</span><small>${L.gp?'':fmtElev(L.elev)}</small> ▾`;
 }
 function lvMenu(open){ const m=$('#lvBar'); m.hidden=!open; $('#lvBtn').setAttribute('aria-expanded',String(open)); }
 $('#lvBtn').addEventListener('click',e=>{ e.stopPropagation(); lvMenu($('#lvBar').hidden); });
@@ -2197,7 +2229,7 @@ document.addEventListener('pointerdown',e=>{ if(!$('#lvBar').hidden&&!e.target.c
 function setLevel(i){
   if(i===doc.curLv) return; doc.curLv=i; persist();
   undoS=[];redoS=[]; chain.pts=[];chain.ids=[]; live=null; selId=null; selJoint=null; moveSel.clear(); pendingText=null;
-  panelKey=''; syncPanel(); syncTop(); renderLevels(); redraw(); toast(doc.levels[i].name+' '+fmtElev(doc.levels[i].elev));
+  panelKey=''; syncPanel(); syncTop(); renderLevels(); redraw(); toast(doc.levels[i].name+(doc.levels[i].gp?'':' '+fmtElev(doc.levels[i].elev)));
 }
 function copyLevel(fi,ti){ const idm={},out=[],src=doc.levels[fi].items;
   for(const it of src){ if(isHole(it)) continue; const c=JSON.parse(JSON.stringify(it)); c.id=uid(); idm[it.id]=c.id; out.push(c); }
@@ -2206,17 +2238,22 @@ function copyLevel(fi,ti){ const idm={},out=[],src=doc.levels[fi].items;
   doc.levels[ti].items.push(...out); return out.length; }
 // уровни всегда по возрастанию отметки; «Этаж N» перенумеровываются по порядку снизу вверх
 // высота уровня = до следующего уровня; у верхнего — своя (по умолчанию 3000)
-function lvHeight(i){ const L=doc.levels; return i<L.length-1?L[i+1].elev-L[i].elev:(L[i].h||3000); }
+function lvHeight(i){ const L=doc.levels; if(L[i].gp) return L[i].h||3000; return i<L.length-1?L[i+1].elev-L[i].elev:(L[i].h||3000); }
 function setLvHeight(i,h){ const L=doc.levels; h=Math.max(100,h); const d=h-lvHeight(i); if(i===L.length-1){ L[i].h=h; return; } for(let k=i+1;k<L.length;k++) L[k].elev=r3(L[k].elev+d); }
 const lvIndexOf=lv=>doc.levels.indexOf(lv);
 // низ и верх стены (мм от нуля): по умолчанию от своего уровня до уровня выше; можно «отсоединить» и задать свою высоту
+function uiDark(){ const t=document.documentElement.dataset.theme; return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches); }
+function holesBad(){ let n=0; for(let li=0;li<doc.levels.length;li++){ const L=doc.levels[li]; for(const h of L.items) if(isHole(h)){ const w=L.items.find(x=>x.id===h.wall); if(!w) continue; const z=wallZ(w,li);
+  if((h.sill||0)<0||(h.sill||0)+h.height>z.z1-z.z0+0.5) n++; } } return n; }
+// изменение высот: если проём перестаёт помещаться в стене — откат и сообщение
+function fitGuard(fn){ const s0=snapshot(), b0=holesBad(); fn(); if(holesBad()>b0){ restore(s0); toast('Не соответствует: проём не помещается в стене по высоте'); return false; } return true; }
 function wallZ(it,li){ const L=doc.levels[li], z0=L.elev+(it.bo||0); return {z0, z1:it.ht?z0+it.ht:L.elev+lvHeight(li)}; }
 const isRoofName=n=>/крыш|кровл|чердак|покрыт/i.test(n||'');
-function sortLevels(){ const cur=doc.levels[doc.curLv]; doc.levels.sort((a,b)=>a.elev-b.elev); let n=0;
+function sortLevels(){ const cur=doc.levels[doc.curLv]; doc.levels.sort((a,b)=>((a.gp?0:1)-(b.gp?0:1))||a.elev-b.elev); let n=0;
   // имена по отметке: от нуля вверх — Этаж 1, 2, 3…; ниже нуля — Этаж -1, -2…; крыша (если она самая верхняя) сохраняет имя
   const L=doc.levels, top=L[L.length-1], keepRoof=top&&isRoofName(top.name)&&L.length>1;
   const auto=l=>/^Этаж -?\d+$/.test(l.name)||isRoofName(l.name)||/^Подвал|^Цоколь/i.test(l.name);
-  const up=L.filter(l=>l.elev>=0&&!(keepRoof&&l===top)), dn=L.filter(l=>l.elev<0).reverse();
+  const up=L.filter(l=>!l.gp&&l.elev>=0&&!(keepRoof&&l===top)), dn=L.filter(l=>!l.gp&&l.elev<0).reverse();
   up.forEach((l,i)=>{ if(auto(l)) l.name='Этаж '+(i+1); }); dn.forEach((l,i)=>{ if(auto(l)) l.name='Этаж -'+(i+1); });
   doc.curLv=Math.max(0,doc.levels.indexOf(cur)); }
 let lvDelConfirm=null;
@@ -2226,8 +2263,8 @@ function openLevels(){
     <div class="sheet-head"><h2 id="lvT">Уровни</h2><button class="ib" data-s="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     ${L.map((l,i)=>`<div class="lvrow">
       <div class="fld"><label for="ln${i}">Название</label><input class="inp wide" id="ln${i}" data-lname="${i}" value="${esc(l.name)}"></div>
-      <div class="fld"><label for="le${i}">Отметка, мм</label><input class="inp" id="le${i}" data-lelev="${i}" inputmode="decimal" value="${l.elev}"></div>
-      <div class="fld${IS3D?'':' only3d'}"><label for="lh${i}">Высота, мм</label><input class="inp" id="lh${i}" data-lheight="${i}" inputmode="decimal" value="${lvHeight(i)}"></div>
+      ${l.gp?`<span class="note" style="grid-column:span 2">план участка, в 3D не входит</span>`:`<div class="fld"><label for="le${i}">Отметка, мм</label><input class="inp" id="le${i}" data-lelev="${i}" inputmode="decimal" value="${l.elev}"></div>
+      <div class="fld${IS3D?'':' only3d'}"><label for="lh${i}">Высота, мм</label><input class="inp" id="lh${i}" data-lheight="${i}" inputmode="decimal" value="${lvHeight(i)}"></div>`}
       ${L.length>1?`<button class="btn danger" data-s="lvdel" data-i="${i}">${lvDelConfirm===i?'Точно?':'Удалить'}</button>`:'<span></span>'}
     </div>`).join('')}
     <button class="btn" data-s="lvadd">Добавить уровень</button>
@@ -2242,7 +2279,7 @@ function openLevels(){
   sheet.hidden=false;
 }
 $('#lvBar').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; lvMenu(false);
-  if(b.dataset.lvcfg){lvDelConfirm=null;openLevels();return;} setLevel(+b.dataset.lv);});
+  if(b.dataset.lvcfg){lvDelConfirm=null;openLevels();return;} if(b.dataset.gpmap){ openMap(); return; } setLevel(+b.dataset.lv);});
 const isShape=()=>lineKind==='poly'||lineKind==='rect'||lineKind==='circ';
 function rectCorners(a,q){ let b=q;
   if(shW>0&&shH>0) b={x:a.x+shW,y:a.y+shH};
@@ -2450,7 +2487,7 @@ function syncLineHint(){
     :'Первая точка: коснитесь поля или сразу введите длину — линия начнётся от конца последней стены.';
   updateHud();
 }
-let polyN=6, polyS=0, shW=0, shH=0, shD=0, fixMode='a', moreOpen=false, lastMoveDir=0; const r1=v=>Math.round(v*10)/10;
+let polyN=6, polyS=0, shW=0, shH=0, shD=0, fixMode='a', moreOpen=false, wMore=false, lastMoveDir=0; const r1=v=>Math.round(v*10)/10;
 // линия построения и стена: стена слева, по оси, справа от линии (вид сверху, линия рисуется слева направо)
 const SIDEI={1:'<rect x="3" y="5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 13h20" stroke-dasharray="3 2"/>',
   0:'<rect x="3" y="8.5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 12h20" stroke-dasharray="3 2"/>',
@@ -2604,9 +2641,9 @@ function syncPanel(){
       <span class="lbl">конёк ${(()=>{ try{ const g=roofGeom(sel); let m=-1e18; for(const f of g.faces) for(const q of f.P) m=Math.max(m,g.H(q)+g.th); return fmtElev(m); }catch(e){ return ''; } })()}</span>
       ${IB('v3d','box','Показать в 3D')}${ICOPY()}${IDEL()}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='stair'&&!moveSel.size){ const g=stairGeom(sel);
-    const trs=g.tr.map(t=>Math.round(t)), trTxt=[...new Set(trs)].join('/');
+    const trs=g.tr.map(t=>Math.round(t)), trTxt=[...new Set(trs)].join(' / ');
     h=`<div class="title"><b>${g.n}</b> ступ.</div>
-      <div class="fld inl"><label for="stT" title="Шаг ступени (проступь)">Шаг</label><input class="inp xs" id="stT" inputmode="decimal" value="${sel.tm?r1(sel.tread):trTxt}" title="${sel.tm?'Задан вручную':'Авто: ступени поровну, около 300 мм (290…350)'}"></div>
+      <div class="fld inl"><label for="stT" title="Шаг ступени (проступь)">Шаг</label><input class="inp sm" id="stT" inputmode="decimal" style="min-width:${Math.max(4,String(sel.tm?r1(sel.tread):trTxt).length*0.62+1.2)}em" value="${sel.tm?r1(sel.tread):trTxt}" title="${sel.tm?'Задан вручную':'Авто: ступени поровну, около 300 мм (290…350)'}"></div>
       <button class="btn${sel.tm?'':' go'}" data-act="stAuto" title="Авто: шаг подбирается сам (290…350 мм, ближе к 300)">${sel.tm?'Ручн.':'Авто'}</button>
       ${stEd===sel.id?'<span class="lbl">Тяните край · цифры — длина</span>':IB('stEd','edges','Изменить длину: тянуть края (двойное касание по лестнице)')}
       <div class="fld inl"><label for="stW">Ширина</label><input class="inp xs" id="stW" inputmode="decimal" value="${sel.w}"></div>
@@ -2643,11 +2680,13 @@ function syncPanel(){
         ${AG?'':`<div class="fld inl"><label for="pAng" title="Угол к горизонтали">∠</label><input class="inp xs" id="pAng" inputmode="decimal" value="${Math.round(ANG*100)/100}" title="Угол, °"></div>`}
         ${AG?`<div class="fld inl"><label for="pR">R</label><input class="inp xs" id="pR" inputmode="decimal" value="${r1(AG.r)}"></div>`:''}
         ${sel.L==='walls'?`<div class="fld inl"><label for="pW" title="Толщина стены">⟷</label><input class="inp xs" id="pW" inputmode="decimal" value="${r3(sel.w||0)}" title="Толщина стены, мм"></div>
-          ${sideSeg('pside',sel.side||0)}${IS3D&&isWall(sel)?(()=>{ const li=doc.curLv, z=wallZ(sel,li), att=!sel.ht; return `<button class="btn${att?' go':''}" data-act="wAtt" title="${att?'Высота привязана к уровню выше — нажмите, чтобы задать свою':'Своя высота — нажмите, чтобы привязать к уровню выше'}">${att?'⤒ До уровня':'⤓ Своя'}</button>
-          <div class="fld inl"><label for="pHt" title="Высота стены">H</label><input class="inp xs" id="pHt" inputmode="decimal" value="${r1(z.z1-z.z0)}" ${att?'readonly':''} title="Высота стены, мм"></div>
+          ${IS3D&&isWall(sel)?(()=>{ const z=wallZ(sel,doc.curLv), att=!sel.ht; return `<div class="fld inl"><label for="pHt" title="Высота стены">H</label><input class="inp xs" id="pHt" inputmode="decimal" value="${r1(z.z1-z.z0)}" ${att?'readonly':''} title="Высота стены, мм"></div>`; })():''}`:''}
+        <button class="btn" data-act="wMore" aria-expanded="${wMore}" title="Ещё свойства">${wMore?'‹':'⋯'}</button>
+        <span style="display:${wMore?'contents':'none'}">
+        ${sel.L==='walls'?`${sideSeg('pside',sel.side||0)}${IS3D&&isWall(sel)?(()=>{ const att=!sel.ht; return `<button class="btn${att?' go':''}" data-act="wAtt" title="${att?'Высота привязана к уровню выше — нажмите, чтобы задать свою':'Своя высота — нажмите, чтобы привязать к уровню выше'}">${att?'⤒ До уровня':'⤓ Своя'}</button>
           <div class="fld inl"><label for="pBo" title="Смещение низа от уровня">Низ</label><input class="inp xs" id="pBo" inputmode="decimal" value="${r1(sel.bo||0)}" title="Смещение низа, мм"></div>`; })():''}`:''}
         ${colorBtns(sel)}
-        <select class="inp" id="pLayer" title="Слой" style="width:auto">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select>`;
+        <select class="inp" id="pLayer" title="Слой" style="width:auto">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select></span>`;
     } else if(sel.t==='circ'){
       h=`<div class="title">Круг <b>Ø${fmt(sel.r*2)} мм</b></div>
         <div class="fld"><label for="pCD">Диаметр, мм</label><input class="inp" id="pCD" inputmode="decimal" value="${r1(sel.r*2)}"></div>
@@ -2723,6 +2762,7 @@ panel.addEventListener('click',e=>{
         ord.forEach((q,i)=>q.o.lab=axLabel(sel.lab,i)); persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'colReset':{ styleBegin(); const S=selIds(); for(const it of doc.items) if(S.has(it.id)){ delete it.lc; delete it.fc; delete it.hp; delete it.lt; delete it.lw; } panelKey=''; syncPanel(); redraw(); }break;
     case 'rfEdge':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ editBegin(); pushUndo(); undoS.pop(); roofChange(sel,r=>{ const e=r.edges[roofEdge.i]; e.s=!e.s; if(e.s&&!(e.a>0)) e.a=r.ang||30; r.type='custom'; }); }break;
+    case 'wMore':{ wMore=!wMore; panelKey=''; syncPanel(); break; }
     case 'wAtt':if(sel&&isWall(sel)){ editBegin(); pushUndo(); if(sel.ht) delete sel.ht; else { const z=wallZ(sel,doc.curLv); sel.ht=r3(z.z1-z.z0); } persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'v3d':open3D();break;
     case 'jtSwap':if(selJoint){ const c=cornerPair(selJoint); if(c){ editBegin(); pushUndo(); const md=cornerMode(c[0],c[1],c[2],c[3]), aPass=md==='p'||md==='qp'; setCorner(selJoint,md==='qp'||md==='qs'?'q':'b',!aPass); persist(); panelKey=''; syncPanel(); redraw(); toast('Проходит другая стена'); } }break;
@@ -2763,7 +2803,7 @@ function applyProp(t){
         else if(t.id==='rfEA'&&roofEdge&&r.edges&&r.edges[roofEdge.i]){ r.edges[roofEdge.i].a=v; r.type='custom'; }
         else if(t.id==='rfO'){ r.ov=v; (r.edges||[]).forEach(e=>{ delete e.ov; }); } else if(t.id==='rfT') r.th=v; else if(t.id==='rfB') r.bo=v; }); return; }
     if(sr&&isWall(sr)&&(t.id==='pHt'||t.id==='pBo')){ const v=parseNum(t.value); if(isNaN(v)) return; pushUndo();
-      if(t.id==='pHt'&&v>0) sr.ht=v; else if(t.id==='pBo') sr.bo=v||0; if(!sr.bo) delete sr.bo; persist(); panelKey=''; syncPanel(); redraw(); return; }
+      if(!fitGuard(()=>{ if(t.id==='pHt'&&v>0) sr.ht=v; else if(t.id==='pBo') sr.bo=v||0; if(!sr.bo) delete sr.bo; })){ undoS.pop(); panelKey=''; syncPanel(); redraw(); return; } persist(); panelKey=''; syncPanel(); redraw(); return; }
     if(sr&&sr.t==='chim'&&['pCH','pCR','pCZ'].includes(t.id)){ const v=parseNum(t.value); if(isNaN(v)) return;
       if(t.id==='pCH'&&!(v>=100&&v<=30000)){ toast('Не соответствует: высота дымохода 100…30000 мм'); panelKey=''; syncPanel(); return; }
       if(t.id==='pCR'&&!(v>=0&&v<=10000)){ toast('Не соответствует: над крышей 0…10000 мм'); panelKey=''; syncPanel(); return; }
@@ -2791,8 +2831,8 @@ function applyProp(t){
     if(so&&isHole(so)&&/^pH[WHSab]$/.test(t.id)){ const v=parseNum(t.value); if(!(v>=0)) return; const g=holeGeom(so); if(!g) return;
       pushUndo();
       if(t.id==='pHW'&&v>0){ so.width=Math.min(v,g.L); }
-      else if(t.id==='pHH'&&v>0) so.height=v;
-      else if(t.id==='pHS') so.sill=v;
+      else if(t.id==='pHH'&&v>0){ if(!fitGuard(()=>{ so.height=v; })){ panelKey=''; syncPanel(); return; } }
+      else if(t.id==='pHS'){ if(!fitGuard(()=>{ so.sill=v; })){ panelKey=''; syncPanel(); return; } }
       else if(t.id==='pHa'){ const c=holeClear(so); so.pos=r3(Math.max(g.w/2,Math.min(g.L-g.w/2,c.left+v+g.w/2))); }
       else if(t.id==='pHb'){ const c=holeClear(so); so.pos=r3(Math.max(g.w/2,Math.min(g.L-g.w/2,c.right-v-g.w/2))); }
       persist(); panelKey=''; syncPanel(); redraw(); return; } }
@@ -2841,7 +2881,7 @@ try{ const m=JSON.parse(localStorage.getItem('zamer-modes')||'null'); if(m){ wal
 function saveModes(){ try{localStorage.setItem('zamer-modes',JSON.stringify({w:wallMode,l:lineMode,e:editMode}));}catch(e){} }
 const segMode=()=>(lineKind==='wall'&&wallMode==='seg')||(lineKind==='line'&&lineMode==='seg');
 const MODEN={grid:'Оси',chain:'Цепочка',seg:'Отрезок',rect:'Прямоуг.',arc:'Дуга',circ:'Круг',poly:'Многоуг.',aux:'Конструкц.',split:'Разделить',merge:'Убрать вершину',mirrorc:'Зеркало',mirrorm:'Зеркало'};
-function setTool(t){ if(t==='move') t='select'; if(tool==='select') editSel=selIds(); const preSel=tool==='select'||['split','merge','mirror'].includes(tool)?editSel:null; if(t!=='select') moveSel.clear();
+function setTool(t){ dimTapA=null; if(t==='move') t='select'; if(tool==='select') editSel=selIds(); const preSel=tool==='select'||['split','merge','mirror'].includes(tool)?editSel:null; if(t!=='select') moveSel.clear();
   btnTool=t; let nk, nt;
   if(t==='line'){ nt=wallMode==='rect'?'rect':'line'; nk=wallMode==='arc'?'arc':'wall'; arcWall=true; }
   else if(t==='draw'){ nt=lineMode==='grid'?'grid':'line'; nk=lineMode==='chain'||lineMode==='seg'||lineMode==='grid'?'line':lineMode; arcWall=false; }
@@ -2856,7 +2896,7 @@ function setTool(t){ if(t==='move') t='select'; if(tool==='select') editSel=selI
   document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tool===btnTool)));
   $('#lblWall').textContent=btnTool==='line'&&wallMode!=='chain'?MODEN[wallMode]:'Стены';
   $('#lblLine').textContent=btnTool==='draw'&&lineMode!=='chain'?MODEN[lineMode]:'Линии';
-  $('#lblEdit').textContent=MODEN[editMode];
+  $('#lblEdit').textContent='Изменить';
   { const l=$('#lblText'); if(l) l.textContent=textMode==='leader'?'Выноска':'Текст'; }
   { const l=$('#lblSel'); if(l) l.textContent=selMode==='copy'?'Копия':selMode==='rot'?'Вращать':selMode==='win'||selMode==='cross'?'Рамка':'Выбор'; }
   syncPanel(); syncModeBtns(); redraw();
@@ -2923,6 +2963,15 @@ $('#btnSnaps').addEventListener('click',()=>{ const m=$('#snapPop'), open=m.hidd
 document.addEventListener('pointerdown',e=>{ const m=$('#snapPop'); if(!m.hidden&&!e.target.closest('#snapPop')&&!e.target.closest('#btnSnaps')){ m.hidden=true; $('#btnSnaps').setAttribute('aria-expanded','false'); } });
 $('#snapPop').addEventListener('click',()=>setTimeout(syncSnapLbl,0));
 document.addEventListener('pointerdown',e=>{ if(!$('#toolMenu').hidden&&!e.target.closest('#toolMenu')&&!e.target.closest('[data-tool]')) closeToolMenu(); });
+// касание чертежа, закрывающее меню, только закрывает его — не рисует и не выбирает
+window.addEventListener('pointerdown',e=>{ if(e.target!==cv) return; const tm=$('#toolMenu'), sp=$('#snapPop'), lb=$('#lvBar');
+  { const r=cv.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+    if(tm.hidden&&sp.hidden&&lb.hidden&&ptrs.size===0){
+      if(NS.wallPick){ e.stopPropagation(); e.preventDefault(); afterClick(()=>northWallTap({x:px,y:py})); return; }
+      if(Math.hypot(px-NSYM.x,py-NSYM.y)<22){ e.stopPropagation(); e.preventDefault(); afterClick(openNorth); return; } } }
+  if(tm.hidden&&sp.hidden&&lb.hidden) return;
+  if(!tm.hidden) closeToolMenu(); if(!sp.hidden){ sp.hidden=true; $('#btnSnaps').setAttribute('aria-expanded','false'); } if(!lb.hidden) lvMenu(false);
+  e.stopPropagation(); e.preventDefault(); },true);
 let lineLayer='misc';
 const AX={ortho:['Орто','Орто: только горизонтально или вертикально'],x:['Ось X','Только по оси X (влево-вправо)'],y:['Ось Y','Только по оси Y (вверх-вниз)'],free:['Свободно','Свободное движение под любым углом']};
 function setAxis(m,quiet){ axisMode=m; $('#axLbl').textContent=AX[m][0]; $('#tgOrtho').setAttribute('aria-pressed',String(m!=='free'));
@@ -2974,6 +3023,7 @@ $('#tgSnap').addEventListener('click',e=>{snapOn=!snapOn;e.currentTarget.setAttr
 $('#btnUndo').addEventListener('click',undo);
 $('#btnRedo').addEventListener('click',redo);
 $('#btnFit').addEventListener('click',fitView);
+$('#btnHelp').addEventListener('click',()=>{ helpUntil=Date.now()+5000; updateHud(); clearTimeout(helpT); helpT=setTimeout(()=>{ helpUntil=0; updateHud(); },5050); });
 $('#docName').addEventListener('input',e=>{doc.name=e.target.value;persist();});
 $('#docNum').addEventListener('input',e=>{doc.num=e.target.value;persist();});
 function syncTop(){ $('#btnUndo').disabled=!undoS.length; $('#btnRedo').disabled=!redoS.length; }
@@ -2995,16 +3045,16 @@ $('#btnCancel').addEventListener('click',()=>{ if(roofEd) roofEd=null; if(stEd) 
   if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
   chain.pts=[]; chain.ids=[]; live=null; arcB=null; dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); redraw(); });
 /* ---------- перетаскиваемые окошки ---------- */
-let gripOff={dyn:{x:0,y:0},ax:{x:0,y:0}}; try{ const g0=JSON.parse(localStorage.getItem('zamer-grip')||'null'); if(g0&&g0.dyn&&g0.ax) gripOff=g0; }catch(e){}
+let gripOff={dyn:{x:0,y:0},ax:{x:0,y:0}}; try{ const g0=JSON.parse(localStorage.getItem('zamer-grip2')||'null'); if(g0&&g0.dyn&&g0.ax) gripOff=g0; }catch(e){}
 document.querySelectorAll('[data-grip]').forEach(g=>{ let st=null;
   g.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); st={x:e.clientX,y:e.clientY,o:{...gripOff[g.dataset.grip]},moved:false}; });
   g.addEventListener('pointermove',e=>{ if(!st) return; const dx=e.clientX-st.x, dy=e.clientY-st.y; if(Math.hypot(dx,dy)>3) st.moved=true;
     gripOff[g.dataset.grip]={x:st.o.x+dx,y:st.o.y+dy}; if(g.dataset.grip==='dyn') placeDyn(); else placeAxPick(); });
-  const end=()=>{ if(!st) return; if(!st.moved){ gripOff[g.dataset.grip]={x:0,y:0}; redraw(); } st=null; try{localStorage.setItem('zamer-grip',JSON.stringify(gripOff));}catch(e){} };
+  const end=()=>{ if(!st) return; if(!st.moved){ gripOff[g.dataset.grip]={x:0,y:0}; redraw(); } st=null; try{localStorage.setItem('zamer-grip2',JSON.stringify(gripOff));}catch(e){} };
   g.addEventListener('pointerup',end); g.addEventListener('pointercancel',end); g.addEventListener('click',e=>e.stopPropagation()); });
 /* ---------- динамический ввод (как DYNMODE в AutoCAD) ---------- */
 const dynEl=$('#dynIn'), dynLen=$('#dynLen'), dynAng=$('#dynAng'); let dynDirSet=null;
-function dynActive(){ return tool==='line'&&!isShape()&&lineKind!=='aux'&&(chain.pts.length>0||lineKind!=='arc'); }
+function dynActive(){ return tool==='line'&&!isShape()&&lineKind!=='aux'&&chain.pts.length>0; }
 const dynLast=()=>chain.pts[chain.pts.length-1]||startPoint();
 function dynDir(){ const last=dynLast();
   const a=parseNum(dynAng.value); if(dynAng.value.trim()!==''&&!isNaN(a)) return a;
@@ -3019,13 +3069,9 @@ function drawDynGhost(){ if(!dynActive()) return; const e=dynEnd(); if(!e) retur
   const s2=toS(e); ctx.fillStyle=C.sel; ctx.fillRect(s2.x-4,s2.y-4,8,8); }
 function placeDyn(){
   if(!dynActive()){ if(!dynEl.hidden){ dynEl.hidden=true; } return; }
-  const last=dynLast(), e=dynEnd();
-  let tgt=e||live; if(!tgt){ const r=dynDir()*Math.PI/180, k=60/view.scale; tgt={x:last.x+Math.cos(r)*k,y:last.y+Math.sin(r)*k}; }
-  const A=toS(last), B=toS(tgt), m={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
-  const r=dynDir()*Math.PI/180, nx=-Math.sin(r), ny=-Math.cos(r); // экранная нормаль «вверх» от линии
+  const last=dynLast();
   dynEl.hidden=false; const w=dynEl.offsetWidth||300, h=dynEl.offsetHeight||46;
-  let x=m.x+nx*0+0, y=m.y-(Math.abs(Math.cos(r))>0.5?h/2+18:0); if(Math.abs(Math.cos(r))<=0.5) x=m.x+w/2+22;
-  const lim=H-(panel.hidden?10:panel.offsetHeight+16); x+=gripOff.dyn.x; y+=gripOff.dyn.y;
+  const lim=H-(panel.hidden?10:panel.offsetHeight+16); let x=W/2+gripOff.dyn.x, y=lim-h/2+gripOff.dyn.y;
   dynEl.style.left=Math.max(w/2+6,Math.min(W-w/2-6,x))+'px'; dynEl.style.top=Math.max(h/2+60,Math.min(lim-h/2,y))+'px';
   if(document.activeElement!==dynLen) dynLen.placeholder=lineKind==='arc'&&arcB?(live&&bulge3(last,arcB,live)?'R '+fmt(arcG({a:last,b:arcB,bg:bulge3(last,arcB,live)}).r):'радиус'):live&&!near(live,last,0.5)?fmt(Math.hypot(live.x-last.x,live.y-last.y)):'длина';
   if(document.activeElement!==dynAng) dynAng.placeholder=fmt(dynDir())+'°';
@@ -3058,7 +3104,8 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Delete'||e.key==='Backspace'){ if(selId){e.preventDefault();delSel();} }
 });
 
-let tt=0; function toast(s){const t=$('#toast');t.textContent=s;t.classList.remove('off');clearTimeout(tt);tt=setTimeout(()=>t.classList.add('off'),2600);}
+const TOAST_KEEP=/^(Не соответствует|Не удалось|Нет |Нечего|Чертёж пустой|Память|Стена короче|На этой стене нет|Проходит другая|Нужно минимум|Точки совпали|Точки на одной|Точка должна|Радиус должен|Длина должна|Ось слишком|Сохран|Отправлено|Старый чертёж|Создан новый|Сначала|Введите|Отменено|Скопировано|Разделено|Уже ровно)/;
+let tt=0; function toast(s,force){ if(!force&&!hintsOn()&&!TOAST_KEEP.test(String(s))) return; const t=$('#toast'); try{ const pn=$('#panel'); t.style.bottom=((pn&&!pn.hidden?pn.offsetHeight+6:0)+(dynEl&&!dynEl.hidden?dynEl.offsetHeight+8:0)+10)+'px'; }catch(e){}t.textContent=s;t.classList.remove('off');clearTimeout(tt);tt=setTimeout(()=>t.classList.add('off'),1600);}
 
 /* ---------- documents sheet ---------- */
 const sheet=$('#sheet'); let confirmDel=null;
@@ -3085,7 +3132,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.10':'4.0.10'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.11':'4.0.11'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3115,6 +3162,8 @@ function renderSheet(view){ if(view) appView=view;
       <select class="inp" id="sClose">${[['out','наружу'],['in','внутрь'],['keep','не менять']].map(([k,n])=>`<option value="${k}"${doc.settings.closeMode===k?' selected':''}>${n}</option>`).join('')}</select>
       <label for="sLabels">Подписывать длины линий</label>
       <input type="checkbox" class="chk" id="sLabels"${doc.settings.wallLabels?' checked':''}>
+      <label for="sHints">Подсказки и сообщения</label>
+      <input type="checkbox" class="chk" id="sHints"${hintsOn()?' checked':''}>
       <label for="sNatDim">Размеры в DWG — родные AutoCAD</label>
       <input type="checkbox" class="chk" id="sNatDim"${doc.settings.nativeDims!==false?' checked':''}>
     </div>
@@ -3141,7 +3190,7 @@ sheet.addEventListener('click',e=>{
     case 'export':sheet.hidden=true; openExport(); break;
     case 'levels':openLevels(); break;
     case 'lvadd':{ // новый этаж встаёт под крышу: крыша поднимается на высоту этажа
-      const L=doc.levels, top=L[L.length-1], roof=top&&isRoofName(top.name)?top:null, below=roof?L[L.length-2]:top;
+      pushUndo(); const L=doc.levels, top=L[L.length-1], roof=top&&isRoofName(top.name)?top:null, below=roof?L[L.length-2]:top;
       const h=below&&roof?Math.max(2500,roof.elev-below.elev):3000;
       if(roof){ L.push({id:uid(),name:'Этаж 999',elev:roof.elev,items:[]}); roof.elev=roof.elev+h; }
       else L.push({id:uid(),name:'Этаж 999',elev:(top?top.elev:0)+3000,items:[]});
@@ -3150,7 +3199,7 @@ sheet.addEventListener('click',e=>{
       lvDelConfirm=null; const cur=doc.levels[doc.curLv]; doc.levels.splice(i,1); let ci=doc.levels.indexOf(cur); if(ci<0) ci=Math.max(0,i-1);
       doc.curLv=-1; setLevel(ci); persist(); renderLevels(); openLevels(); break;}
     case 'lvcopy':{const f=+$('#cpFrom').value,t=+$('#cpTo').value; if(f===t){toast('Выберите разные уровни');break;}
-      const n=copyLevel(f,t); persist(); sheet.hidden=true; doc.curLv=-1; setLevel(t); toast('Скопировано объектов: '+n+' → '+doc.levels[t].name); break;}
+      pushUndo(); const n=copyLevel(f,t); persist(); sheet.hidden=true; doc.curLv=-1; setLevel(t); toast('Скопировано объектов: '+n+' → '+doc.levels[t].name); break;}
     case 'allW':{pushUndo();let n=0;for(const it of doc.items) if(it.t==='line'&&it.L==='walls'){it.w=doc.settings.wallW;n++;}
       persist();redraw();toast('Толщина изменена у стен: '+n);break;}
     case 'open':openDoc(id);sheet.hidden=true;break;
@@ -3167,13 +3216,15 @@ sheet.addEventListener('click',e=>{
 });
 sheet.addEventListener('change',e=>{
   const tl=e.target;
-  if(tl.dataset.lname!==undefined){ doc.levels[+tl.dataset.lname].name=tl.value.trim()||'Уровень'; persist(); renderLevels(); return; }
-  if(tl.dataset.lheight!==undefined){ const v=parseNum(tl.value); if(!(v>0)) return; setLvHeight(+tl.dataset.lheight,r3(v)); persist(); renderLevels(); openLevels(); redraw(); return; }
-  if(tl.dataset.lelev!==undefined){ const v=parseNum(tl.value); if(isNaN(v)) return; doc.levels[+tl.dataset.lelev].elev=r3(v); sortLevels(); persist(); renderLevels(); openLevels(); redraw(); return; }
+  const reLv=()=>setTimeout(()=>{ if(!sheet.hidden&&sheet.querySelector('#lvT')) openLevels(); },0); // перерисовать окно после ухода фокуса
+  if(tl.dataset.lname!==undefined){ pushUndo(); doc.levels[+tl.dataset.lname].name=tl.value.trim()||'Уровень'; persist(); renderLevels(); return; }
+  if(tl.dataset.lheight!==undefined){ const v=parseNum(tl.value); if(!(v>=100&&v<=30000)){ toast('Не соответствует: высота этажа 100…30000 мм'); reLv(); return; } pushUndo(); if(!fitGuard(()=>setLvHeight(+tl.dataset.lheight,r3(v)))){ reLv(); return; } persist(); renderLevels(); reLv(); redraw(); return; }
+  if(tl.dataset.lelev!==undefined){ const v=parseNum(tl.value); if(isNaN(v)) return; pushUndo(); doc.levels[+tl.dataset.lelev].elev=r3(v); sortLevels(); persist(); renderLevels(); reLv(); redraw(); return; }
   const t=e.target;
   if(t.id==='sGrid') doc.settings.grid=+t.value;
   else if(t.id==='sTextH'){const v=parseNum(t.value); if(v>0) doc.settings.textH=v;}
   else if(t.id==='sLabels'){ doc.settings.wallLabels=t.checked; syncLabelsBtn(); }
+  else if(t.id==='sHints'){ setHints(t.checked); return; }
   else if(t.id==='sNatDim') doc.settings.nativeDims=t.checked;
   else if(t.id==='sWallW'){const v=parseNum(t.value); if(v>=0){doc.settings.wallW=v; const b=sheet.querySelector('[data-s="allW"]'); if(b) b.textContent='Задать всем стенам толщину '+fmt(v)+' мм';}}
   else if(t.id==='sClose') doc.settings.closeMode=t.value;
@@ -3270,6 +3321,10 @@ function buildDXF0(d,all,rec){
           TEXT(L,lp,th*.7,(it.t==='win'?'ОК ':'ДВ ')+fmt(gm.w)+'x'+fmt(it.height)+(it.t==='win'?' h='+fmt(it.sill):''),readableAngle(gm.u));
         }
       }
+      if(li===lvls[lvls.length-1]&&isFinite(x1)){ // стрелка севера справа сверху
+        const V=northV().N, Ln=Math.max(th*6,800), c={x:x1+Ln*1.2,y:y1-Ln*0.6}, tip={x:c.x+V.x*Ln/2,y:c.y+V.y*Ln/2}, tl={x:c.x-V.x*Ln/2,y:c.y-V.y*Ln/2}, P={x:-V.y,y:V.x}, hb={x:tip.x-V.x*Ln*.3,y:tip.y-V.y*Ln*.3};
+        COL.NORTH=7; LINE('NORTH',tl,tip); LINE('NORTH',tip,{x:hb.x+P.x*Ln*.15,y:hb.y+P.y*Ln*.15}); LINE('NORTH',tip,{x:hb.x-P.x*Ln*.15,y:hb.y-P.y*Ln*.15});
+        TEXT('NORTH',{x:tip.x+V.x*th*1.2-th*.4,y:tip.y+V.y*th*1.2-th*.5},th*1.2,'С',0); }
     }
   } finally { d.curLv=save; }
   if(!isFinite(x0)){x0=0;y0=0;x1=1000;y1=1000;}
@@ -3643,25 +3698,49 @@ function wallOutline(walls,w){ const segs=[];
     const C=cleanPoly(P.map(q=>({x:r3(q.x),y:r3(q.y)}))); if(C.length>=3) outs.push(C); }
   const hit=outs.filter(C=>inPoly(C,w)).sort((a,b)=>Math.abs(polyArea2(a))-Math.abs(polyArea2(b)));
   return hit[0]||null; }
-function roofAt(w){ const cur=doc.curLv; let src=cur, onTop=true;
-  const hasW=li=>doc.levels[li].items.some(isWall);
-  if(!hasW(cur)){ if(cur>0&&hasW(cur-1)){ src=cur-1; onTop=false; } else { toast('Нет стен на этом и нижнем уровне — сначала нарисуйте стены'); return null; } }
-  const walls=doc.levels[src].items.filter(isWall), save=doc.curLv; doc.curLv=src; let best=null;
+// контур крыши по стенам уровня src вокруг точки w (null — не найден)
+function roofOutlineAt(w,src){ const walls=doc.levels[src].items.filter(isWall); if(!walls.length) return null; const save=doc.curLv; doc.curLv=src; let best=null;
   try{ // связные группы стен по общим концам
     const par=walls.map((_,i)=>i), f=i=>par[i]===i?i:(par[i]=f(par[i]));
     for(let i=0;i<walls.length;i++) for(let j=i+1;j<walls.length;j++){ const A=walls[i],B=walls[j]; if([A.a,A.b].some(p=>[B.a,B.b].some(q=>Math.hypot(p.x-q.x,p.y-q.y)<Math.max(A.w,B.w)))) par[f(i)]=f(j); }
     const grp=new Map(); walls.forEach((W,i)=>{ const k=f(i); if(!grp.has(k)) grp.set(k,[]); grp.get(k).push(W); });
     for(const G of grp.values()){ const pts=[]; for(const W of G){ if(isArc(W)) arcPolyPts(W).forEach(q=>pts.push(q)); else { const p=wallPoly(W); pts.push(p.aL,p.aR,p.bL,p.bR); } }
       const Hh=convexHull(pts); if(Hh.length<3) continue; let ins=false; for(let i=0,j=Hh.length-1;i<Hh.length;j=i++){ if(((Hh[i].y>w.y)!==(Hh[j].y>w.y))&&(w.x<(Hh[j].x-Hh[i].x)*(w.y-Hh[i].y)/(Hh[j].y-Hh[i].y)+Hh[i].x)) ins=!ins; }
-      const ar=Math.abs(polyArea2(Hh)); if(ins&&(!best||ar<best.ar)) best={H:Hh,ar}; } }
-  finally{ doc.curLv=save; }
-  if(!best){ toast('Коснитесь внутри контура стен'); return null; }
-  { let OL=null; const sv=doc.curLv; doc.curLv=src; try{ OL=wallOutline(walls,w); }catch(e){ OL=null; } finally{ doc.curLv=sv; }
+      const ar=Math.abs(polyArea2(Hh)); if(ins&&(!best||ar<best.ar)) best={H:Hh,ar}; }
+    if(!best) return null;
+    let OL=null; try{ OL=wallOutline(walls,w); }catch(e){ OL=null; }
     if(OL&&!polySelfX(OL)&&Math.abs(polyArea2(OL))>Math.abs(best.ar)*0.3) best={H:OL,ar:Math.abs(polyArea2(OL))}; }
+  finally{ doc.curLv=save; }
   // убрать почти совпадающие и почти коллинеарные точки
   let P=best.H.map(q=>({x:r3(q.x),y:r3(q.y)})); for(let k=0;k<3;k++) P=P.filter((q,i)=>{ const a=P[(i+P.length-1)%P.length], b=P[(i+1)%P.length]; if(Math.hypot(q.x-a.x,q.y-a.y)<5) return false; const cr=((q.x-a.x)*(b.y-a.y)-(q.y-a.y)*(b.x-a.x))/(Math.hypot(b.x-a.x,b.y-a.y)||1); return Math.abs(cr)>3; });
-  if(P.length<3) return null; const d=roofDef();
-  const r={id:uid(),t:'roof',pts:P,type:d.type,ang:d.ang,ov:d.ov,th:d.th,onTop,bo:0}; roofPreset(r,d.type); return r; }
+  return P.length>=3?P:null; }
+function roofAt(w){ const cur=doc.curLv; let src=cur, onTop=true;
+  const hasW=li=>doc.levels[li].items.some(isWall);
+  if(!hasW(cur)){ if(cur>0&&hasW(cur-1)){ src=cur-1; onTop=false; } else { toast('Нет стен на этом и нижнем уровне — сначала нарисуйте стены'); return null; } }
+  const P=roofOutlineAt(w,src); if(!P){ toast('Коснитесь внутри контура стен'); return null; }
+  const d=roofDef();
+  const r={id:uid(),t:'roof',pts:P,type:d.type,ang:d.ang,ov:d.ov,th:d.th,onTop,bo:0}; roofPreset(r,d.type);
+  r.src='walls'; r.seed={x:r3(w.x),y:r3(w.y)}; r.sl=src-cur; r.wk=wallsKey(src); r.pk=ptsKey(r.pts); return r; }
+// крыша «по стенам» следует за стенами: стены изменились — контур пересчитывается, свойства граней переносятся
+const ptsKey=P=>P.map(q=>Math.round(q.x)+','+Math.round(q.y)).join(';');
+function wallsKey(li){ const L=doc.levels[li]; if(!L) return ''; return L.items.filter(isWall).map(W=>[W.a.x,W.a.y,W.b.x,W.b.y,W.w||0,W.side||0,W.bg||0].map(v=>Math.round(v)).join(',')).join('|'); }
+function syncRoofs(){ if(syncRoofs.busy) return false; syncRoofs.busy=1; let ch=false;
+  try{ for(let li=0;li<doc.levels.length;li++) for(const r of doc.levels[li].items){ if(r.t!=='roof'||r.src!=='walls') continue;
+    const src=li+(r.sl||0); if(!doc.levels[src]){ r.src='manual'; continue; } const wk=wallsKey(src), pk=ptsKey(r.pts);
+    if(wk===r.wk&&pk===r.pk) continue;
+    if(pk!==r.pk&&wk===r.wk){ r.src='manual'; ch=true; continue; } // контур правили вручную
+    const c=r.pts.reduce((m,q)=>({x:m.x+q.x/r.pts.length,y:m.y+q.y/r.pts.length}),{x:0,y:0});
+    let seed=r.seed||c; if(pk!==r.pk&&r.pk){ const Q=r.pk.split(';').map(t=>t.split(',').map(Number)), oc={x:Q.reduce((m,v)=>m+v[0],0)/Q.length,y:Q.reduce((m,v)=>m+v[1],0)/Q.length}; seed={x:seed.x+c.x-oc.x,y:seed.y+c.y-oc.y}; }
+    let P=roofOutlineAt(seed,src)||roofOutlineAt(c,src);
+    if(!P){ r.wk=wk; r.pk=pk; continue; }
+    if(pk!==r.pk&&ptsKey(P)!==pk){ r.src='manual'; ch=true; continue; } // сдвинули и крышу, и стены, но не вместе
+    if(ptsKey(P)!==pk){ const O=r.pts, E=r.edges||[], n=O.length;
+      r.edges=P.map((A,i)=>{ const B=P[(i+1)%P.length], u=unit(A,B), m={x:(A.x+B.x)/2,y:(A.y+B.y)/2}; let bj=-1,bd=1e18;
+        for(let k=0;k<n;k++){ const a=O[k], b=O[(k+1)%n], v=unit(a,b); if(u.x*v.x+u.y*v.y<0.97) continue; const d=Math.abs((m.x-a.x)*v.y-(m.y-a.y)*v.x)+0.1*Math.hypot(m.x-(a.x+b.x)/2,m.y-(a.y+b.y)/2); if(d<bd){ bd=d; bj=k; } }
+        return bj>=0&&E[bj]?{...E[bj]}:{s:true,a:r.ang||30}; });
+      r.pts=P; ch=true; }
+    if(pk!==r.pk) r.seed=seed; r.wk=wk; r.pk=ptsKey(r.pts); } }
+  catch(e){ console.warn('syncRoofs',e); } finally{ syncRoofs.busy=0; } return ch; }
 function roofTap(p){ const sel=doc.items.find(i=>i.id===selId); if(!sel||sel.t!=='roof') return false;
   for(const b of roofBadges(sel)) if(Math.hypot(b.s.x-p.x,b.s.y-p.y)<22){ roofEdge={id:sel.id,i:b.i}; panelKey=''; syncPanel(); redraw(); return true; }
   return false; }
@@ -3676,7 +3755,7 @@ function chimBot(it,li){ return it.z0!=null?it.z0:doc.levels[li].elev; }
 function chimTop(it,li){ const rt=chimRoofTop(it); if(rt!=null) return Math.round(rt+(it.hr==null?600:it.hr)); return chimBot(it,li)+(it.hgt>0?it.hgt:lvHeight(li)+1500); }
 // ---- вся модель ----
 function buildModel(){ const M=Mesh(), save=doc.curLv; geoMemoOn();
-  try{ doc.levels.forEach((L,li)=>{ doc.curLv=li;
+  try{ doc.levels.forEach((L,li)=>{ if(L.gp) return; doc.curLv=li;
     for(const it of L.items){
       if(isWall(it)){ const fc=rgbOf(it.fc,'#d9d6cf');
         for(const pc of wallPieces(it,li)){
@@ -3755,7 +3834,7 @@ function open3D(){ const M=buildModel(); if(!M.tri.length){ toast('Нечего 
   v3={...st,keep:true,el,draw:null,R};
   const mul=(a,b)=>{ const r=new Array(16).fill(0); for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=0;k<4;k++) r[j*4+i]+=a[k*4+i]*b[j*4+k]; return r; };
   const draw=()=>{ const W2=cvs.clientWidth, H2=cvs.clientHeight, dpr=window.devicePixelRatio||1; if(cvs.width!==Math.round(W2*dpr)){ cvs.width=Math.round(W2*dpr); cvs.height=Math.round(H2*dpr); }
-    gl.viewport(0,0,cvs.width,cvs.height); const dk=matchMedia('(prefers-color-scheme: dark)').matches; gl.clearColor(dk?.09:.94,dk?.1:.94,dk?.11:.92,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+    gl.viewport(0,0,cvs.width,cvs.height); const dk=uiDark(); gl.clearColor(dk?.09:.94,dk?.1:.94,dk?.11:.92,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
     const cyw=Math.cos(v3.yaw),syw=Math.sin(v3.yaw),cp=Math.cos(v3.pitch),sp=Math.sin(v3.pitch);
     const tgt=[C0[0]+v3.pan[0],C0[1]+v3.pan[1],C0[2]+v3.pan[2]], eye=[tgt[0]+v3.dist*cp*cyw,tgt[1]+v3.dist*cp*syw,tgt[2]+v3.dist*sp];
     const f=[tgt[0]-eye[0],tgt[1]-eye[1],tgt[2]-eye[2]]; const fl=Math.hypot(...f); f[0]/=fl;f[1]/=fl;f[2]/=fl; let s=[f[1]*1-f[2]*0,f[2]*0-f[0]*1,0]; const sl=Math.hypot(...s)||1; s=s.map(v=>v/sl); const u=[s[1]*f[2]-s[2]*f[1],s[2]*f[0]-s[0]*f[2],s[0]*f[1]-s[1]*f[0]];
@@ -3779,12 +3858,16 @@ function open3D(){ const M=buildModel(); if(!M.tri.length){ toast('Нечего 
   const up=e=>{ P.delete(e.pointerId); last=null; }; cvs.onpointerup=up; cvs.onpointercancel=up;
   cvs.onwheel=e=>{ e.preventDefault(); v3.dist=Math.max(R*0.15,Math.min(R*12,v3.dist*(e.deltaY>0?1.12:0.89))); draw(); };
   el.querySelector('.v3bar').onclick=e=>{ const b=e.target.closest('[data-v3]'); if(!b) return; const k=b.dataset.v3;
-    if(k==='close'){ el.hidden=true; return; } if(/^e[SNEW]$/.test(k)){ el.hidden=true; if(EV) EV.view=null; openElev(k[1]); return; } if(k==='iso'){ v3.yaw=-0.6-Math.PI/2; v3.pitch=0.5; v3.dist=fitD(); } if(k==='top'){ v3.yaw=-Math.PI/2; v3.pitch=1.53; v3.dist=fitD(); } if(k==='front'){ v3.yaw=-Math.PI/2; v3.pitch=0.05; v3.dist=fitD(); } if(k==='edges') v3.edges=!v3.edges; v3.pan=[0,0,0]; draw(); };
+    if(k==='close'){ el.hidden=true; return; } if(/^e[SNEW]$/.test(k)){ el.hidden=true; if(EV) EV.view=null; openElev(elevByCard(k[1])); return; } if(k==='iso'){ v3.yaw=-0.6-Math.PI/2; v3.pitch=0.5; v3.dist=fitD(); } if(k==='top'){ v3.yaw=-Math.PI/2; v3.pitch=1.53; v3.dist=fitD(); } if(k==='front'){ v3.yaw=-Math.PI/2; v3.pitch=0.05; v3.dist=fitD(); } if(k==='edges') v3.edges=!v3.edges; v3.pan=[0,0,0]; draw(); };
   window.addEventListener('resize',()=>{ if(!el.hidden) draw(); }); }
 
 // ---- фасады (как фасадные виды Revit): стены, проёмы, крыша, уровни — тянуть и вводить цифрами ----
 const ELEVD={S:{n:'Южный',r:{x:1,y:0},f:{x:0,y:1}},N:{n:'Северный',r:{x:-1,y:0},f:{x:0,y:-1}},E:{n:'Восточный',r:{x:0,y:1},f:{x:-1,y:0}},W:{n:'Западный',r:{x:0,y:-1},f:{x:1,y:0}}};
 let EV=null;
+// фасады по сторонам света: вид вдоль осей плана, имя — по ближайшей стороне света наружной нормали (север задаётся стрелкой)
+function elevCard(k){ const f=ELEVD[k].f, n={x:-f.x,y:-f.y}, V=northV(), az=nrm360(Math.atan2(n.x*V.E.x+n.y*V.E.y,n.x*V.N.x+n.y*V.N.y)*180/Math.PI); return ['N','E','S','W'][Math.round(az/90)%4]; }
+function elevAz(k){ const f=ELEVD[k].f, n={x:-f.x,y:-f.y}, V=northV(); return Math.round(nrm360(Math.atan2(n.x*V.E.x+n.y*V.E.y,n.x*V.N.x+n.y*V.N.y)*180/Math.PI)); }
+function elevByCard(c){ return ['S','N','E','W'].find(k=>elevCard(k)===c)||c; }
 function elevEl(){ let el=$('#elev'); if(el) return el; el=document.createElement('div'); el.id='elev';
   el.innerHTML=`<div class="evwrap"><canvas class="evg"></canvas><canvas class="evo"></canvas><input class="inline evin" inputmode="decimal" hidden><div class="evhint"></div></div>
     <div class="v3bar"><span class="lbl">Фасад</span>${['S','N','E','W'].map(k=>`<button class="btn" data-ev="${k}" title="${ELEVD[k].n} фасад">${{S:'Ю',N:'С',E:'В',W:'З'}[k]}</button>`).join('')}
@@ -3792,18 +3875,19 @@ function elevEl(){ let el=$('#elev'); if(el) return el; el=document.createElemen
   document.body.appendChild(el); return el; }
 function openElev(dk){ elevInit(); const el=elevEl(); el.hidden=false; const g=el.querySelector('.evg'), gl=g.getContext('webgl',{antialias:true}); if(!gl){ toast('WebGL недоступен'); el.hidden=true; return; }
   const keep=EV&&EV.dk===dk?EV:null; EV={dk,el,gl,cg:g,co:el.querySelector('.evo'),sel:keep?keep.sel:null,snap:EV&&EV.snap,view:keep?keep.view:null,hits:[]};
-  el.querySelectorAll('[data-ev]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ev===dk)));
+  el.querySelectorAll('[data-ev]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ev===elevCard(dk))));
   elevBuild(); if(!EV.view) elevFit(); elevDraw(); elevBtns(); elevHint(); }
 function elevBtns(){ const el=EV.el; el.querySelector('.evok').hidden=!EV.snap; el.querySelector('.evcx').hidden=!EV.snap; }
 function elevHint(){ const s=EV.sel, t=!s?'Коснитесь стены, окна, двери или крыши. Линии уровней тянутся за кружок справа.':s.kind==='wall'?'Стена: тяните верх или низ (квадраты), синие цифры — ввести':s.kind==='hole'?'Проём: тяните верх или низ, цифры — высота и подоконник':'Крыша: тяните конёк или карниз, цифры — уклон и высота конька';
-  EV.el.querySelector('.evhint').textContent=t; }
+  const nm={N:'Северный',E:'Восточный',S:'Южный',W:'Западный'}[elevCard(EV.dk)]+' фасад'+(northA()?' · азимут '+elevAz(EV.dk)+'°':'');
+  EV.el.querySelector('.evhint').textContent=nm+(hintsOn()?' — '+t:''); }
 const evU=(q)=>{ const r=ELEVD[EV.dk].r; return r.x*q.x+r.y*q.y; }, evD=(q)=>{ const f=ELEVD[EV.dk].f; return f.x*q.x+f.y*q.y; };
 function elevBuild(){ const M=buildModel(); EV.M=M; const gl=EV.gl, D=ELEVD[EV.dk];
   let u0=1e18,u1=-1e18,z0=1e18,z1=-1e18,d0=1e18,d1=-1e18; const pos=[],nrm=[],col=[];
   for(const t of M.tri){ const [a,b,c]=t.v; const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2]; let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx; const l=Math.hypot(nx,ny,nz)||1; nx/=l;ny/=l;nz/=l;
     for(const p of [a,b,c]){ pos.push(p[0],p[1],p[2]); nrm.push(nx,ny,nz); col.push(...t.col); const u=D.r.x*p[0]+D.r.y*p[1], d=D.f.x*p[0]+D.f.y*p[1]; u0=Math.min(u0,u); u1=Math.max(u1,u); z0=Math.min(z0,p[2]); z1=Math.max(z1,p[2]); d0=Math.min(d0,d); d1=Math.max(d1,d); } }
   if(!M.tri.length){ u0=-5000;u1=5000;z0=0;z1=3000;d0=-1;d1=1; }
-  for(const L of doc.levels){ z0=Math.min(z0,L.elev); z1=Math.max(z1,L.elev); }
+  for(const L of doc.levels){ if(L.gp) continue; z0=Math.min(z0,L.elev); z1=Math.max(z1,L.elev); }
   EV.B={u0,u1,z0,z1,d0:d0-1000,d1:d1+1000};
   const lp=[]; for(const [a,b] of M.lines) lp.push(...a,...b);
   if(!EV.prog){ const sh=(t,src)=>{ const s=gl.createShader(t); gl.shaderSource(s,src); gl.compileShader(s); return s; };
@@ -3815,7 +3899,7 @@ function elevBuild(){ const M=buildModel(); EV.M=M; const gl=EV.gl, D=ELEVD[EV.d
   put(EV.bufs[0],pos); put(EV.bufs[1],nrm); put(EV.bufs[2],col); put(EV.bufs[3],lp); EV.nT=pos.length/3; EV.nL=lp.length/3;
   // что можно выбрать: стены, проёмы, крыши (в координатах фасада u — вправо, z — вверх, d — глубина)
   const H=[], save=doc.curLv;
-  try{ doc.levels.forEach((Lv,li)=>{ doc.curLv=li;
+  try{ doc.levels.forEach((Lv,li)=>{ if(Lv.gp) return; doc.curLv=li;
     for(const it of Lv.items){
       if(isWall(it)){ const F=wallFootprint(it,-1e6,1e6), us=F.map(evU), ds=F.map(evD), z=wallZ(it,li);
         H.push({kind:'wall',it,li,u0:Math.min(...us),u1:Math.max(...us),z0:z.z0,z1:z.z1,d:Math.min(...ds)});
@@ -3839,7 +3923,7 @@ function elevDraw(){ const gl=EV.gl, cg=EV.cg, co=EV.co, dpr=window.devicePixelR
   const D=ELEVD[EV.dk], v=EV.view, B=EV.B, hw=W2/2/v.s, hh=H2/2/v.s, hd=(B.d1-B.d0)/2, cd=(B.d0+B.d1)/2;
   // ортогональная проекция: x — вдоль фасада, y — высота, глубина — от зрителя
   const m=[D.r.x/hw,0,D.f.x/hd,0, D.r.y/hw,0,D.f.y/hd,0, 0,1/hh,0,0, -v.cu/hw,-v.cz/hh,-cd/hd,1];
-  gl.viewport(0,0,cg.width,cg.height); gl.clearColor(.97,.97,.95,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
+  gl.viewport(0,0,cg.width,cg.height); const dk=uiDark(); gl.clearColor(dk?.07:.97,dk?.08:.97,dk?.09:.95,1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST);
   if(EV.nT){ gl.useProgram(EV.prog); gl.uniformMatrix4fv(gl.getUniformLocation(EV.prog,'m'),false,new Float32Array(m));
     [['p',0],['n',1],['c',2]].forEach(([nm,i])=>{ const l=gl.getAttribLocation(EV.prog,nm); gl.bindBuffer(gl.ARRAY_BUFFER,EV.bufs[i]); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); });
     gl.drawArrays(gl.TRIANGLES,0,EV.nT); ['n','c'].forEach(nm=>gl.disableVertexAttribArray(gl.getAttribLocation(EV.prog,nm)));
@@ -3847,11 +3931,11 @@ function elevDraw(){ const gl=EV.gl, cg=EV.cg, co=EV.co, dpr=window.devicePixelR
     const l=gl.getAttribLocation(EV.progL,'p'); gl.bindBuffer(gl.ARRAY_BUFFER,EV.bufs[3]); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); gl.drawArrays(gl.LINES,0,EV.nL); }
   // поверх: уровни, выделение, ручки, синие цифры
   const x=co.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W2,H2); EV.hits=[];
-  const blue='#2563eb', tag=(t,px,py,kind,data)=>{ x.font='600 12px '+FNUM; const w=x.measureText(t).width+12; x.fillStyle='#fff'; x.strokeStyle=blue; x.lineWidth=1.2; x.beginPath(); x.roundRect?x.roundRect(px-w/2,py-10,w,20,4):x.rect(px-w/2,py-10,w,20); x.fill(); x.stroke(); x.fillStyle=blue; x.textAlign='center'; x.textBaseline='middle'; x.fillText(t,px,py+.5); if(kind) EV.hits.push({kind,x:px,y:py,w,...data}); };
-  const hand=(px,py,kind,data)=>{ x.fillStyle='#fff'; x.strokeStyle=blue; x.lineWidth=2; x.beginPath(); x.rect(px-6,py-6,12,12); x.fill(); x.stroke(); EV.hits.push({kind,x:px,y:py,w:24,handle:true,...data}); };
-  doc.levels.forEach((L,k)=>{ const y=evS(0,L.elev).y; x.strokeStyle='#64748b'; x.lineWidth=1; x.setLineDash([10,4,2,4]); x.beginPath(); x.moveTo(0,y); x.lineTo(W2-58,y); x.stroke(); x.setLineDash([]);
-    x.fillStyle='#334155'; x.font='600 11px '+FNUM; x.textAlign='right'; x.textBaseline='bottom'; x.fillText(L.name+'  '+fmtElev(L.elev),W2-62,y-2);
-    x.beginPath(); x.arc(W2-44,y,9,0,Math.PI*2); x.fillStyle=k?'#fff':'#e2e8f0'; x.fill(); x.strokeStyle='#64748b'; x.stroke(); if(k) EV.hits.push({kind:'lvl',k,x:W2-44,y,w:26,handle:true}); });
+  const blue=dk?'#6ea8ff':'#2563eb', cW=dk?'#1b1f22':'#fff', cT=dk?'#cbd5e1':'#334155', cG=dk?'#94a3b8':'#64748b', tag=(t,px,py,kind,data)=>{ x.font='600 12px '+FNUM; const w=x.measureText(t).width+12; x.fillStyle=cW; x.strokeStyle=blue; x.lineWidth=1.2; x.beginPath(); x.roundRect?x.roundRect(px-w/2,py-10,w,20,4):x.rect(px-w/2,py-10,w,20); x.fill(); x.stroke(); x.fillStyle=blue; x.textAlign='center'; x.textBaseline='middle'; x.fillText(t,px,py+.5); if(kind) EV.hits.push({kind,x:px,y:py,w,...data}); };
+  const hand=(px,py,kind,data)=>{ x.fillStyle=cW; x.strokeStyle=blue; x.lineWidth=2; x.beginPath(); x.rect(px-6,py-6,12,12); x.fill(); x.stroke(); EV.hits.push({kind,x:px,y:py,w:24,handle:true,...data}); };
+  doc.levels.forEach((L,k)=>{ if(L.gp) return; const y=evS(0,L.elev).y; x.strokeStyle=cG; x.lineWidth=1; x.setLineDash([10,4,2,4]); x.beginPath(); x.moveTo(0,y); x.lineTo(W2-58,y); x.stroke(); x.setLineDash([]);
+    x.fillStyle=cT; x.font='600 11px '+FNUM; x.textAlign='right'; x.textBaseline='bottom'; x.fillText(L.name+'  '+fmtElev(L.elev),W2-62,y-2);
+    x.beginPath(); x.arc(W2-44,y,9,0,Math.PI*2); const k0=k!==doc.levels.findIndex(l=>!l.gp); x.fillStyle=k0?cW:(dk?'#334155':'#e2e8f0'); x.fill(); x.strokeStyle=cG; x.stroke(); if(k0) EV.hits.push({kind:'lvl',k,x:W2-44,y,w:26,handle:true}); });
   const s=EV.sel; if(s){ x.strokeStyle=blue; x.lineWidth=2;
     if(s.kind==='wall'||s.kind==='hole'){ const a=evS(s.u0,s.z1), b=evS(s.u1,s.z0); x.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y); const mx=(a.x+b.x)/2;
       hand(mx,a.y,'top',{}); hand(mx,b.y,'bot',{});
@@ -3876,13 +3960,14 @@ function elevPick(px,py){ const w=evW(px,py); let best=null;
 // изменения: снимок для ✕, сохранение и перестройка фасада
 function elevBegin(){ if(!EV.snap){ EV.snap=JSON.stringify(doc.levels); pushUndo(); elevBtns(); } }
 function elevApply(fn){ elevBegin(); const ok=fn(); persist(); elevBuild(); elevDraw(); elevBtns(); return ok; }
-function elevSnapZ(z,excl){ const t=12/EV.view.s; let best=null; for(const L of doc.levels) if(Math.abs(L.elev-z)<t&&(!best||Math.abs(L.elev-z)<Math.abs(best-z))) best=L.elev;
+function elevSnapZ(z,excl){ const t=12/EV.view.s; let best=null; for(const L of doc.levels) if(!L.gp&&Math.abs(L.elev-z)<t&&(!best||Math.abs(L.elev-z)<Math.abs(best-z))) best=L.elev;
   for(const h of EV.items){ if(h===excl||h.kind!=='wall') continue; for(const v of [h.z0,h.z1]) if(Math.abs(v-z)<t&&(best==null||Math.abs(v-z)<Math.abs(best-z))) best=v; }
   return best; }
 function elevSet(kind,val){ const s=EV.sel; if(!s) return;
-  if(s.kind==='wall'&&(kind==='wH'||kind==='top')){ const top=kind==='wH'?s.z0+val:val; if(top-s.z0<100){ toast('Не соответствует: высота стены от 100 мм'); return false; } s.it.ht=r3(top-s.z0); return true; }
+  if(s.kind==='wall'&&(kind==='wH'||kind==='top')){ const top=kind==='wH'?s.z0+val:val; if(top-s.z0<100){ toast('Не соответствует: высота стены от 100 мм'); return false; } const h0=s.it.ht, n0=holesBad(); s.it.ht=r3(top-s.z0); if(holesBad()>n0){ if(h0==null) delete s.it.ht; else s.it.ht=h0; toast('Не соответствует: проём не помещается в стене по высоте'); return false; } return true; }
   if(s.kind==='wall'&&(kind==='wB'||kind==='bot')){ const Lz=doc.levels[s.li].elev, nb=kind==='wB'?val:val-Lz; if(s.z1-(Lz+nb)<100){ toast('Не соответствует: низ выше верха стены'); return false; }
-    if(s.it.ht) s.it.ht=r3(s.z1-(Lz+nb)); s.it.bo=r3(nb); if(!s.it.bo) delete s.it.bo; return true; }
+    const h0=s.it.ht, b0=s.it.bo, n0=holesBad(); if(s.it.ht) s.it.ht=r3(s.z1-(Lz+nb)); s.it.bo=r3(nb); if(!s.it.bo) delete s.it.bo;
+    if(holesBad()>n0){ if(h0==null) delete s.it.ht; else s.it.ht=h0; if(b0==null) delete s.it.bo; else s.it.bo=b0; toast('Не соответствует: проём не помещается в стене по высоте'); return false; } return true; }
   if(s.kind==='hole'){ const wz=s.wz; let sill=s.z0-wz.z0, hgt=s.z1-s.z0;
     if(kind==='hH') hgt=val; else if(kind==='hS'){ sill=val; } else if(kind==='top') hgt=val-s.z0; else if(kind==='bot'){ const top=s.z1; sill=val-wz.z0; hgt=top-val; }
     if(hgt<100||sill<0||wz.z0+sill+hgt>wz.z1+0.5){ toast('Не соответствует: проём должен помещаться в стене (высота от 100 мм)'); return false; }
@@ -3926,7 +4011,7 @@ function elevInit(){ const el=elevEl(); if(el.dataset.init) return; el.dataset.i
   co.addEventListener('pointerup',up); co.addEventListener('pointercancel',up);
   co.addEventListener('wheel',e=>{ e.preventDefault(); const v=EV.view, k=e.deltaY>0?0.89:1.12; EV.view={...v,s:Math.max(0.005,Math.min(5,v.s*k))}; elevDraw(); },{passive:false});
   el.querySelector('.v3bar').addEventListener('click',e=>{ const b=e.target.closest('[data-ev]'); if(!b) return; const k=b.dataset.ev;
-    if(ELEVD[k]){ EV.sel=null; EV.view=null; openElev(k); return; }
+    if(ELEVD[k]){ EV.sel=null; EV.view=null; openElev(elevByCard(k)); return; }
     if(k==='3d'){ el.hidden=true; open3D(); return; }
     if(k==='ok'){ EV.snap=null; elevBtns(); toast('Сохранено'); return; }
     if(k==='cx'){ if(EV.snap){ doc.levels=JSON.parse(EV.snap); EV.snap=null; persist(); elevBuild(); elevDraw(); elevBtns(); toast('Отменено'); } return; }
@@ -3942,12 +4027,13 @@ function buildIFC0(){ const L=[]; let id=0; const E=s=>{ id++; L.push('#'+id+'='
   const P3=(x,y,z)=>E(`IFCCARTESIANPOINT((${n(x)},${n(y)},${n(z)}))`), P2=(x,y)=>E(`IFCCARTESIANPOINT((${n(x)},${n(y)}))`);
   const D3=(x,y,z)=>E(`IFCDIRECTION((${n(x)},${n(y)},${n(z)}))`);
   const origin=P3(0,0,0), dz=D3(0,0,1), dx=D3(1,0,0), ax0=E(`IFCAXIS2PLACEMENT3D(${origin},${dz},${dx})`);
-  const ctx=E(`IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,${ax0},$)`), body=E(`IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,${ctx},$,.MODEL_VIEW.,$)`);
+  const tnV=northV().N, tn=E(`IFCDIRECTION((${n(tnV.x)},${n(tnV.y)}))`), ctx=E(`IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,${ax0},${tn})`), body=E(`IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,${ctx},$,.MODEL_VIEW.,$)`);
   const u1=E(`IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.)`), u2=E(`IFCSIUNIT(*,.AREAUNIT.,$,.SQUARE_METRE.)`), u3=E(`IFCSIUNIT(*,.VOLUMEUNIT.,$,.CUBIC_METRE.)`), u4=E(`IFCSIUNIT(*,.PLANEANGLEUNIT.,$,.RADIAN.)`);
   const units=E(`IFCUNITASSIGNMENT((${u1},${u2},${u3},${u4}))`);
   const proj=E(`IFCPROJECT('${ifcGuid()}',$,${str(fileBase()||'EasyCAD')},$,$,$,$,(${ctx}),${units})`);
   const plc=(rel,z)=>E(`IFCLOCALPLACEMENT(${rel||'$'},${E(`IFCAXIS2PLACEMENT3D(${P3(0,0,z||0)},$,$)`)})`);
-  const siteP=plc(null,0), site=E(`IFCSITE('${ifcGuid()}',$,${str('Участок')},$,$,${siteP},$,$,.ELEMENT.,$,$,$,$,$)`);
+  const siteP=plc(null,0), geo0=planToGeo({x:0,y:0}), dms=v=>{ const sg=v<0?-1:1, a=Math.abs(v), d=Math.floor(a), m=Math.floor((a-d)*60), sc=Math.floor(((a-d)*60-m)*60), us=Math.round((((a-d)*60-m)*60-sc)*1e6); return '('+[d,m,sc,us].map(x=>sg*x).join(',')+')'; },
+    site=E(`IFCSITE('${ifcGuid()}',$,${str('Участок')},$,$,${siteP},$,$,.ELEMENT.,${geo0?dms(geo0.lat):'$'},${geo0?dms(geo0.lon):'$'},$,$,$)`);
   const bldP=plc(siteP,0), bld=E(`IFCBUILDING('${ifcGuid()}',$,${str(doc.name||'Здание')},$,$,${bldP},$,$,.ELEMENT.,$,$,$)`);
   E(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${proj},(${site}))`); E(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${site},(${bld}))`);
   const storeys=[], save=doc.curLv;
@@ -3958,7 +4044,7 @@ function buildIFC0(){ const L=[]; let id=0; const E=s=>{ id++; L.push('#'+id+'='
     for(const t of M.tri){ const a=k(t.v[0]),b=k(t.v[1]),c=k(t.v[2]); if(a!==b&&b!==c&&a!==c) idx.push(`(${a},${b},${c})`); }
     const pl=E(`IFCCARTESIANPOINTLIST3D((${pts.map(p=>'('+p.map(n).join(',')+')').join(',')}))`); const fs=E(`IFCTRIANGULATEDFACESET(${pl},$,.T.,(${idx.join(',')}),$)`);
     return E(`IFCPRODUCTDEFINITIONSHAPE($,$,(${E(`IFCSHAPEREPRESENTATION(${body},'Body','Tessellation',(${fs}))`)}))`); };
-  try{ doc.levels.forEach((Lv,li)=>{ doc.curLv=li; const sp=plc(bldP,Lv.elev), st=E(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${str(Lv.name)},$,$,${sp},$,$,.ELEMENT.,${n(Lv.elev)})`); storeys.push(st); const inS=[];
+  try{ doc.levels.forEach((Lv,li)=>{ if(Lv.gp) return; doc.curLv=li; const sp=plc(bldP,Lv.elev), st=E(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${str(Lv.name)},$,$,${sp},$,$,.ELEMENT.,${n(Lv.elev)})`); storeys.push(st); const inS=[];
     for(const it of Lv.items){
       if(isWall(it)){ const {z0,z1}=wallZ(it,li), F=wallFootprint(it,-1e6,1e6), wp=plc(sp,0);
         const w=E(`IFCWALL('${ifcGuid()}',$,${str('Стена '+fmt(it.w)+' мм')},$,$,${wp},${extr(F,z0-Lv.elev,z1-z0)},$,.STANDARD.)`); inS.push(w);
@@ -4031,6 +4117,7 @@ function renderPNG(){
     fillWalls();
     for(const it of doc.items) if(it.t!=='aux') drawItem(it,false);
     drawOrigin();
+    { const sv2={...NSYM}; Object.assign(NSYM,{x:LW-46,y:100,r:16}); try{ drawNorthSym(); } finally{ Object.assign(NSYM,sv2); } }
     ctx.fillStyle=C.ink; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     ctx.font='700 26px "Barlow Condensed","Arial Narrow",sans-serif';
     ctx.fillText((doc.num?'№'+doc.num+'  ':'')+(doc.name||'')+'  ·  '+doc.levels[doc.curLv].name,28,44);
@@ -4127,6 +4214,236 @@ function withDoc(d,fn){ const save=doc; doc=d; try{ return fn(); } finally{ doc=
 let exExt='dwg'; try{ const e0=localStorage.getItem('zamer-ext2'); if(e0==='dxf'||e0==='dwg'||(IS3D&&e0==='ifc')) exExt=e0; }catch(e){}
 $('#btnExport').textContent=exExt.toUpperCase();
 $('#btnExport').addEventListener('click',openExport);
+
+/* ---------- север, генплан (карта), «где я» ---------- */
+// магнитное склонение по модели WMM-2025 (NOAA, общественное достояние), годится до 2029 г.
+const WMM25={g:[0,-29351.8,-1410.8,-2556.6,2951.1,1649.3,1361,-2404.1,1243.8,453.6,895,799.5,55.7,-281.1,12.1,-233.2,368.9,187.2,-138.7,-142,20.9,64.4,63.8,76.9,-115.7,-40.9,14.9,-60.7,79.5,-77,-8.8,59.3,15.8,2.5,-11.1,14.2,23.2,10.8,-17.5,2,-21.7,16.9,15,-16.8,0.9,4.6,7.8,3,-0.2,-2.5,-13.1,2.4,8.6,-8.7,-12.9,-1.3,-6.4,0.2,2,-1,-0.6,-0.9,1.5,0.9,-2.7,-3.9,2.9,-1.5,-2.5,2.4,-0.6,-0.1,-0.6,-0.1,1.1,-1,-0.2,2.6,-2,-0.2,0.3,1.2,-1.3,0.6,0.6,0.5,-0.1,-0.4,-0.2,-1.3,-0.7],h:[0,0,4545.4,0,-3133.6,-815.1,0,-56.6,237.5,-549.5,0,278.6,-133.9,212,-375.6,0,45.4,220.2,-122.9,43,106.1,0,-18.4,16.8,48.8,-59.8,10.9,72.7,0,-48.9,-14.4,-1,23.4,-7.4,-25.1,-2.3,0,7.1,-12.6,11.4,-9.7,12.7,0.7,-5.2,3.9,0,-24.8,12.2,8.3,-3.3,-5.2,7.2,-0.6,0.8,10,0,3.3,0,2.4,5.3,-9.1,0.4,-4.2,-3.8,0.9,-9.1,0,0,2.9,-0.6,0.2,0.5,-0.3,-1.2,-1.7,-2.9,-1.8,-2.3,0,-1.3,0.7,1,-1.4,0,0.6,-0.1,0.8,0.1,-1,0.1,0.2],sg:[0,12,9.7,-11.6,-5.2,-8,-1.3,-4.2,0.4,-15.6,-1.6,-2.4,-6,5.6,-7,0.6,1.4,0,0.6,2.2,0.9,-0.2,-0.4,0.9,1.2,-0.9,0.3,0.9,0,-0.1,-0.1,0.5,-0.1,-0.8,-0.8,0.8,-0.1,0.2,0,0.5,-0.1,0.3,0.2,0,0.2,0,-0.1,0.1,0.3,-0.3,0,0.3,-0.1,0.1,-0.1,0.1,0,0.1,0.1,0,-0.3,0,-0.1,-0.1,0,0,0,0,0,0,0,-0.1,0,0,-0.1,-0.1,-0.1,-0.1,0,0,0,0,0,0,0.1,0,0,0,-0.1,0,-0.1],sh:[0,0,-21.5,0,-27.7,-12.1,0,4,-0.3,-4.1,0,-1.1,4.1,1.6,-4.4,0,-0.5,2.2,0.4,1.7,1.9,0,0.3,-1.6,-0.4,0.9,0.7,0.9,0,0.6,0.5,-0.8,0,-1,0.6,-0.2,0,-0.2,0.5,-0.4,0.4,-0.5,-0.6,0.3,0.2,0,-0.3,0.3,-0.3,0.3,0.2,-0.1,-0.2,0.4,0.1,0,0,0,-0.2,0.1,-0.1,0.1,0,-0.1,0.2,0,0,0,0.1,0,0.1,0,0,0.1,0,0,0,0,0,0,0,-0.1,0.1,0,0,0,0,0,0,0,-0.1]};
+function magDecl(lat,lon,yr){ const N=12, dt=yr-2025, a=6378.137, f=1/298.257223563, e2=f*(2-f), re=6371.2, ph=lat*Math.PI/180, la=lon*Math.PI/180, sp=Math.sin(ph);
+  const Rc=a/Math.sqrt(1-e2*sp*sp), p=Rc*Math.cos(ph), z=Rc*(1-e2)*sp, r=Math.hypot(p,z), phc=Math.asin(z/r), c=Math.sin(phc), s=Math.cos(phc);
+  const P=[[1]], D=[[0]], S=[[1]]; let X=0,Y=0,Z=0;
+  for(let n=1;n<=N;n++){ P[n]=[]; D[n]=[]; S[n]=[]; const ar=Math.pow(re/r,n+2);
+    for(let m=0;m<=n;m++){
+      if(n===m){ P[n][m]=s*P[n-1][m-1]; D[n][m]=s*D[n-1][m-1]+c*P[n-1][m-1]; }
+      else if(n===1){ P[n][m]=c*P[0][0]; D[n][m]=c*D[0][0]-s*P[0][0]; }
+      else { const K=((n-1)*(n-1)-m*m)/((2*n-1)*(2*n-3)); P[n][m]=c*P[n-1][m]-K*(P[n-2][m]||0); D[n][m]=c*D[n-1][m]-s*P[n-1][m]-K*(D[n-2][m]||0); }
+      S[n][m]=m===0?S[n-1][0]*(2*n-1)/n:S[n][m-1]*Math.sqrt((n-m+1)*(m===1?2:1)/(n+m));
+      const k=n*(n+1)/2+m, g=WMM25.g[k]+dt*WMM25.sg[k], h=WMM25.h[k]+dt*WMM25.sh[k], cm=Math.cos(m*la), sm=Math.sin(m*la), Pn=S[n][m]*P[n][m], Dn=S[n][m]*D[n][m];
+      X+=ar*(g*cm+h*sm)*Dn; Y+=ar*m*(g*sm-h*cm)*Pn/(s||1e-9); Z+=-(n+1)*ar*(g*cm+h*sm)*Pn; } }
+  const dp=phc-ph; return Math.atan2(Y,X*Math.cos(dp)-Z*Math.sin(dp))*180/Math.PI; }
+const yearNow=()=>{ const d=new Date(); return d.getFullYear()+(d.getMonth()*30.4+d.getDate())/365; };
+const nrm360=a=>((a%360)+360)%360;
+// картинка-генплан с географической привязкой (последняя по уровням)
+function geoImg(){ let best=null; for(const L of doc.levels) for(const it of L.items) if(it.t==='img'&&it.geo) best=it; return best; }
+function gpLevelIdx(){ return doc.levels.findIndex(l=>l.gp); }
+const NR=()=>{ if(!doc.north) doc.north={a:0,m:'manual',lock:false,decl:0}; return doc.north; };
+// угол севера: по часовой стрелке от «вверх» плана, градусы
+function northA(){ const n=NR(); if(n.m==='map'){ const g=geoImg(); if(g) return nrm360(-(g.rot||0)); } return nrm360(n.a||0); }
+const northV=()=>{ const a=northA()*Math.PI/180; return {N:{x:Math.sin(a),y:Math.cos(a)},E:{x:Math.cos(a),y:-Math.sin(a)}}; };
+// широта/долгота → точка плана по привязке картинки
+function geoToPlan(lat,lon){ const it=geoImg(); if(!it) return null; const g=it.geo, R=6378137, k=it.w/(g.wm*1000), r=(it.rot||0)*Math.PI/180;
+  const e=(lon-g.lon)*Math.PI/180*R*Math.cos(g.lat*Math.PI/180), n=(lat-g.lat)*Math.PI/180*R, X={x:Math.cos(r),y:Math.sin(r)}, U={x:-Math.sin(r),y:Math.cos(r)};
+  return {x:it.p.x+k*1000*(e*X.x+n*U.x), y:it.p.y+k*1000*(e*X.y+n*U.y), k}; }
+function planToGeo(p){ const it=geoImg(); if(!it) return null; const g=it.geo, R=6378137, k=it.w/(g.wm*1000), r=(it.rot||0)*Math.PI/180, dx=(p.x-it.p.x)/(k*1000), dy=(p.y-it.p.y)/(k*1000);
+  const e=dx*Math.cos(r)+dy*Math.sin(r), n=-dx*Math.sin(r)+dy*Math.cos(r);
+  return {lat:g.lat+n/R*180/Math.PI, lon:g.lon+e/(R*Math.cos(g.lat*Math.PI/180))*180/Math.PI}; }
+
+// --- компас устройства ---
+const CMP={on:0,h:null,abs:false,fn:null};
+function headingOf(e){ if(e.webkitCompassHeading!=null) return {h:e.webkitCompassHeading,abs:true}; if(e.alpha==null) return null;
+  const so=(screen.orientation&&screen.orientation.angle)||window.orientation||0; return {h:nrm360(360-e.alpha+so),abs:!!e.absolute}; }
+function compassStart(){ if(CMP.on++) return true; if(!('DeviceOrientationEvent' in window)) return false;
+  CMP.fn=e=>{ const r=headingOf(e); if(!r||(!r.abs&&e.type!=='deviceorientationabsolute'&&e.webkitCompassHeading==null)) return; const t=nrm360(r.h+(NR().decl||0));
+    CMP.h=CMP.h==null?t:nrm360(CMP.h+(((t-CMP.h+540)%360)-180)*0.25); CMP.abs=true; onCompass(); };
+  try{ if(typeof DeviceOrientationEvent.requestPermission==='function') DeviceOrientationEvent.requestPermission().catch(()=>{}); }catch(e){}
+  window.addEventListener('deviceorientationabsolute',CMP.fn); window.addEventListener('deviceorientation',CMP.fn); return true; }
+function compassStop(){ if(!CMP.on||--CMP.on) return; window.removeEventListener('deviceorientationabsolute',CMP.fn); window.removeEventListener('deviceorientation',CMP.fn); CMP.fn=null; CMP.h=null; CMP.abs=false; }
+function onCompass(){ if(NS.live) nsSync(); if(ME.on) redraw(); }
+
+// --- значок севера на плане: маленький, всегда виден, касание — настройки ---
+const NSYM={x:26,y:64,r:13};
+function drawNorthSym(){ if(NS.live&&(sheet.hidden||!$('#nsT'))) nsLiveOff(); const a=northA()*Math.PI/180, {x,y,r}=NSYM, ux=Math.sin(a), uy=-Math.cos(a);
+  ctx.save(); ctx.globalAlpha=.85; ctx.fillStyle=C.surface; ctx.strokeStyle=C.rule; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  const px=-uy, py=ux, tip={x:x+ux*(r-2),y:y+uy*(r-2)}, tail={x:x-ux*(r-3),y:y-uy*(r-3)};
+  ctx.fillStyle=NR().lock?C.ink:(NS.live?C.tape:C.dim); ctx.beginPath(); ctx.moveTo(tip.x,tip.y); ctx.lineTo(x+px*4,y+py*4); ctx.lineTo(x-px*4,y-py*4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=C.muted; ctx.beginPath(); ctx.moveTo(tail.x,tail.y); ctx.lineTo(x+px*4,y+py*4); ctx.lineTo(x-px*4,y-py*4); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1; ctx.fillStyle=C.ink; ctx.font='700 10px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('С',x+ux*(r+7),y+uy*(r+7)); ctx.restore(); }
+
+// --- окно «Север» ---
+const NS={live:false,wallPick:false};
+// открыть окно после «клика» того же касания — иначе клик попадёт в фон окна и закроет его
+function afterClick(fn){ let done=false; const go=e=>{ if(done) return; done=true; window.removeEventListener('click',h,true); clearTimeout(t); fn(); };
+  const h=e=>{ e.stopPropagation(); e.preventDefault(); go(); }; window.addEventListener('click',h,true); const t=setTimeout(go,450); }
+function openNorth(){ const n=NR(), g=geoImg(), lk=n.lock;
+  sheet.classList.remove('appm'); sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="nsT">
+    <div class="sheet-head"><h2 id="nsT">Север</h2><button class="ib" data-s="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="nsrow"><canvas id="nsDial" width="150" height="150" aria-label="Стрелка севера — тяните, чтобы повернуть"></canvas>
+      <div class="nscol">
+        <div class="fld"><label for="nsA">Угол от «вверх» плана, °</label><input class="inp" id="nsA" inputmode="decimal" value="${Math.round(northA()*10)/10}"${lk?' disabled':''}></div>
+        <div class="seg nsm">${[['manual','Вручную'],['wall','По стене'],['compass','Компас']].concat(g?[['map','По карте']]:[]).map(([k,t])=>`<button class="btn${n.m===k?' go':''}" data-n="m_${k}"${lk?' disabled':''}>${t}</button>`).join('')}</div>
+        <label class="nslk"><input type="checkbox" class="chk" id="nsLock"${lk?' checked':''}> Зафиксировать север</label>
+      </div></div>
+    <div id="nsLive" class="note"${NS.live?'':' hidden'}></div>
+    <div class="set">
+      <label for="nsD">Магнитное склонение, ° (восток +)</label>
+      <div class="nsdec"><input class="inp sm" id="nsD" inputmode="decimal" value="${Math.round((n.decl||0)*100)/100}"><button class="btn" data-n="declGps" title="Посчитать по местоположению (модель WMM-2025)">по GPS</button></div>
+    </div>
+    <p class="note">Склонение нужно только для компаса: он показывает магнитный север, план — истинный. ${g?'Генплан привязан к карте — «По карте» берёт север с неё.':'Карту участка можно открыть: Уровни → Генплан.'}</p>
+  </div>`;
+  sheet.hidden=false; nsDial(); if(n.m==='compass'&&!lk) nsLiveOn(); }
+function nsDial(){ const c=$('#nsDial'); if(!c) return; const x=c.getContext('2d'), w=150, R=62, a=(NS.live&&CMP.h!=null?nrm360(360-CMP.h):northA())*Math.PI/180;
+  x.clearRect(0,0,w,w); x.strokeStyle=C.rule; x.lineWidth=1; x.beginPath(); x.arc(75,75,R,0,Math.PI*2); x.stroke();
+  for(let i=0;i<72;i++){ const t=i*5*Math.PI/180, l=i%18===0?10:i%2===0?5:3; x.beginPath(); x.moveTo(75+Math.sin(t)*R,75-Math.cos(t)*R); x.lineTo(75+Math.sin(t)*(R-l),75-Math.cos(t)*(R-l)); x.stroke(); }
+  x.font='600 11px '+FNUM; x.fillStyle=C.muted; x.textAlign='center'; x.textBaseline='middle'; x.fillText('план ↑',75,10);
+  const ux=Math.sin(a), uy=-Math.cos(a), px=-uy, py=ux;
+  x.fillStyle=NR().lock?C.ink:C.dim; x.beginPath(); x.moveTo(75+ux*(R-6),75+uy*(R-6)); x.lineTo(75+px*9,75+py*9); x.lineTo(75-px*9,75-py*9); x.closePath(); x.fill();
+  x.fillStyle=C.muted; x.beginPath(); x.moveTo(75-ux*(R-14),75-uy*(R-14)); x.lineTo(75+px*9,75+py*9); x.lineTo(75-px*9,75-py*9); x.closePath(); x.fill();
+  x.fillStyle=C.ink; x.font='700 13px '+FNUM; x.fillText('С',75+ux*(R-22)+px*0,75+uy*(R-22)); }
+function nsSync(){ nsDial(); const i=$('#nsA'); if(i&&document.activeElement!==i) i.value=Math.round((NS.live&&CMP.h!=null?nrm360(360-CMP.h):northA())*10)/10;
+  const lv=$('#nsLive'); if(lv&&NS.live) lv.innerHTML=CMP.h==null?'Компас ждёт данные датчика… Если ничего не меняется — на этом устройстве компаса нет.'
+    :`Положите телефон так, чтобы верх экрана смотрел туда же, куда «вверх» на плане. Сейчас: курс ${Math.round(CMP.h)}°. <button class="btn go" data-n="liveFix">Зафиксировать</button>`;
+  redraw(); }
+function nsLiveOn(){ if(NS.live) return; NS.live=true; compassStart(); const lv=$('#nsLive'); if(lv) lv.hidden=false; nsSync(); }
+function nsLiveOff(){ if(!NS.live) return; NS.live=false; compassStop(); const lv=$('#nsLive'); if(lv) lv.hidden=true; }
+function setNorth(a,m){ const n=NR(); if(n.lock) return false; pushUndo(); n.a=Math.round(nrm360(a)*100)/100; if(m) n.m=m; persist(); redraw(); return true; }
+sheet.addEventListener('click',e=>{ const b=e.target.closest('[data-n]'); if(!b||!$('#nsT')) return; const k=b.dataset.n, n=NR();
+  if(k.startsWith('m_')){ const m=k.slice(2); nsLiveOff();
+    if(m==='wall'){ sheet.hidden=true; NS.wallPick=true; setTool('select'); updateHud(); redraw(); return; }
+    if(m==='compass'){ pushUndo(); n.m='compass'; persist(); openNorth(); return; }
+    if(m==='map'){ pushUndo(); n.m='map'; persist(); openNorth(); redraw(); return; }
+    pushUndo(); n.a=northA(); n.m='manual'; persist(); openNorth(); return; }
+  if(k==='liveFix'&&CMP.h!=null){ setNorth(360-CMP.h,'compass'); nsLiveOff(); openNorth(); return; }
+  if(k==='declGps'){ if(!navigator.geolocation){ toast('Не удалось: нет доступа к местоположению',true); return; } b.disabled=true; b.textContent='…';
+    navigator.geolocation.getCurrentPosition(p=>{ const d=magDecl(p.coords.latitude,p.coords.longitude,yearNow()); pushUndo(); n.decl=Math.round(d*100)/100; persist(); const i=$('#nsD'); if(i) i.value=n.decl; b.disabled=false; b.textContent='по GPS'; },
+      ()=>{ b.disabled=false; b.textContent='по GPS'; const it=geoImg(); if(it){ const d=magDecl(it.geo.lat,it.geo.lon,yearNow()); pushUndo(); n.decl=Math.round(d*100)/100; persist(); const i=$('#nsD'); if(i) i.value=n.decl; } else toast('Не удалось определить местоположение',true); },{enableHighAccuracy:false,timeout:15000,maximumAge:600000}); return; }
+});
+sheet.addEventListener('change',e=>{ const t=e.target; if(!$('#nsT')) return; const n=NR();
+  if(t.id==='nsA'){ const v=parseNum(t.value); if(isNaN(v)) return; if(n.m==='map'){ const g=geoImg(); if(g){ pushUndo(); g.rot=r3(nrm360(-v)); persist(); nsSync(); return; } } setNorth(v,n.m==='wall'?'manual':n.m); nsSync(); }
+  else if(t.id==='nsLock'){ pushUndo(); n.a=northA(); n.lock=t.checked; if(n.lock) nsLiveOff(); persist(); openNorth(); redraw(); }
+  else if(t.id==='nsD'){ const v=parseNum(t.value); if(isNaN(v)||Math.abs(v)>90) return; pushUndo(); n.decl=v; persist(); }
+},true);
+// поворот стрелки пальцем на круге
+(()=>{ let drag=false; const ang=e=>{ const c=$('#nsDial').getBoundingClientRect(); return Math.atan2(e.clientX-c.left-c.width/2,-(e.clientY-c.top-c.height/2))*180/Math.PI; };
+  sheet.addEventListener('pointerdown',e=>{ if(e.target.id!=='nsDial'||NR().lock) return; nsLiveOff(); drag=true; e.target.setPointerCapture(e.pointerId); const n=NR(); pushUndo(); if(n.m==='wall'||n.m==='compass') n.m='manual'; mv(e); });
+  const mv=e=>{ if(!drag) return; const n=NR(); let v=nrm360(ang(e)); if(Math.abs(((v+2.5)%5)-2.5)<1.2) v=Math.round(v/5)*5; // мягкая привязка к 5°
+    if(n.m==='map'){ const g=geoImg(); if(g) g.rot=r3(nrm360(-v)); } else n.a=Math.round(v*10)/10; nsSync(); };
+  sheet.addEventListener('pointermove',mv); const up=()=>{ if(drag){ drag=false; persist(); } }; sheet.addEventListener('pointerup',up); sheet.addEventListener('pointercancel',up); })();
+// «По стене»: коснитесь стены северного фасада — север смотрит от здания наружу через неё
+function northWallTap(p){ const w=toW(p.x,p.y); let best=null,bd=1e18; for(const it of doc.items){ if(!isWall(it)||isArc(it)) continue; const d=segDist(p.x,p.y,toS(it.a),toS(it.b)); if(d<bd){ bd=d; best=it; } }
+  NS.wallPick=false; if(!best||bd>40){ updateHud(); redraw(); openNorth(); return; }
+  const u=unit(best.a,best.b), n={x:u.y,y:-u.x}, m={x:(best.a.x+best.b.x)/2,y:(best.a.y+best.b.y)/2};
+  let cx=0,cy=0,k=0; for(const it of doc.items) if(isWall(it)){ cx+=it.a.x+it.b.x; cy+=it.a.y+it.b.y; k+=2; }
+  const c={x:cx/k,y:cy/k}; let s=(m.x-c.x)*n.x+(m.y-c.y)*n.y; if(Math.abs(s)<1) s=(w.x-m.x)*n.x+(w.y-m.y)*n.y; const v=s<0?{x:-n.x,y:-n.y}:n;
+  setNorth(Math.atan2(v.x,v.y)*180/Math.PI,'wall'); updateHud(); openNorth(); }
+
+// --- «Где я» ---
+const ME={on:false,watch:null,p:null,acc:0,h:null,center:false,t:0};
+function meToggle(force){ const on=force!=null?force:!ME.on; if(on===ME.on) return;
+  if(on){ if(!geoImg()){ toast('Не удалось: нет привязки к карте — Уровни → Генплан',true); return; } if(!navigator.geolocation){ toast('Не удалось: нет доступа к местоположению',true); return; }
+    ME.on=true; ME.p=null; ME.watch=navigator.geolocation.watchPosition(meFix,er=>{ if(er.code===1){ toast('Не удалось: нет разрешения на местоположение',true); meToggle(false); } },{enableHighAccuracy:true,maximumAge:2000,timeout:30000}); compassStart(); }
+  else { ME.on=false; if(ME.watch!=null) navigator.geolocation.clearWatch(ME.watch); ME.watch=null; ME.p=null; ME.center=false; compassStop(); }
+  $('#btnMe').setAttribute('aria-pressed',String(ME.on)); redraw(); }
+function meFix(pos){ const c=pos.coords, q=geoToPlan(c.latitude,c.longitude); if(!q) return; const acc=(c.accuracy||0)*1000*q.k;
+  if(!ME.p) ME.p={x:q.x,y:q.y}; else { const d=Math.hypot(q.x-ME.p.x,q.y-ME.p.y), al=d>Math.max(acc,5000)*3?1:Math.min(.6,Math.max(.15,1-acc/(acc+d+1))); ME.p={x:ME.p.x+(q.x-ME.p.x)*al,y:ME.p.y+(q.y-ME.p.y)*al}; }
+  ME.acc=ME.acc?ME.acc+(acc-ME.acc)*.3:acc; ME.t=Date.now();
+  if(ME.center){ ME.center=false; view.cx=ME.p.x; view.cy=ME.p.y; } redraw(); }
+function drawMe(){ if(!ME.on||!ME.p) return; const S=toS(ME.p), busy=(tool==='line'&&chain.pts.length)||dragA||moveDelta||jointDrag, al=busy?.35:1;
+  const top=58, bot=H-(panel.hidden?12:panel.offsetHeight+18), inside=S.x>=8&&S.x<=W-8&&S.y>=top&&S.y<=bot;
+  ctx.save(); ctx.globalAlpha=al;
+  if(inside){ const ra=ME.acc*view.scale; if(ra>14&&ra<3000){ ctx.fillStyle=C.sel; ctx.globalAlpha=al*.07; ctx.beginPath(); ctx.arc(S.x,S.y,ra,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=al*.18; ctx.strokeStyle=C.sel; ctx.lineWidth=1; ctx.stroke(); }
+    if(CMP.h!=null){ const t=(CMP.h+northA())*Math.PI/180, dx=Math.sin(t), dy=-Math.cos(t), sp=0.42, L=44, gr=ctx.createRadialGradient(S.x,S.y,4,S.x,S.y,L);
+      gr.addColorStop(0,'rgba(110,168,255,.30)'); gr.addColorStop(1,'rgba(110,168,255,0)'); ctx.globalAlpha=al; ctx.fillStyle=gr; ctx.beginPath(); ctx.moveTo(S.x,S.y);
+      const a0=Math.atan2(dy,dx); ctx.arc(S.x,S.y,L,a0-sp,a0+sp); ctx.closePath(); ctx.fill(); }
+    ctx.globalAlpha=al*.55; ctx.fillStyle=C.sel; ctx.beginPath(); ctx.arc(S.x,S.y,5,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=al*.8; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke(); }
+  else { const cx=W/2, cy=(top+bot)/2, dx=S.x-cx, dy=S.y-cy, k=Math.min(Math.abs((W/2-(dx>0?62:16))/(dx||1e-9)),Math.abs(((bot-top)/2-14)/(dy||1e-9))), ex=cx+dx*k, ey=cy+dy*k, a=Math.atan2(dy,dx);
+    ctx.globalAlpha=al*.7; ctx.fillStyle=C.sel; ctx.translate(ex,ey); ctx.rotate(a); ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(-5,-6); ctx.lineTo(-5,6); ctx.closePath(); ctx.fill(); ctx.rotate(-a);
+    const d=Math.hypot(ME.p.x-view.cx,ME.p.y-view.cy)/1000, t=d<1000?Math.round(d)+' м':(Math.round(d/100)/10)+' км';
+    ctx.font='600 11px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; const ox=-Math.cos(a)*22, oy=-Math.sin(a)*14; ctx.globalAlpha=al*.85; ctx.fillStyle=C.surface; const tw=ctx.measureText(t).width+8; ctx.fillRect(ox-tw/2,oy-8,tw,16); ctx.fillStyle=C.sel; ctx.fillText(t,ox,oy); }
+  ctx.restore(); }
+// кнопка-прицел: касание — вкл/выкл, удержание — показать меня по центру
+(()=>{ const b=$('#btnMe'); let t=0, long=false;
+  b.addEventListener('pointerdown',()=>{ long=false; clearTimeout(t); t=setTimeout(()=>{ long=true; if(!ME.on) meToggle(true); if(ME.on){ if(ME.p){ view.cx=ME.p.x; view.cy=ME.p.y; redraw(); } else ME.center=true; } },550); });
+  const cl=()=>clearTimeout(t); b.addEventListener('pointerup',cl); b.addEventListener('pointercancel',cl); b.addEventListener('pointerleave',cl);
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+  b.addEventListener('click',e=>{ if(long){ long=false; return; } meToggle(); }); })();
+
+// --- карта участка (генплан) ---
+const MAPSRC={osm:{n:'Схема',url:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`,max:19,attr:'© участники OpenStreetMap'},
+  sat:{n:'Спутник',url:(z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,max:19,attr:'Снимки © Esri, Maxar, Earthstar Geographics'}};
+const MP={lat:20,lon:20,Z:2,src:'osm',tiles:new Map(),me:null,pend:0};
+const lon2x=(lon,z)=>(lon+180)/360*256*Math.pow(2,z), lat2y=(lat,z)=>{ const s=Math.sin(Math.max(-85.05,Math.min(85.05,lat))*Math.PI/180); return (0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*256*Math.pow(2,z); };
+const x2lon=(x,z)=>x/(256*Math.pow(2,z))*360-180, y2lat=(y,z)=>{ const n=Math.PI-2*Math.PI*y/(256*Math.pow(2,z)); return 180/Math.PI*Math.atan(Math.sinh(n)); };
+function mapEl(){ let el=$('#gpMap'); if(el) return el; el=document.createElement('div'); el.id='gpMap'; el.hidden=true;
+  el.innerHTML=`<div class="gptop"><input class="inp" id="gpQ" placeholder="Адрес, место или координаты" enterkeyhint="search" autocomplete="off"><button class="btn" data-g="find">Найти</button><button class="ib" data-g="gps" title="Где я" aria-label="Где я"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
+    <div class="gpres" hidden></div><div class="gpwrap"><canvas></canvas><div class="gpattr"></div></div>
+    <div class="v3bar"><button class="btn" data-g="osm">Схема</button><button class="btn" data-g="sat">Спутник</button><span class="sp"></span><button class="btn go" data-g="fix" title="Положить видимую часть карты подложкой на уровень «Генплан»">Зафиксировать</button><button class="btn" data-g="close">✕</button></div>`;
+  document.body.appendChild(el); mapWire(el); return el; }
+function openMap(){ const el=mapEl(); el.hidden=false; const g=geoImg(); if(g){ MP.lat=g.geo.lat; MP.lon=g.geo.lon; MP.Z=g.geo.z||17; MP.src=g.geo.src||MP.src; } else if(doc.geoLast){ Object.assign(MP,doc.geoLast); }
+  el.querySelectorAll('[data-g="osm"],[data-g="sat"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===MP.src))); mapDraw(); }
+function mapTile(z,x,y){ const k=MP.src+'/'+z+'/'+x+'/'+y; let t=MP.tiles.get(k); if(t) return t;
+  t=new Image(); t.crossOrigin='anonymous'; t._ok=false; MP.pend++; t.onload=()=>{ t._ok=true; MP.pend--; mapDraw(); }; t.onerror=()=>{ t._bad=true; MP.pend--; mapDraw(); }; t.src=MAPSRC[MP.src].url(z,x,y); MP.tiles.set(k,t);
+  if(MP.tiles.size>400){ const it=MP.tiles.keys().next().value; MP.tiles.delete(it); } return t; }
+function mapDraw(clean){ const el=$('#gpMap'); if(!el||el.hidden) return; const c=el.querySelector('canvas'), dpr=Math.min(window.devicePixelRatio||1,2048/Math.max(c.clientWidth,c.clientHeight,1)), W2=c.clientWidth, H2=c.clientHeight;
+  if(c.width!==Math.round(W2*dpr)||c.height!==Math.round(H2*dpr)){ c.width=Math.round(W2*dpr); c.height=Math.round(H2*dpr); }
+  const x=c.getContext('2d'), S=MAPSRC[MP.src], tz=Math.max(0,Math.min(S.max,Math.round(MP.Z+Math.log2(dpr)*0.5))), sc=Math.pow(2,MP.Z-tz), n=Math.pow(2,tz);
+  x.setTransform(dpr,0,0,dpr,0,0); x.fillStyle=uiDark()?'#1b1f22':'#e8e6e1'; x.fillRect(0,0,W2,H2);
+  const cx=lon2x(MP.lon,tz), cy=lat2y(MP.lat,tz), x0=Math.floor((cx-W2/2/sc)/256), x1=Math.floor((cx+W2/2/sc)/256), y0=Math.max(0,Math.floor((cy-H2/2/sc)/256)), y1=Math.min(n-1,Math.floor((cy+H2/2/sc)/256));
+  let miss=0;
+  for(let ty=y0;ty<=y1;ty++) for(let tx=x0;tx<=x1;tx++){ const wx=((tx%n)+n)%n, sx=(tx*256-cx)*sc+W2/2, sy=(ty*256-cy)*sc+H2/2, sz=256*sc+0.5, t=mapTile(tz,wx,ty);
+    if(t._ok) x.drawImage(t,sx,sy,sz,sz); else { miss++; // пока грузится — растянутый кусок крупного тайла
+      for(let up=1;up<=4&&tz-up>=0;up++){ const k=MP.src+'/'+(tz-up)+'/'+(wx>>up)+'/'+(ty>>up), p=MP.tiles.get(k); if(p&&p._ok){ const m=1<<up, s=256/m; x.drawImage(p,(wx%m)*s,(ty%m)*s,s,s,sx,sy,sz,sz); break; } } } }
+  MP.miss=miss;
+  if(!clean){ if(MP.me){ const px=(lon2x(MP.me.lon,tz)-cx)*sc+W2/2, py=(lat2y(MP.me.lat,tz)-cy)*sc+H2/2; x.globalAlpha=.6; x.fillStyle='#2f7cf6'; x.beginPath(); x.arc(px,py,6,0,Math.PI*2); x.fill(); x.globalAlpha=1; x.strokeStyle='#fff'; x.lineWidth=2; x.stroke(); }
+    x.strokeStyle='rgba(0,0,0,.45)'; x.lineWidth=1; x.beginPath(); x.moveTo(W2/2-9,H2/2); x.lineTo(W2/2+9,H2/2); x.moveTo(W2/2,H2/2-9); x.lineTo(W2/2,H2/2+9); x.stroke();
+    // масштабная линейка
+    const mpp=156543.03392*Math.cos(MP.lat*Math.PI/180)/Math.pow(2,MP.Z); let L=[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1e6].find(v=>v/mpp>=70)||1e6;
+    const lp=L/mpp; x.fillStyle='rgba(255,255,255,.8)'; x.fillRect(10,H2-26,lp+52,18); x.strokeStyle='#333'; x.beginPath(); x.moveTo(14,H2-12); x.lineTo(14+lp,H2-12); x.moveTo(14,H2-16); x.lineTo(14,H2-12); x.moveTo(14+lp,H2-16); x.lineTo(14+lp,H2-12); x.stroke();
+    x.fillStyle='#222'; x.font='600 11px '+FNUM; x.textBaseline='middle'; x.textAlign='left'; x.fillText(L>=1000?(L/1000)+' км':L+' м',18+lp,H2-14); }
+  el.querySelector('.gpattr').textContent=S.attr; }
+function mapZoomAt(sx,sy,nZ){ const el=$('#gpMap'), c=el.querySelector('canvas'); nZ=Math.max(1,Math.min(21,nZ));
+  const W2=c.clientWidth, H2=c.clientHeight, wx=lon2x(MP.lon,MP.Z)+(sx-W2/2), wy=lat2y(MP.lat,MP.Z)+(sy-H2/2), k=Math.pow(2,nZ-MP.Z);
+  MP.lon=x2lon(wx*k-(sx-W2/2),nZ); MP.lat=y2lat(wy*k-(sy-H2/2),nZ); MP.Z=nZ; mapDraw(); }
+function mapWire(el){ const c=el.querySelector('canvas'), P=new Map(); let g=null, lastTap=0;
+  const pt=e=>{ const r=c.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; };
+  c.addEventListener('pointerdown',e=>{ c.setPointerCapture(e.pointerId); P.set(e.pointerId,pt(e)); el.querySelector('.gpres').hidden=true;
+    if(P.size===2){ const [a,b]=[...P.values()]; g={d:Math.hypot(a.x-b.x,a.y-b.y)||1,Z:MP.Z}; } else if(P.size===1){ const now=Date.now(), p=pt(e); if(now-lastTap<300) mapZoomAt(p.x,p.y,Math.round(MP.Z)+1); lastTap=now; } });
+  c.addEventListener('pointermove',e=>{ if(!P.has(e.pointerId)) return; const p=pt(e), o=P.get(e.pointerId); P.set(e.pointerId,p);
+    if(P.size===1){ const x=lon2x(MP.lon,MP.Z)-(p.x-o.x), y=lat2y(MP.lat,MP.Z)-(p.y-o.y); MP.lon=x2lon(x,MP.Z); MP.lat=y2lat(y,MP.Z); mapDraw(); }
+    else if(P.size===2&&g){ const [a,b]=[...P.values()], d=Math.hypot(a.x-b.x,a.y-b.y); mapZoomAt((a.x+b.x)/2,(a.y+b.y)/2,g.Z+Math.log2(d/g.d)); } });
+  const up=e=>{ P.delete(e.pointerId); if(P.size<2) g=null; }; c.addEventListener('pointerup',up); c.addEventListener('pointercancel',up);
+  c.addEventListener('wheel',e=>{ e.preventDefault(); const p=pt(e); mapZoomAt(p.x,p.y,MP.Z-e.deltaY*0.0025); },{passive:false});
+  el.querySelector('#gpQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); mapFind(); } });
+  el.addEventListener('click',e=>{ const b=e.target.closest('[data-g]'); if(!b) return; const k=b.dataset.g;
+    if(k==='close'){ el.hidden=true; return; }
+    if(k==='osm'||k==='sat'){ MP.src=k; el.querySelectorAll('[data-g="osm"],[data-g="sat"]').forEach(q=>q.setAttribute('aria-pressed',String(q.dataset.g===k))); mapDraw(); return; }
+    if(k==='find'){ mapFind(); return; }
+    if(k==='gps'){ if(!navigator.geolocation){ toast('Не удалось: нет доступа к местоположению',true); return; }
+      navigator.geolocation.getCurrentPosition(p=>{ MP.me={lat:p.coords.latitude,lon:p.coords.longitude}; MP.lat=MP.me.lat; MP.lon=MP.me.lon; MP.Z=Math.max(MP.Z,18); mapDraw(); },()=>toast('Не удалось определить местоположение',true),{enableHighAccuracy:true,timeout:20000,maximumAge:10000}); return; }
+    if(k==='fix'){ mapFixIt(); return; }
+    if(k==='res'){ MP.lat=+b.dataset.lat; MP.lon=+b.dataset.lon; MP.Z=Math.max(MP.Z,17); el.querySelector('.gpres').hidden=true; mapDraw(); return; } });
+  window.addEventListener('resize',()=>{ if(!el.hidden) mapDraw(); }); }
+function mapFind(){ const el=$('#gpMap'), q=el.querySelector('#gpQ').value.trim(), R=el.querySelector('.gpres'); if(!q) return;
+  const m=q.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)\s*$/); // «40.4093, 49.8671»
+  if(m){ MP.lat=parseFloat(m[1].replace(',','.')); MP.lon=parseFloat(m[2].replace(',','.')); MP.Z=Math.max(MP.Z,17); mapDraw(); return; }
+  R.hidden=false; R.textContent='Поиск…';
+  fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=ru&q='+encodeURIComponent(q)).then(r=>r.json()).then(a=>{
+    if(!a.length){ R.textContent='Ничего не найдено'; return; }
+    R.innerHTML=a.map(o=>`<button class="btn" data-g="res" data-lat="${+o.lat}" data-lon="${+o.lon}">${esc(o.display_name)}</button>`).join('')+'<small>Поиск: © OpenStreetMap, Nominatim</small>'; })
+  .catch(()=>{ R.textContent='Не удалось: нет связи с сервисом поиска'; }); }
+function mapFixIt(){ const el=$('#gpMap'), c=el.querySelector('canvas'); mapDraw(true);
+  if(MP.miss){ toast('Не удалось: карта ещё загружается — подождите секунду',true); mapDraw(); return; }
+  let src; try{ src=c.toDataURL('image/jpeg',0.84); }catch(e){ src=null; } mapDraw();
+  if(!src||src.length<1000){ toast('Не удалось сохранить карту: сервер не разрешает копирование',true); return; }
+  const W2=c.clientWidth, H2=c.clientHeight, mpp=156543.03392*Math.cos(MP.lat*Math.PI/180)/Math.pow(2,MP.Z), wm=W2*mpp, hm=H2*mpp;
+  pushUndo(); const old=geoImg(); let p, rot, k=1;
+  if(old){ const q=geoToPlan(MP.lat,MP.lon); p={x:q.x,y:q.y}; rot=old.rot||0; k=q.k; }
+  else { let bx=[1e18,1e18,-1e18,-1e18]; for(const L of doc.levels) if(!L.gp) for(const it of L.items) if(isWall(it)) for(const q of [it.a,it.b]){ bx=[Math.min(bx[0],q.x),Math.min(bx[1],q.y),Math.max(bx[2],q.x),Math.max(bx[3],q.y)]; }
+    p=bx[0]<1e17?{x:(bx[0]+bx[2])/2,y:(bx[1]+bx[3])/2}:toW(W/2,H/2); rot=-northA(); }
+  let li=gpLevelIdx(); if(li<0){ doc.levels.push({id:uid(),name:'Генплан',elev:0,gp:true,items:[]}); sortLevels(); li=gpLevelIdx(); }
+  const L=doc.levels[li]; L.items=L.items.filter(it=>!(it.t==='img'&&it.geo));
+  const it={id:uid(),t:'img',p:{x:r3(p.x),y:r3(p.y)},w:r3(wm*1000*k),h:r3(hm*1000*k),rot:r3(nrm360(rot)),op:.75,src,geo:{lat:MP.lat,lon:MP.lon,wm,z:MP.Z,src:MP.src}};
+  L.items.unshift(it); doc.geoLast={lat:MP.lat,lon:MP.lon,Z:MP.Z,src:MP.src}; const n=NR(); if(!n.lock&&n.m!=='compass'&&n.m!=='wall') n.m='map';
+  el.hidden=true; setLevel(li); setTool('select'); selId=it.id; persist(); renderLevels(); fitView(); panelKey=''; syncPanel(); redraw(); }
 
 /* ---------- boot ---------- */
 readColors();
