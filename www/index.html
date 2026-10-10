@@ -1404,7 +1404,9 @@ cv.addEventListener('pointerdown',e=>{
     press.pan=true; return; }
   // вершина под пальцем важнее значков, цифр и ручек рядом с ней (работа в перчатках, в темноте, на крыше)
   const JR=press.mouse?14:32; let jv=null; if(tool==='select'){ let bd=JR; for(const j of joints()){ const s2=toS(j), d=Math.hypot(s2.x-p.x,s2.y-p.y); if(d<bd){bd=d;jv={j,d};} } }
-  if(jv){ let ic=null; for(const h of joinHits){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<10&&d<jv.d){ ic=h; } } if(!ic) press.forceJoint=jv.j; }
+  if(jv){ // значок, ручка или цифра ближе вершины — касание им, а не вершине
+    let ic=null; const chk=(L,r)=>{ for(const h of L){ const d=Math.hypot(h.x-p.x,h.y-p.y); if(d<r&&d<jv.d) ic=h; } };
+    chk(joinHits,18); chk(tdHits,20); chk(witHits,22); chk(dimHits,20); chk(labelHits,18); if(!ic) press.forceJoint=jv.j; }
   if((tool==='select'||tool==='hole')&&!press.forceJoint){
     let wb=null,wd=22; for(const w of witHits){ const d=Math.hypot(w.x-p.x,w.y-p.y); if(d<wd){wd=d;wb=w;} }
     if(wb&&(wb.kind==='ld'||wb.kind==='ldE')){ const it=doc.items.find(i=>i.id===wb.id); if(it){ press.pan=false; press.ldDrag={it,elbow:wb.kind==='ldE',started:false}; return; } }
@@ -2967,7 +2969,7 @@ window.addEventListener('pointerdown',e=>{ if(e.target!==cv) return; const tm=$(
   { const r=cv.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
     if(tm.hidden&&sp.hidden&&lb.hidden&&ptrs.size===0){
       if(NS.wallPick){ e.stopPropagation(); e.preventDefault(); afterClick(()=>northWallTap({x:px,y:py})); return; }
-      if(Math.hypot(px-NSYM.x,py-NSYM.y)<22){ e.stopPropagation(); e.preventDefault(); afterClick(openNorth); return; } } }
+      if(Math.hypot(px-NSYM.x,py-NSYM.y)<22){ e.stopPropagation(); e.preventDefault(); afterClick(()=>openNorth()); return; } } }
   if(tm.hidden&&sp.hidden&&lb.hidden) return;
   if(!tm.hidden) closeToolMenu(); if(!sp.hidden){ sp.hidden=true; $('#btnSnaps').setAttribute('aria-expanded','false'); } if(!lb.hidden) lvMenu(false);
   e.stopPropagation(); e.preventDefault(); },true);
@@ -3103,7 +3105,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Delete'||e.key==='Backspace'){ if(selId){e.preventDefault();delSel();} }
 });
 
-const TOAST_KEEP=/^(Не соответствует|Не удалось|Нет |Нечего|Чертёж пустой|Память|Стена короче|На этой стене нет|Проходит другая|Нужно минимум|Точки совпали|Точки на одной|Точка должна|Радиус должен|Длина должна|Ось слишком|Сохран|Отправлено|Старый чертёж|Создан новый|Сначала|Введите|Отменено|Скопировано|Разделено|Уже ровно)/;
+const TOAST_KEEP=/^(Не соответствует|Не удалось|Нет |Нечего|Чертёж пустой|Память|Стена короче|На этой стене нет|Проходит другая|Нужно минимум|Точки совпали|Точки на одной|Точка должна|Радиус должен|Длина должна|Ось слишком|Сохран|Отправлено|Старый чертёж|Создан новый|Сначала|Введите|Отменено|Скопировано|Разделено|Уже ровно|Соединено|Отсоединено|По направлению|Тяните синий кружок|Тяните кружок|Размер привязан|Размер снова|Размер от|Стена держится)/;
 let tt=0; function toast(s,force){ if(!force&&!hintsOn()&&!TOAST_KEEP.test(String(s))) return; const t=$('#toast'); try{ const pn=$('#panel'); t.style.bottom=((pn&&!pn.hidden?pn.offsetHeight+6:0)+(dynEl&&!dynEl.hidden?dynEl.offsetHeight+8:0)+10)+'px'; }catch(e){}t.textContent=s;t.classList.remove('off');clearTimeout(tt);tt=setTimeout(()=>t.classList.add('off'),1600);}
 
 /* ---------- documents sheet ---------- */
@@ -3131,7 +3133,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.11':'4.0.11'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.12':'4.0.12'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -4236,7 +4238,7 @@ function geoImg(){ let best=null; for(const L of doc.levels) for(const it of L.i
 function gpLevelIdx(){ return doc.levels.findIndex(l=>l.gp); }
 const NR=()=>{ if(!doc.north) doc.north={a:0,m:'manual',lock:false,decl:0}; return doc.north; };
 // угол севера: по часовой стрелке от «вверх» плана, градусы
-function northA(){ const n=NR(); if(n.m==='map'){ const g=geoImg(); if(g) return nrm360(-(g.rot||0)); } return nrm360(n.a||0); }
+function northA(){ const n=NR(); if(NS.live&&CMP.h!=null&&!n.lock) return nrm360(360-CMP.h); if(n.m==='map'){ const g=geoImg(); if(g) return nrm360(-(g.rot||0)); } return nrm360(n.a||0); }
 const northV=()=>{ const a=northA()*Math.PI/180; return {N:{x:Math.sin(a),y:Math.cos(a)},E:{x:Math.cos(a),y:-Math.sin(a)}}; };
 // широта/долгота → точка плана по привязке картинки
 function geoToPlan(lat,lon){ const it=geoImg(); if(!it) return null; const g=it.geo, R=6378137, k=it.w/(g.wm*1000), r=(it.rot||0)*Math.PI/180;
@@ -4247,20 +4249,27 @@ function planToGeo(p){ const it=geoImg(); if(!it) return null; const g=it.geo, R
   return {lat:g.lat+n/R*180/Math.PI, lon:g.lon+e/(R*Math.cos(g.lat*Math.PI/180))*180/Math.PI}; }
 
 // --- компас устройства ---
-const CMP={on:0,h:null,abs:false,fn:null};
+const CMP={on:0,h:null,abs:false,fn:null,sens:null,src:'',rel:0,t0:0,last:0};
+function cmpPut(h,src){ const t=nrm360(h+(NR().decl||0)); CMP.h=CMP.h==null?t:nrm360(CMP.h+(((t-CMP.h+540)%360)-180)*0.25); CMP.abs=true; CMP.src=src; CMP.last=Date.now(); onCompass(); }
+const scrAng=()=>(screen.orientation&&screen.orientation.angle)||window.orientation||0;
 function headingOf(e){ if(e.webkitCompassHeading!=null) return {h:e.webkitCompassHeading,abs:true}; if(e.alpha==null) return null;
-  const so=(screen.orientation&&screen.orientation.angle)||window.orientation||0; return {h:nrm360(360-e.alpha+so),abs:!!e.absolute}; }
-function compassStart(){ if(CMP.on++) return true; if(!('DeviceOrientationEvent' in window)) return false;
-  CMP.fn=e=>{ const r=headingOf(e); if(!r||(!r.abs&&e.type!=='deviceorientationabsolute'&&e.webkitCompassHeading==null)) return; const t=nrm360(r.h+(NR().decl||0));
-    CMP.h=CMP.h==null?t:nrm360(CMP.h+(((t-CMP.h+540)%360)-180)*0.25); CMP.abs=true; onCompass(); };
-  try{ if(typeof DeviceOrientationEvent.requestPermission==='function') DeviceOrientationEvent.requestPermission().catch(()=>{}); }catch(e){}
-  window.addEventListener('deviceorientationabsolute',CMP.fn); window.addEventListener('deviceorientation',CMP.fn); return true; }
-function compassStop(){ if(!CMP.on||--CMP.on) return; window.removeEventListener('deviceorientationabsolute',CMP.fn); window.removeEventListener('deviceorientation',CMP.fn); CMP.fn=null; CMP.h=null; CMP.abs=false; }
+  return {h:nrm360(360-e.alpha+scrAng()),abs:e.type==='deviceorientationabsolute'||!!e.absolute}; }
+// компас телефона: датчик ориентации (AbsoluteOrientationSensor), иначе события deviceorientationabsolute / deviceorientation
+function compassStart(){ if(CMP.on++) return true; CMP.t0=Date.now(); CMP.rel=0; CMP.src='';
+  CMP.fn=e=>{ const r=headingOf(e); if(!r) return; if(!r.abs){ CMP.rel++; return; } if(CMP.sens&&CMP.src==='sensor'&&Date.now()-CMP.last<500) return; cmpPut(r.h,e.webkitCompassHeading!=null?'ios':'event'); };
+  try{ if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function') DeviceOrientationEvent.requestPermission().catch(()=>{}); }catch(e){}
+  try{ if('AbsoluteOrientationSensor' in window){ const S=new AbsoluteOrientationSensor({frequency:30,referenceFrame:'screen'});
+      S.addEventListener('reading',()=>{ const q=S.quaternion; if(!q) return; const [x,y,z,w]=q; cmpPut(nrm360(Math.atan2(2*(x*y-w*z),1-2*(x*x+z*z))*180/Math.PI),'sensor'); });
+      S.addEventListener('error',()=>{ CMP.sens=null; }); S.start(); CMP.sens=S; } }catch(e){ CMP.sens=null; }
+  window.addEventListener('deviceorientationabsolute',CMP.fn); window.addEventListener('deviceorientation',CMP.fn);
+  setTimeout(()=>{ if(CMP.on&&CMP.h==null) onCompass(); },2500); return true; }
+function compassStop(){ if(!CMP.on||--CMP.on) return; window.removeEventListener('deviceorientationabsolute',CMP.fn); window.removeEventListener('deviceorientation',CMP.fn); CMP.fn=null;
+  try{ if(CMP.sens) CMP.sens.stop(); }catch(e){} CMP.sens=null; CMP.h=null; CMP.abs=false; }
 function onCompass(){ if(NS.live) nsSync(); if(ME.on) redraw(); }
 
 // --- значок севера на плане: маленький, всегда виден, касание — настройки ---
 const NSYM={x:26,y:64,r:13};
-function drawNorthSym(){ if(NS.live&&(sheet.hidden||!$('#nsT'))) nsLiveOff(); const a=northA()*Math.PI/180, {x,y,r}=NSYM, ux=Math.sin(a), uy=-Math.cos(a);
+function drawNorthSym(){ if(NS.live&&(sheet.hidden||!$('#nsT'))) nsLiveOff(true); const a=northA()*Math.PI/180, {x,y,r}=NSYM, ux=Math.sin(a), uy=-Math.cos(a);
   ctx.save(); ctx.globalAlpha=.85; ctx.fillStyle=C.surface; ctx.strokeStyle=C.rule; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
   const px=-uy, py=ux, tip={x:x+ux*(r-2),y:y+uy*(r-2)}, tail={x:x-ux*(r-3),y:y-uy*(r-3)};
   ctx.fillStyle=NR().lock?C.ink:(NS.live?C.tape:C.dim); ctx.beginPath(); ctx.moveTo(tip.x,tip.y); ctx.lineTo(x+px*4,y+py*4); ctx.lineTo(x-px*4,y-py*4); ctx.closePath(); ctx.fill();
@@ -4273,13 +4282,13 @@ const NS={live:false,wallPick:false};
 // открыть окно после «клика» того же касания — иначе клик попадёт в фон окна и закроет его
 function afterClick(fn){ let done=false; const go=e=>{ if(done) return; done=true; window.removeEventListener('click',h,true); clearTimeout(t); fn(); };
   const h=e=>{ e.stopPropagation(); e.preventDefault(); go(); }; window.addEventListener('click',h,true); const t=setTimeout(go,450); }
-function openNorth(){ const n=NR(), g=geoImg(), lk=n.lock;
+function openNorth(live){ const n=NR(), g=geoImg(), lk=n.lock;
   sheet.classList.remove('appm'); sheet.innerHTML=`<div class="sheet-body" role="dialog" aria-modal="true" aria-labelledby="nsT">
     <div class="sheet-head"><h2 id="nsT">Север</h2><button class="ib" data-s="close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div class="nsrow"><canvas id="nsDial" width="150" height="150" aria-label="Стрелка севера — тяните, чтобы повернуть"></canvas>
       <div class="nscol">
         <div class="fld"><label for="nsA">Угол от «вверх» плана, °</label><input class="inp" id="nsA" inputmode="decimal" value="${Math.round(northA()*10)/10}"${lk?' disabled':''}></div>
-        <div class="seg nsm">${[['manual','Вручную'],['wall','По стене'],['compass','Компас']].concat(g?[['map','По карте']]:[]).map(([k,t])=>`<button class="btn${n.m===k?' go':''}" data-n="m_${k}"${lk?' disabled':''}>${t}</button>`).join('')}</div>
+        <div class="seg nsm">${[['manual','Вручную'],['wall','По стене'],['compass','Компас']].concat(g?[['map','По карте']]:[]).map(([k,t])=>`<button class="btn${((live===true&&k==='compass')||(!(live===true)&&n.m===k))?' go':''}" data-n="m_${k}"${lk?' disabled':''}>${t}</button>`).join('')}</div>
         <label class="nslk"><input type="checkbox" class="chk" id="nsLock"${lk?' checked':''}> Зафиксировать север</label>
       </div></div>
     <div id="nsLive" class="note"${NS.live?'':' hidden'}></div>
@@ -4289,7 +4298,7 @@ function openNorth(){ const n=NR(), g=geoImg(), lk=n.lock;
     </div>
     <p class="note">Склонение нужно только для компаса: он показывает магнитный север, план — истинный. ${g?'Генплан привязан к карте — «По карте» берёт север с неё.':'Карту участка можно открыть: Уровни → Генплан.'}</p>
   </div>`;
-  sheet.hidden=false; nsDial(); if(n.m==='compass'&&!lk) nsLiveOn(); }
+  sheet.hidden=false; nsDial(); if(live===true&&!lk) nsLiveOn(); }
 function nsDial(){ const c=$('#nsDial'); if(!c) return; const x=c.getContext('2d'), w=150, R=62, a=(NS.live&&CMP.h!=null?nrm360(360-CMP.h):northA())*Math.PI/180;
   x.clearRect(0,0,w,w); x.strokeStyle=C.rule; x.lineWidth=1; x.beginPath(); x.arc(75,75,R,0,Math.PI*2); x.stroke();
   for(let i=0;i<72;i++){ const t=i*5*Math.PI/180, l=i%18===0?10:i%2===0?5:3; x.beginPath(); x.moveTo(75+Math.sin(t)*R,75-Math.cos(t)*R); x.lineTo(75+Math.sin(t)*(R-l),75-Math.cos(t)*(R-l)); x.stroke(); }
@@ -4299,19 +4308,20 @@ function nsDial(){ const c=$('#nsDial'); if(!c) return; const x=c.getContext('2d
   x.fillStyle=C.muted; x.beginPath(); x.moveTo(75-ux*(R-14),75-uy*(R-14)); x.lineTo(75+px*9,75+py*9); x.lineTo(75-px*9,75-py*9); x.closePath(); x.fill();
   x.fillStyle=C.ink; x.font='700 13px '+FNUM; x.fillText('С',75+ux*(R-22)+px*0,75+uy*(R-22)); }
 function nsSync(){ nsDial(); const i=$('#nsA'); if(i&&document.activeElement!==i) i.value=Math.round((NS.live&&CMP.h!=null?nrm360(360-CMP.h):northA())*10)/10;
-  const lv=$('#nsLive'); if(lv&&NS.live) lv.innerHTML=CMP.h==null?'Компас ждёт данные датчика… Если ничего не меняется — на этом устройстве компаса нет.'
-    :`Положите телефон так, чтобы верх экрана смотрел туда же, куда «вверх» на плане. Сейчас: курс ${Math.round(CMP.h)}°. <button class="btn go" data-n="liveFix">Зафиксировать</button>`;
+  const lv=$('#nsLive'); if(lv&&NS.live) lv.innerHTML=CMP.h==null?(Date.now()-CMP.t0<2400?'Компас: жду датчик…'
+      :'<b>Компас телефона не отвечает.</b> '+(CMP.rel?'Датчик поворота есть, но без направления на север (нет магнитометра или он недоступен приложению).':'Телефон не передаёт направление этому приложению.')+' Положите телефон ровно и покачайте «восьмёркой», или задайте север вручную / по стене.')
+    :`<b>Живой компас: стрелка следует за телефоном.</b> Положите телефон ровно, верхом экрана туда же, куда «вверх» на плане. Курс ${Math.round(CMP.h)}°. <button class="btn go" data-n="liveFix">Зафиксировать север</button>`;
   redraw(); }
 function nsLiveOn(){ if(NS.live) return; NS.live=true; compassStart(); const lv=$('#nsLive'); if(lv) lv.hidden=false; nsSync(); }
-function nsLiveOff(){ if(!NS.live) return; NS.live=false; compassStop(); const lv=$('#nsLive'); if(lv) lv.hidden=true; }
+function nsLiveOff(save){ if(!NS.live) return; if(save&&CMP.h!=null&&!NR().lock){ const a=360-CMP.h; NS.live=false; setNorth(a,'compass'); } NS.live=false; compassStop(); const lv=$('#nsLive'); if(lv) lv.hidden=true; }
 function setNorth(a,m){ const n=NR(); if(n.lock) return false; pushUndo(); n.a=Math.round(nrm360(a)*100)/100; if(m) n.m=m; persist(); redraw(); return true; }
 sheet.addEventListener('click',e=>{ const b=e.target.closest('[data-n]'); if(!b||!$('#nsT')) return; const k=b.dataset.n, n=NR();
   if(k.startsWith('m_')){ const m=k.slice(2); nsLiveOff();
     if(m==='wall'){ sheet.hidden=true; NS.wallPick=true; setTool('select'); updateHud(); redraw(); return; }
-    if(m==='compass'){ pushUndo(); n.m='compass'; persist(); openNorth(); return; }
+    if(m==='compass'){ openNorth(true); return; }
     if(m==='map'){ pushUndo(); n.m='map'; persist(); openNorth(); redraw(); return; }
     pushUndo(); n.a=northA(); n.m='manual'; persist(); openNorth(); return; }
-  if(k==='liveFix'&&CMP.h!=null){ setNorth(360-CMP.h,'compass'); nsLiveOff(); openNorth(); return; }
+  if(k==='liveFix'&&CMP.h!=null){ nsLiveOff(true); openNorth(); return; }
   if(k==='declGps'){ if(!navigator.geolocation){ toast('Не удалось: нет доступа к местоположению',true); return; } b.disabled=true; b.textContent='…';
     navigator.geolocation.getCurrentPosition(p=>{ const d=magDecl(p.coords.latitude,p.coords.longitude,yearNow()); pushUndo(); n.decl=Math.round(d*100)/100; persist(); const i=$('#nsD'); if(i) i.value=n.decl; b.disabled=false; b.textContent='по GPS'; },
       ()=>{ b.disabled=false; b.textContent='по GPS'; const it=geoImg(); if(it){ const d=magDecl(it.geo.lat,it.geo.lon,yearNow()); pushUndo(); n.decl=Math.round(d*100)/100; persist(); const i=$('#nsD'); if(i) i.value=n.decl; } else toast('Не удалось определить местоположение',true); },{enableHighAccuracy:false,timeout:15000,maximumAge:600000}); return; }
