@@ -722,6 +722,16 @@ let lineKind='wall', drawKind='line', chimPrev=null, chimDrag=null, lastChimTap=
 function wallPoly(it){ if(isArc(it)){ const G=arcG(it),o=offs(it); return {aL:arcAt(G,0,o.L),aR:arcAt(G,0,-o.R),bL:arcAt(G,1,o.L),bR:arcAt(G,1,-o.R),capA:true,capB:true,arc:G}; }
   const A=wallEnd(it,'a'),B=wallEnd(it,'b'); return {aL:A.L,aR:A.R,bL:B.L,bR:B.R,capA:A.cap,capB:B.cap}; }
 
+// кэш геометрии стен на время одной отрисовки/экспорта: соседи, узлы и Т-примыкания считаются один раз
+// (без него план из 50 стен на планшете рисовался в 10+ раз медленнее)
+let GM=null, GMd=0;
+function geoMemoOn(){ if(!GMd++) GM=new Map(); }
+function geoMemoOff(){ if(!--GMd) GM=null; }
+function memoG(name,fn){ return function(it,k){ if(!GM||!it||typeof it!=='object') return fn.apply(this,arguments); let m=GM.get(name); if(!m){ m=new WeakMap(); GM.set(name,m); }
+  let r=m.get(it); if(!r){ r={}; m.set(it,r); } const kk=k===undefined?'_':(typeof k==='object'?null:k); if(kk===null) return fn.apply(this,arguments);
+  if(kk in r) return r[kk]; return r[kk]=fn.apply(this,arguments); }; }
+nodeJoin=memoG('nodeJoin',nodeJoin); endCount=memoG('endCount',endCount); tJoinFind=memoG('tJoinFind',tJoinFind); wallNeighbor=memoG('wallNeighbor',wallNeighbor);
+wallEnd=memoG('wallEnd',wallEnd); faceGaps=memoG('faceGaps',faceGaps); holesOn=memoG('holesOn',holesOn); arcEnds=memoG('arcEnds',arcEnds); arcHost=memoG('arcHost',arcHost); awayInfo=memoG('awayInfo',awayInfo);
 /* ---------- snapping ---------- */
 const SNAPNAME={mid:'середина',onc:'на окружности',center:'центр',cross:'пересечение',aux:'конструкционная',origin:'нулевая точка',end:'конец',corner:'вершина',quad:'точка окружности',face:'грань стены',axis:'на линии (грань)',align:'по выравниванию'};
 const inRng=(cc,q)=>!cc.rng||arcProj(cc.rng,q).inside;
@@ -1145,7 +1155,8 @@ function drawSelTemp(){ const it=tmpTarget(); if(!it) return; const len=lineLen(
   if(!(inlineH&&inlineH.id===it.id&&inlineH.kind==='ang')) tmpBox(aval.toFixed(2)+'°',tp.x,tp.y,0);
   labelHits.push({id:it.id,kind:'ang',w:toW(tp.x,tp.y),x:tp.x,y:tp.y,val:aval,one:true});
   ctx.restore(); }
-function render(){ queueMicrotask(placePanel);
+function render(){ geoMemoOn(); try{ render0(); } finally{ geoMemoOff(); } }
+function render0(){ queueMicrotask(placePanel);
   labelHits=[]; witHits=[]; tdHits=[]; dimHits=[]; joinHits=[]; syncDims();
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.fillStyle=C.paper;ctx.fillRect(0,0,W,H);
@@ -3012,7 +3023,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.3':'4.0.3'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.4':'4.0.4'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3111,7 +3122,8 @@ sheet.addEventListener('change',e=>{
 function encTxt(s){return String(s).replace(/[^\x20-\x7e]/g,c=>'\\U+'+c.charCodeAt(0).toString(16).toUpperCase().padStart(4,'0'));}
 function num(v){const r=Math.round(v*1000)/1000;return (Object.is(r,-0)?0:r).toString();}
 // all=true — все уровни в одном файле (слои с префиксом L1_, L2_…, отметка Z = отметка уровня)
-function buildDXF(d,all,rec){
+function buildDXF(d,all,rec){ geoMemoOn(); try{ return buildDXF0(d,all,rec); } finally{ geoMemoOff(); } }
+function buildDXF0(d,all,rec){
   const th=d.settings.textH, E=[]; const g=(c,v)=>{E.push(String(c));E.push(String(v));};
   const used=new Map(); const COL={ROOF:40,GRID:8,STAIRS:2,CHIMNEY:8,WALLS:7,OPENINGS:5,MISC:8,DIMS:1,TEXT:3,AXIS:6,WINDOWS:4,DOORS:30};
   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity, blk=null;
@@ -3470,7 +3482,7 @@ function chimRoofTop(it){ let top=null;
 function chimBot(it,li){ return it.z0!=null?it.z0:doc.levels[li].elev; }
 function chimTop(it,li){ const rt=chimRoofTop(it); if(rt!=null) return Math.round(rt+(it.hr==null?600:it.hr)); return chimBot(it,li)+(it.hgt>0?it.hgt:lvHeight(li)+1500); }
 // ---- вся модель ----
-function buildModel(){ const M=Mesh(), save=doc.curLv;
+function buildModel(){ const M=Mesh(), save=doc.curLv; geoMemoOn();
   try{ doc.levels.forEach((L,li)=>{ doc.curLv=li;
     for(const it of L.items){
       if(isWall(it)){ const fc=rgbOf(it.fc,'#d9d6cf');
@@ -3486,7 +3498,7 @@ function buildModel(){ const M=Mesh(), save=doc.curLv;
       else if(it.t==='stair'){ stairMesh(M,it,L.elev,lvHeight(li)); }
       else if(it.t==='roof'){ roofMesh(M,it,li); } }
     // перекрытие (пол) под стенами этажа — тонкая плита по контуру стен
-  }); } finally { doc.curLv=save; }
+  }); } finally { doc.curLv=save; geoMemoOff(); }
   return M; }
 // контурные линии стены: только наружный контур и рамки проёмов (без швов между кусками)
 function wallLines(M,it,li){ const {z0,z1}=wallZ(it,li), pcs=wallPieces(it,li), F=cleanPoly(wallFootprint(it,-1e6,1e6)), n=F.length, arc=isArc(it), G=arc?arcG(it):null, L=arc?G.L:lineLen(it), u=arc?null:unit(it.a,it.b), nv=arc?null:lft(u);
@@ -3569,7 +3581,8 @@ function open3D(){ const M=buildModel(); if(!M.tri.length){ toast('Нечего 
 
 // ---- IFC4 (Revit, ArchiCAD, BIM-просмотрщики) ----
 function ifcGuid(){ const c='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$'; let s=c[Math.floor(Math.random()*4)]; for(let i=1;i<22;i++) s+=c[Math.floor(Math.random()*64)]; return s; }
-function buildIFC(){ const L=[]; let id=0; const E=s=>{ id++; L.push('#'+id+'='+s+';'); return '#'+id; };
+function buildIFC(){ geoMemoOn(); try{ return buildIFC0(); } finally{ geoMemoOff(); } }
+function buildIFC0(){ const L=[]; let id=0; const E=s=>{ id++; L.push('#'+id+'='+s+';'); return '#'+id; };
   const str=v=>"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"''").replace(/[^\x20-\x7e]+/g,ch=>'\\X2\\'+[...ch].map(c=>c.charCodeAt(0).toString(16).toUpperCase().padStart(4,'0')).join('')+'\\X0\\')+"'";
   const n=v=>{ const r=Math.round(v*1000)/1000; return (Number.isInteger(r)?r+'.':String(r)); };
   const P3=(x,y,z)=>E(`IFCCARTESIANPOINT((${n(x)},${n(y)},${n(z)}))`), P2=(x,y)=>E(`IFCCARTESIANPOINT((${n(x)},${n(y)}))`);
