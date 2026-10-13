@@ -1,8 +1,6 @@
 name: Сборка APK
 on:
-  push:
-    branches: [main]
-    paths-ignore: ['app3d/**', '.github/workflows/android3d.yml']
+  # 2D больше не собираем автоматически (с 13.10.2026 развивается только 3D); ручной запуск оставлен
   workflow_dispatch: {}
 permissions:
   contents: write
