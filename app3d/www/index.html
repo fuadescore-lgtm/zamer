@@ -222,6 +222,7 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
 .btn.lnk{display:grid;place-items:center;text-decoration:none;color:var(--ink);font-size:15px}
 .note{margin:0;font-size:14px;line-height:1.45;color:var(--muted);max-width:65ch}
 @media (prefers-reduced-motion: reduce){#toast{transition:none}}
+.asksh{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}.asksh[hidden]{display:none}.askb{background:var(--surface,#fff);color:var(--ink,#222);border-radius:14px 14px 0 0;padding:16px;max-width:520px;width:100%;box-shadow:0 -4px 20px rgba(0,0,0,.25)}.askb p{font-size:13px;opacity:.75;margin:6px 0 12px}.askr{display:flex;gap:8px}.askr .btn{flex:1}
 </style>
 
 <div id="app">
@@ -456,7 +457,7 @@ function toggleMulti(h){ const g=grpItems(h).filter(i=>!isHole(i)).map(i=>i.id);
   panelKey=''; syncPanel(); redraw(); toast(moveSel.size?'Выбрано объектов: '+selCount()+'. Тяните любой — двигаются все':'Выбор снят'); }
 function armLongPress(h){ if(!h||isHole(h)) return; press.lpSel=setTimeout(()=>{ if(press&&!press.moved&&press.lpSel){ press.lpSel=null; press.noop=true; press.sd=null; press.label=null; if(press.prev){ selId=press.prev.id; moveSel=press.prev.ms; } toggleMulti(h); } },520); }
 let undoS=[], redoS=[];
-let C={};
+let C={}; let copyHi=null; // только что сделанная копия — зелёная, пока её не переместят/не завершат
 
 // снимок для ↶/↷: все уровни (картинки-подложки по ссылке, чтобы не копировать мегабайты)
 const imgSrcCache=new Map();
@@ -715,6 +716,10 @@ function chimSnap(it,c){
   liveSnap=(nx!==null||ny!==null)?'face':null; return {x:r3(out.x),y:r3(out.y)};
 }
 function chimDef(){ if(!doc.settings.chim) doc.settings.chim={w:500,l:500,th:120}; return doc.settings.chim; }
+const chimRound=it=>it&&it.sh==='round';
+// контур дымохода: прямоугольник или круг (24-угольник, Ø = w)
+function chimOut(it,inset){ if(!chimRound(it)) return chimCorners(it,inset); const r=it.w/2-(inset||0), N=24, o=[]; for(let k=0;k<N;k++){ const a=k/N*Math.PI*2; o.push({x:r3(it.p.x+Math.cos(a)*r),y:r3(it.p.y+Math.sin(a)*r)}); } return o; }
+const chimHasIn=it=>it.th>0&&it.th*2<Math.min(it.w,chimRound(it)?it.w:it.l);
 function holesOn(Y){ return doc.items.filter(i=>isHole(i)&&i.wall===Y.id); }
 // разрывы в гранях стены Y там, где в неё упираются другие стены
 function faceGaps(Y){ const g={L:[],R:[]};
@@ -1019,7 +1024,8 @@ function drawArcLine(it,sel){
     ctx.font=(sel?'600 ':'')+'12px '+FNUM;ctx.textAlign='center';ctx.textBaseline='middle';haloText(fmt(G.L)+(sel?' · R'+fmt(G.r):''),0,0,sel?C.sel:C.muted);ctx.restore(); }
   if(sel){ ctx.fillStyle=C.sel; for(const q of [it.a,it.b]){ const P=toS(q); ctx.fillRect(P.x-4,P.y-4,8,8); } }
 }
-function drawItem(it,sel){
+function drawItem(it,sel){ if(copyHi&&copyHi.has(it.id)){ const o=C.sel; C.sel='#2e9e4f'; try{ drawItem0(it,true); }finally{ C.sel=o; } return; } drawItem0(it,sel); }
+function drawItem0(it,sel){
   if(it.t==='grid'){ drawGrid2(it,sel); return; }
   if(it.t==='stair'){ drawStair(it,sel); if(sel) drawStairEdit(it); return; }
   if(it.t==='roof'){ drawRoof(it,sel); return; }
@@ -1074,16 +1080,17 @@ function drawItem(it,sel){
     ctx.save(); ctx.globalAlpha=sel?1:.55; ctx.strokeStyle=sel?C.sel:C.muted; ctx.lineWidth=sel?1.6:1; ctx.setLineDash([9,6]); line(A,B); ctx.restore(); ctx.setLineDash([]);
     if(sel){ctx.fillStyle=C.sel;for(const q of [it.a,it.b]){const t=toS(q);ctx.fillRect(t.x-3,t.y-3,6,6);}}
   } else if(it.t==='chim'){
-    const O=chimCorners(it).map(toS), I=(it.th>0&&it.th*2<Math.min(it.w,it.l))?chimCorners(it,it.th).map(toS):null;
-    ctx.fillStyle=C.wall; poly(O); ctx.fill();
+    const rd=chimRound(it), O=chimOut(it).map(toS), I=chimHasIn(it)?chimOut(it,it.th).map(toS):null;
+    ctx.fillStyle=it.fc||C.wall; poly(O); ctx.fill();
+    if(it.hp&&it.hp!=='none'){ ctx.save(); ctx.globalAlpha=.75; ctx.fillStyle=hatchPattern(it.hp,it.lc||C.ink); poly(O); ctx.fill(); ctx.restore(); }
     if(I){ ctx.fillStyle=C.paper; poly(I); ctx.fill(); }
-    ctx.strokeStyle=sel?C.sel:C.ink; ctx.lineWidth=sel?2.2:1.6; ctx.setLineDash([]); poly(O); ctx.stroke();
-    if(I){ ctx.lineWidth=1.2; poly(I); ctx.stroke(); ctx.lineWidth=1; line(I[0],I[2]); line(I[1],I[3]); }
+    ctx.strokeStyle=sel?C.sel:(it.lc||C.ink); ctx.lineWidth=sel?2.2:lwPx(it,1.6); ctx.setLineDash([]); poly(O); ctx.stroke();
+    if(I){ ctx.lineWidth=sel?1.2:lwPx(it,1.2)*.75; poly(I); ctx.stroke(); ctx.lineWidth=1; if(rd){ const n=I.length; line(I[0],I[n/2]); line(I[n/4],I[3*n/4]); } else { line(I[0],I[2]); line(I[1],I[3]); } }
     const sz=Math.min(it.w,it.l)*view.scale;
     if(sz>28||sel){ const m=toS({x:it.p.x,y:it.p.y-it.l/2-14/view.scale});
       ctx.font=(sel?'600 ':'500 ')+'11px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle';
-      haloText('ДЫМ '+fmt(it.w)+'×'+fmt(it.l),m.x,m.y,sel?C.sel:C.ink); }
-    if(sel){ ctx.fillStyle=C.sel; for(const q of O) ctx.fillRect(q.x-3,q.y-3,6,6); }
+      haloText('ДЫМ '+(rd?'Ø'+fmt(it.w):fmt(it.w)+'×'+fmt(it.l)),m.x,m.y,sel?C.sel:C.ink); }
+    if(sel){ ctx.fillStyle=C.sel; for(const q of (rd?[O[0],O[6],O[12],O[18]]:O)) ctx.fillRect(q.x-3,q.y-3,6,6); }
   } else if(isHole(it)){
     const sy=holeSymbol(it); if(!sy) return;
     ctx.strokeStyle=sel?C.sel:(it.t==='win'?C.open:C.ink); ctx.lineWidth=sel?2:1.3; ctx.setLineDash([]); ctx.lineCap='butt';
@@ -1311,7 +1318,7 @@ function render0(){ queueMicrotask(placePanel);
   if(tool==='dim'&&dragA&&dragB){ctx.strokeStyle=C.dim;ctx.lineWidth=1.5;ctx.setLineDash([6,4]);line(toS(dragA),toS(dragB));ctx.setLineDash([]);marker(dragB,liveSnap);}
   if(tool==='text'&&pendingText) marker(pendingText,null);
   if(tool==='text'&&ldPick){ marker(ldPick,null); if(pendingText){ const g=leaderGeom({p:pendingText,s:'Текст',h:doc.settings.noteH||doc.settings.textH,ld:{pt:ldPick,end:doc.settings.ldEnd||'arrow'}}); ctx.save(); ctx.setLineDash([5,4]); ctx.strokeStyle=C.sel; line(toS(g.E),toS(g.P)); ctx.restore(); ctx.setLineDash([]); } }
-  if(tool==='hole'&&chimPrev){ const g={...chimDef(),p:chimPrev,rot:0}, O=chimCorners(g).map(toS);
+  if(tool==='hole'&&chimPrev){ const g={...chimDef(),p:chimPrev,rot:0}, O=chimOut(g).map(toS);
     ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(O); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
   if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd)))) marker(snapMark.p,snapMark.k);
   drawTempDims(); drawSelTemp(); drawGridGaps(); drawJoinIcons();
@@ -1345,7 +1352,7 @@ function updateHud(){
   const sn=liveSnap&&SNAPNAME[liveSnap]?' · '+SNAPNAME[liveSnap]:'';
   if(typeof NS!=='undefined'&&NS.wallPick){ txt='Север: коснитесь стены северного фасада'; isLive=true; }
   else if(orgEd){ txt='Начало координат: тяните кружок (липнет к углам) · ✓ — готово'; isLive=true; }
-  else if(chimPrev&&tool==='hole'){ const d=chimDef(); txt='Дымоход '+fmt(d.w)+'×'+fmt(d.l)+' мм'+sn; isLive=true; }
+  else if(chimPrev&&tool==='hole'){ const d=chimDef(); txt='Дымоход '+(chimRound(d)?'Ø'+fmt(d.w):fmt(d.w)+'×'+fmt(d.l))+' мм'+sn; isLive=true; }
   else if(chimDrag){ txt='Дымоход '+fmt(chimDrag.w)+'×'+fmt(chimDrag.l)+' · X '+fmt(chimDrag.p.x)+' Y '+fmt(chimDrag.p.y)+sn; isLive=true; }
   else if(holeDrag){ const c=holeClear(holeDrag); if(c){ txt='← '+fmt(c.dl)+' · '+fmt(c.dr)+' → мм до стен'; isLive=true; } }
   else if(moveDelta){ const d=Math.hypot(moveDelta.dx,moveDelta.dy);
@@ -1399,14 +1406,18 @@ cv.addEventListener('pointerdown',e=>{
   if(tool==='roof'&&!press.pan){ press.pan=true; press.roofTap=true; }
   if(tool==='select'){ const lk=lockHits.find(h=>Math.hypot(h.x-p.x,h.y-p.y)<16); if(lk){ press.noop=true; press.pan=false; toggleLock(lk); return; } }
   if(tool==='select'&&roofJoinTap(p)){ press.noop=true; press.pan=false; return; }
+  if(tool==='select'&&lastObjTap&&lastObjTap.x!=null&&Date.now()-lastObjTap.t<420&&Math.hypot(lastObjTap.x-p.x,lastObjTap.y-p.y)<18){ const r=doc.items.find(i=>i.id===lastObjTap.id&&(i.t==='roof'||i.t==='stair'));
+    if(r&&r.id===selId&&roofEd!==r.id&&stEd!==r.id){ lastObjTap=null; press.noop=true; press.pan=false; if(r.t==='stair') stairEdit(r); else roofEdit(r); return; } } // второе касание двойного попало на появившийся кружок ската
   if(tool==='select'&&roofTap(p)){ press.noop=true; press.pan=false; return; }
   if(tool==='select'&&stEd&&!hitLabel(p.x,p.y)){ const it=doc.items.find(i=>i.id===stEd&&i.t==='stair'); const hd=it&&stairEdgeHit(it,p);
     if(hd){ press.pan=false; press.stEnd={it,hd,started:false}; return; } }
   if(tool==='select'&&!moveSel.size){ const g=doc.items.find(i=>i.id===selId&&i.t==='grid');
     if(g) for(const k of ['a','b']){ const sp=toS(g[k]); if(Math.hypot(sp.x-p.x,sp.y-p.y)<20){ const o=k==='a'?{...g.b}:{...g.a}; press.pan=false; press.gEnd={it:g,k,o,u:unit(o,g[k]),started:false}; return; } } }
-  if(tool==='select'&&roofEd&&!hitLabel(p.x,p.y)){ const r=doc.items.find(i=>i.id===roofEd&&i.t==='roof');
-    if(r){ let vi=-1,bd=20; r.pts.forEach((q,i)=>{ const sq=toS(q), d=Math.hypot(sq.x-p.x,sq.y-p.y); if(d<bd){ bd=d; vi=i; } }); if(vi>=0){ press.pan=false; press.roofPt={r,i:vi,started:false}; return; } } }
-  if(tool==='select'&&roofEd&&!hitLabel(p.x,p.y)){ const r=doc.items.find(i=>i.id===roofEd&&i.t==='roof'); const eh=r&&roofEaveHit(r,p);
+  if(tool==='select'&&roofEd){ const r=doc.items.find(i=>i.id===roofEd&&i.t==='roof'), ownL=(h=>h&&h.id===roofEd)(hitLabel(p.x,p.y));
+    if(r){ let vi=-1,bd=ownL?11:20; r.pts.forEach((q,i)=>{ const sq=toS(q), d=Math.hypot(sq.x-p.x,sq.y-p.y); if(d<bd){ bd=d; vi=i; } }); if(vi>=0){ press.pan=false; press.roofPt={r,i:vi,started:false,jb:roofJoinSet(r)}; return; }
+      const n=r.pts.length; let ei=-1; bd=ownL?11:18; for(let i=0;i<n;i++){ const A=r.pts[i],B=r.pts[(i+1)%n], m=toS({x:(A.x+B.x)/2,y:(A.y+B.y)/2}), d=Math.hypot(m.x-p.x,m.y-p.y); if(d<bd){ bd=d; ei=i; } }
+      if(ei>=0){ press.pan=false; press.roofEg={r,i:ei,P0:r.pts.map(q=>({...q})),started:false,jb:roofJoinSet(r)}; return; } } }
+  if(tool==='select'&&roofEd&&!((h=>h&&h.id===roofEd)(hitLabel(p.x,p.y)))){ const r=doc.items.find(i=>i.id===roofEd&&i.t==='roof'); const eh=r&&roofEaveHit(r,p);
     if(eh){ press.pan=false; press.roofOv={r,i:eh.i,A:eh.A,out:eh.out,snap:JSON.stringify(r),started:false}; return; } }
   if(tool==='split'&&!press.pan){ press.split=true; updSplit(p); redraw(); return; }
   if(tool==='merge'&&!press.pan){ press.noop=true; let best=null,bd=press.mouse?16:28; for(const q of mergePts()){ const t=toS(q),d=Math.hypot(t.x-p.x,t.y-p.y); if(d<bd){bd=d;best=q;} }
@@ -1470,9 +1481,10 @@ cv.addEventListener('pointerdown',e=>{
   if(tool==='select'){
     let lh=press.forceJoint?null:hitLabel(p.x,p.y); const h0=hit(p.x,p.y);
     // двойное касание по лестнице или крыше — режим правки (важнее синих цифр поверх них)
-    if(h0&&(h0.t==='stair'||h0.t==='roof')&&!(lh&&/^(rf|st)/.test(lh.kind||''))){ const now=Date.now();
+    const sameSpot=h0&&lastObjTap&&lastObjTap.id===h0.id&&lastObjTap.x!=null&&Math.hypot(lastObjTap.x-p.x,lastObjTap.y-p.y)<18&&Date.now()-lastObjTap.t<420;
+    if(h0&&(h0.t==='stair'||h0.t==='roof')&&(sameSpot||!(lh&&/^(rf|st)/.test(lh.kind||'')))){ const now=Date.now();
       if(lastObjTap&&lastObjTap.id===h0.id&&now-lastObjTap.t<420){ lastObjTap=null; press.noop=true; press.pan=false; if(h0.t==='stair') stairEdit(h0); else roofEdit(h0); return; }
-      lastObjTap={id:h0.id,t:now}; }
+      lastObjTap={id:h0.id,t:now,x:p.x,y:p.y}; }
     // окно, дверь или дымоход под пальцем важнее чужой подписи длины
     if(lh&&h0&&(isHole(h0)||h0.t==='chim')&&lh.id!==h0.id&&!/^rf/.test(lh.kind||'')) lh=null;
     if(lh&&(lh.kind==='td'||lh.one||((lh.kind==='hl'||lh.kind==='hr')&&lh.id===selId))){ press.label=lh; press.pan=false; if(lh.one){ const hh=hit(p.x,p.y), ids=selIds(); if(hh&&ids.has(hh.id)) press.sd=startObjDrag(ids,p,true); } return; }
@@ -1515,7 +1527,7 @@ cv.addEventListener('pointerdown',e=>{
   if(tool==='select'){
     const h=hit(p.x,p.y);
     if(h&&!isHole(h)&&h.t!=='chim'){
-      const key=h.g||h.id, now=Date.now(), dbl=lastObjTap&&lastObjTap.id===key&&now-lastObjTap.t<420; lastObjTap={id:key,t:now};
+      const key=h.g||h.id, now=Date.now(), dbl=lastObjTap&&lastObjTap.id===key&&now-lastObjTap.t<420; lastObjTap={id:key,t:now,x:p.x,y:p.y};
       if(dbl&&h.t==='circ'){ lastObjTap=null; const lh=labelHits.find(l=>l.id===h.id&&l.kind==='cd'); if(lh){ press.label=lh; press.pan=false; return; } }
       armLongPress(h); const ids=selIds();
       // у выделенной фигуры тянем одну грань — соседние грани фигуры подстраиваются
@@ -1577,7 +1589,14 @@ cv.addEventListener('pointermove',e=>{
       const t=((o.a.x-q.o.x)*v.y-(o.a.y-q.o.y)*v.x)/den; for(const c of [t,t+ext,t-ext]) if(Math.abs(c-s)<tol&&(best==null||Math.abs(c-s)<Math.abs(best-s))) best=c; }
     s=best!=null?best:Math.round(s/10)*10; s=Math.max(300,s); it[q.k]={x:r3(q.o.x+q.u.x*s),y:r3(q.o.y+q.u.y*s)}; liveSnap=best!=null?'cross':null; redraw(); return; }
   if(press.roofPt){ const q=press.roofPt; if(!press.moved) return; if(!q.started){ q.started=true; pushUndo(); }
-    const P=q.r.pts, prev=P[(q.i+P.length-1)%P.length], w=snapPoint(p.x,p.y,prev), old=P[q.i]; P[q.i]={x:r3(w.x),y:r3(w.y)}; if(roofCheck(q.r)) P[q.i]=old; redraw(); return; }
+    const P=q.r.pts, prev=P[(q.i+P.length-1)%P.length], w=snapPoint(p.x,p.y,prev,{exclude:new Set([q.r.id])}), old=P[q.i]; P[q.i]={x:r3(w.x),y:r3(w.y)}; if(roofCheck(q.r)) P[q.i]=old; redraw(); return; }
+  if(press.roofEg){ const q=press.roofEg; if(!press.moved) return; if(!q.started){ q.started=true; pushUndo(); }
+    const P0=q.P0, n=P0.length, i=q.i, j=(i+1)%n, A=P0[i], B=P0[j], u=unit(A,B), nv={x:-u.y,y:u.x}, m={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
+    const w=snapPoint(p.x,p.y,null,{exclude:new Set([q.r.id])}); let d=(w.x-m.x)*nv.x+(w.y-m.y)*nv.y; if(!liveSnap) d=Math.round(d/10)*10;
+    const A2={x:A.x+nv.x*d,y:A.y+nv.y*d}, B2={x:B.x+nv.x*d,y:B.y+nv.y*d};
+    const cut=(Pa,Pb,L0)=>{ const v={x:Pb.x-Pa.x,y:Pb.y-Pa.y}, den=v.x*u.y-v.y*u.x; if(Math.abs(den)<1e-6*Math.hypot(v.x,v.y)) return null; const t=((L0.x-Pa.x)*u.y-(L0.y-Pa.y)*u.x)/den; return {x:Pa.x+v.x*t,y:Pa.y+v.y*t}; };
+    const pa=cut(P0[(i+n-1)%n],A,A2)||A2, pb=cut(P0[(j+1)%n],B,B2)||B2; const old=q.r.pts; q.r.pts=P0.map(o=>({...o})); q.r.pts[i]={x:r3(pa.x),y:r3(pa.y)}; q.r.pts[j]={x:r3(pb.x),y:r3(pb.y)};
+    if(polyArea2(q.r.pts)===0||roofCheck(q.r)) q.r.pts=old; q.d=d; redraw(); return; }
   if(press.roofOv){ const q=press.roofOv, w=toW(p.x,p.y); if(!press.moved) return;
     if(!q.started){ q.started=true; pushUndo(); q.r.edges=q.r.edges&&q.r.edges.length===q.r.pts.length?q.r.edges:(roofPreset(q.r,q.r.type||'gable'),q.r.edges); }
     let ov=(w.x-q.A.x)*q.out.x+(w.y-q.A.y)*q.out.y; ov=Math.max(0,Math.min(3000,Math.round(ov/10)*10)); const old=q.r.edges[q.i].ov; q.r.edges[q.i].ov=ov;
@@ -1647,7 +1666,7 @@ cv.addEventListener('pointermove',e=>{
   else if(tool==='dim') dragB=snapPoint(p.x,p.y,null);
   redraw();
 });
-function endPtr(e,cancel){
+function endPtr(e,cancel){ if(copyHi&&press&&press.moved&&(press.sd||press.mv||press.objDrag||press.move)) copyHi=null;
   ptrs.delete(e.pointerId);
   if(gesture&&ptrs.size<2) gesture=null;
   if(ptrs.size===0) blockUntilUp=false;
@@ -1661,7 +1680,8 @@ function endPtr(e,cancel){
     redraw(); return; }
   if(pr.stEnd){ liveSnap=null; if(pr.stEnd.started){ persist(); toast('Лестница: '+stairGeom(pr.stEnd.it).n+' ступ., шаг '+[...new Set(stairGeom(pr.stEnd.it).tr.map(Math.round))].join('/')+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.gEnd){ liveSnap=null; if(pr.gEnd.started){ persist(); toast('Длина оси: '+fmt(lineLen(pr.gEnd.it))+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
-  if(pr.roofPt){ liveSnap=null; if(pr.roofPt.started){ persist(); toast('Контур крыши изменён'); } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.roofPt){ liveSnap=null; if(pr.roofPt.started){ pr.roofPt.r.src='manual'; persist(); toast('Контур крыши изменён'); roofJoinAsk(pr.roofPt.r,pr.roofPt.jb); } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.roofEg){ liveSnap=null; if(pr.roofEg.started){ pr.roofEg.r.src='manual'; persist(); toast('Край крыши сдвинут на '+fmt(Math.abs(pr.roofEg.d||0))); roofJoinAsk(pr.roofEg.r,pr.roofEg.jb); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.roofOv){ if(pr.roofOv.started){ persist(); toast('Свес грани '+(pr.roofOv.i+1)+': '+fmt(roofOv(pr.roofOv.r,pr.roofOv.i))+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.dimOff){ if(pr.dimOff.started){ persist(); } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.box){ if(!pr.moved){ selTap(pr.box.a.x,pr.box.a.y); return; }
@@ -1703,13 +1723,14 @@ function endPtr(e,cancel){
       else toast((Wt.key==='refL'?'Левый':'Правый')+' размер привязан к выбранной точке. Касание кружка — вернуть авто.');
       persist(); }
     panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.sd&&pr.sd.started&&pr.sd.rf&&!pr.sd.copy) setTimeout(()=>{ const r=doc.items.find(i=>i.id===pr.sd.rf.id); if(r) roofJoinAsk(r,pr.sd.jb); },0);
   if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.grp&&editGrp===pr.sd.grp) editGrp=null; if(!pr.sd.started&&!pr.moved&&selJoint) selJoint=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); if(pr.sd.copy) toast('Копия поставлена'); if(selMode==='mv'){ selMode='pick'; syncSelLbl(); } } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } else if(!pr.moved&&tool==='select'&&!pr.sd.copy&&moveSel.size<=1){ selTap(p.x,p.y); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.label&&!pr.moved){ openInline(pr.label); return; }
   if(pr.labelArm){ return; }
   if(pr.lp) clearTimeout(pr.lp);
   if(pr.focusOnUp){ chimDrag=null; setTimeout(focusChim,40); return; }
   if(pr.chimPlace){ const c=chimPrev||chimSnap({...chimDef(),rot:0,id:'_'},toW(pos(e).x,pos(e).y)); chimPrev=null; const d=chimDef();
-    pushUndo(); const o={id:uid(),t:'chim',p:{x:c.x,y:c.y},w:d.w,l:d.l,th:d.th,rot:0}; doc.items.push(o); selId=o.id; persist(); panelKey=''; syncPanel(); redraw();
+    pushUndo(); const o={id:uid(),t:'chim',p:{x:c.x,y:c.y},w:d.w,l:chimRound(d)?d.w:d.l,th:d.th,rot:0}; if(chimRound(d)) o.sh='round'; doc.items.push(o); selId=o.id; persist(); panelKey=''; syncPanel(); redraw();
     toast('Дымоход '+fmt(d.w)+'×'+fmt(d.l)+'. Тяните его целиком, двойное касание — размеры.'); return; }
   if(pr.chim){ chimDrag=null; snapMark=null; if(pr.chim.started) persist(); liveSnap=null; panelKey=''; syncPanel(); redraw(); return; }
   if(pr.hole){ holeDrag=null; if(pr.hole.started) persist(); else if(!pr.moved&&tool==='select'){ selId=pr.hole.prev; selTap(p.x,p.y); return; } panelKey=''; syncPanel(); redraw(); return; }
@@ -1957,10 +1978,10 @@ function dragSnap(grab,items,refs,dx,dy,ex){
   if(grab) sn=probeSnap([grab],dx,dy,ex);
   if(!sn){ const O=new Map(refs.map(r=>[r.it.id+r.k,r.o])); sn=probeSnap(probesOf(items,(it,k)=>O.get(it.id+k)||it[k]),dx,dy,ex); }
   if(sn) liveSnap=sn.k; return sn; }
-function startObjDrag(ids,p,attach){ const items=doc.items.filter(i=>ids.has(i.id)&&!isHole(i));
+function startObjDrag(ids,p,attach){ const items=doc.items.filter(i=>ids.has(i.id)&&!isHole(i)); const rf=items.length===1&&items[0].t==='roof'?items[0]:null;
   const g=grabPoint(items,p.x,p.y); const w=toW(p.x,p.y);
   snapMark=g?{p:g,k:'end'}:null;
-  return {ids,items,start:w,grab:g,attach,started:false}; }
+  return {ids,items,start:w,grab:g,attach,started:false,rf,jb:rf?roofJoinSet(rf):null}; }
 function stepObjDrag(D,p){
   if(!D.started){ D.started=true; pushUndo(); if(D.copy){ D.ids=cloneItems(D.ids); D.items=doc.items.filter(i=>D.ids.has(i.id)&&!isHole(i)); const f=doc.items.find(i=>D.ids.has(i.id)); selId=f?f.id:null; moveSel=D.ids.size>1?new Set(D.ids):new Set(); } if(D.grp){ editGrp=D.grp; selId=[...D.ids][0]; } for(const it of doc.items) if(D.ids.has(it.id)&&it.t==='dim'){ delete it.ra; delete it.rb; } D.refs=buildRefs(D.attach,D.ids); }
   const w=toW(p.x,p.y); let dx=w.x-D.start.x, dy=w.y-D.start.y; ({dx,dy}=constrain(dx,dy));
@@ -2056,16 +2077,19 @@ function copyObj(){
     let step=behind!=null?-behind:3000; if(ahead!=null&&ahead<=step) step=ahead/2;
     pushUndo(); const c=JSON.parse(JSON.stringify(A)); c.id=uid(); delete c.gs; for(const k of ['a','b']) c[k]={x:r3(A[k].x+n.x*step),y:r3(A[k].y+n.y*step)}; c.lab=gridNextLab(A.lab);
     doc.items.push(c); selId=c.id; persist(); panelKey=''; syncPanel(); redraw(); toast('Ось '+c.lab+' через '+fmt(step)+' мм'); return; }
-  const pr=probesOf(items,(it,k)=>it[k]); let x0=Infinity,x1=-Infinity; for(const q of pr){x0=Math.min(x0,q.x);x1=Math.max(x1,q.x);}
+  const pr=probesOf(items,(it,k)=>it[k]); for(const it of items) if(Array.isArray(it.pts)){ for(const q of it.pts) pr.push(q); if(it.t==='roof') try{ for(const q of roofPlan(it).g.O) pr.push(q); }catch(e){} }
+  let x0=Infinity,x1=-Infinity; for(const q of pr){x0=Math.min(x0,q.x);x1=Math.max(x1,q.x);}
   if(items.some(i=>i.t==='text')) x1=Math.max(x1,x0+1000);
-  const gr=doc.settings.grid||10, dx=Math.ceil(((x1-x0)+300)/gr)*gr; pushUndo();
+  if(!isFinite(x0)||!isFinite(x1)){ x0=0; x1=1000; } const gr=doc.settings.grid||10, dx=Math.ceil(((x1-x0)+300)/gr)*gr; pushUndo();
   const gmap={}, made=[]; let first=null;
   for(const it of items){ const c=JSON.parse(JSON.stringify(it)); c.id=uid(); if(c.g) c.g=gmap[c.g]||(gmap[c.g]=uid());
     for(const k of ['a','b','p','c']) if(c[k]) c[k]={x:r3(c[k].x+dx),y:c[k].y};
+    if(Array.isArray(c.pts)) c.pts=c.pts.map(q=>({x:r3(q.x+dx),y:q.y}));
+    if(c.t==='roof'){ c.src='manual'; delete c.seed; delete c.wk; delete c.pk; delete c.nj; }
     if(c.t==='dim'){ delete c.ra; delete c.rb; } doc.items.push(c); made.push(c); if(it.id===selId) first=c;
     for(const o of doc.items.filter(i=>isHole(i)&&i.wall===it.id)){ const hc=JSON.parse(JSON.stringify(o)); hc.id=uid(); hc.wall=c.id; doc.items.push(hc); } }
   for(const c of made) if(c.t==='dim') attachDim(c);
-  selId=(first||made[0]).id; editGrp=null; if(moveSel.size) moveSel=new Set(made.map(c=>c.id)); persist(); panelKey=''; syncPanel(); redraw();
+  selId=(first||made[0]).id; editGrp=null; if(moveSel.size) moveSel=new Set(made.map(c=>c.id)); copyHi=new Set(made.map(c=>c.id)); persist(); panelKey=''; syncPanel(); redraw();
   toast('Копия поставлена правее на '+fmt(dx)+' мм. Тяните её на место — прилипает вершинами; синие цифры можно ввести.');
 }
 // временные размеры (как в Revit): от выбранного объекта до ближайших стен и линий по X и Y
@@ -2175,7 +2199,7 @@ function moveBy(ang){
   persist(); redraw(); toast('Сдвинуто на '+fmt(L)+' мм');
 }
 function syncMoveInfo(){ const e=$('#mvInfo'); if(e) e.textContent=moveSel.size?('Выбрано: '+moveSel.size):'Ничего не выбрано'; updateHud(); }
-function focusChim(){ panelKey=''; syncPanel(); const i=$('#pCW'); if(i){ i.focus(); i.select(); } }
+function focusChim(){ const c=doc.items.find(i=>i.id===selId&&i.t==='chim'); if(c) detailSel=c.id; panelKey=''; syncPanel(); const i=$('#pCW'); if(i){ i.focus(); i.select(); } }
 function holeDef(t){ const D={win:{w:1200,h:1400,sill:900},door:{w:900,h:2100,sill:0}};
   if(!doc.settings[t]) doc.settings[t]=D[t]; return doc.settings[t]; }
 // захват вершины: своя вершина едет всегда, соседи — если соединены; Т-примыкания скользят
@@ -2449,7 +2473,7 @@ let CYC=null, CYCt=0, detailSel=null;
 function selTap(sx,sy){ const now=Date.now(), same=CYC&&Math.hypot(sx-CYC.x,sy-CYC.y)<16;
   if(same&&now-CYC.t<380&&selId){ clearTimeout(CYCt); CYC=null; enterDetail(); return; }
   const L=hitAll(sx,sy);
-  const apply=h=>{ selId=h?h.id:null; moveSel.clear(); selJoint=null; detailSel=null; if(!h||!h.g||h.g!==editGrp) editGrp=null; if(!h||h.id!==editLine) editLine=null; panelKey=''; syncPanel(); redraw(); };
+  const apply=h=>{ if(copyHi&&!(h&&copyHi.has(h.id))) copyHi=null; selId=h?h.id:null; moveSel.clear(); selJoint=null; detailSel=null; if(!h||!h.g||h.g!==editGrp) editGrp=null; if(!h||h.id!==editLine) editLine=null; panelKey=''; syncPanel(); redraw(); };
   const i=same&&selId?L.findIndex(o=>o.id===selId):-1;
   CYC={x:sx,y:sy,t:now}; clearTimeout(CYCt);
   if(i>=0&&L.length>1){ CYCt=setTimeout(()=>{ CYCt=0; apply(L[(i+1)%L.length]); },390); return; } // ждём: вдруг это двойное касание
@@ -2613,13 +2637,14 @@ const ICOPY=()=>IB('copyObj','copy','Копировать'), IDEL=()=>IB('del','
 function ldEndSeg(name,v){ const I={arrow:'<path d="M3 12h12"/><path d="M21 12l-7-4v8z" fill="currentColor"/>',dot:'<path d="M3 12h12"/><circle cx="18" cy="12" r="3.5" fill="currentColor"/>',none:'<path d="M3 12h18"/>'}, N={arrow:'Стрелка',dot:'Точка',none:'Без знака'};
   return `<div class="seg" role="group">${['arrow','dot','none'].map(k=>`<button class="sico" data-${name}="${k}" aria-pressed="${v===k}" title="${N[k]}" aria-label="${N[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${I[k]}</svg></button>`).join('')}</div>`; }
 // цвет линии (и заливки, и штриховка — у стены); пусто = цвет слоя по умолчанию
-function colorBtns(it,multi){ if(multi?detailSel!=='*':detailSel!==(it&&it.id)) return ''; const w=multi?true:isWall(it), cv=v=>v||'';
+function colorBtns(it,multi){ if(multi?detailSel!=='*':detailSel!==(it&&it.id)) return ''; const w=multi?true:(isWall(it)||it.t==='chim'), cv=v=>v||'';
   const sw=(id,val,def,t)=>`<label class="csw" title="${t}"><input type="color" id="${id}" value="${val||def}"><span style="background:${val||'transparent'}"></span><i>${t.split(' ')[0]}</i></label>`;
   return `${sw('pLc',multi?'':it.lc,'#e8e6e1','Линия')}${w?sw('pFc',multi?'':it.fc,'#3a4442','Заливка'):''}
     ${w?`<select class="inp" id="pHp" title="Штриховка" style="width:auto">${Object.entries(HATCH).map(([k,n])=>`<option value="${k}"${(multi?'none':(it.hp||'none'))===k?' selected':''}>${n}</option>`).join('')}</select>`:''}
     ${!w||multi?`<select class="inp" id="pLt" title="Тип линии" style="width:auto">${Object.entries(LT).map(([k,n])=>`<option value="${k}"${(multi?'solid':(it.lt||'solid'))===k?' selected':''}>${n}</option>`).join('')}</select>`:''}
     <select class="inp" id="pLw" title="Толщина линии, мм" style="width:auto"><option value="">толщ. ⟂</option>${LW.map(v=>`<option value="${v}"${!multi&&it.lw===v?' selected':''}>${v} мм</option>`).join('')}</select>
     ${!multi&&(it.lc||it.fc||(it.hp&&it.hp!=='none')||it.lt||it.lw)?'<button class="btn" data-act="colReset" title="Цвет, тип и толщина линии по умолчанию">↺</button>':''}`; }
+function chimShSeg(v,name){ return `<div class="seg" role="group">${[['rect','▭ Прямоуг.'],['round','◯ Круглый']].map(([k,n])=>`<button data-${name}="${k}" aria-pressed="${v===k}">${n}</button>`).join('')}</div>`; }
 function sideSeg(name,v){ return `<div class="seg" role="group">${[[1,'◂ Слева',SIDEI[1]],[0,'Ось',SIDEI[0]],[-1,'Справа ▸',SIDEI[-1]]].map(([k,n,ic])=>`<button data-${name}="${k}" aria-pressed="${v===k}" title="${n}" aria-label="${n}" class="sico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${ic}</svg></button>`).join('')}</div>`; }
 // мини-панель висит рядом с выделенным (под ним, а если места нет — над ним), не закрывая чертёж снизу
 // длинная панель — в два ряда: главное (удалить, копировать, размеры) в первом, остальное во втором; ряды листаются вбок
@@ -2711,17 +2736,19 @@ function syncPanel(){
       ${isW?'':'<button class="btn" data-act="hinge" title="Петли на другую сторону" aria-label="Петли на другую сторону">⇆</button><button class="btn" data-act="swing" title="Открывание внутрь или наружу" aria-label="Открывание внутрь или наружу">⇅</button>'}
       ${ICOPY()}${IDEL()}`;
   } else if((tool==='select'||tool==='hole'||tool==='move')&&sel&&sel.t==='chim'){
-    h=`<div class="title">Дымоход <b>${fmt(sel.w)}×${fmt(sel.l)} мм</b><span class="lbl">${sel.th>0?'стенка '+fmt(sel.th):'сплошной'}</span></div>
-      <div class="fld"><label for="pCW">Ширина (X)</label><input class="inp sm" id="pCW" inputmode="decimal" value="${r1(sel.w)}"></div>
-      <div class="fld"><label for="pCL">Длина (Y)</label><input class="inp sm" id="pCL" inputmode="decimal" value="${r1(sel.l)}"></div>
+    const rd=chimRound(sel);
+    h=`<div class="title">Дымоход <b>${rd?'Ø'+fmt(sel.w):fmt(sel.w)+'×'+fmt(sel.l)} мм</b><span class="lbl">${sel.th>0?'стенка '+fmt(sel.th):'сплошной'}</span></div>
+      ${chimShSeg(rd?'round':'rect','pcsh')}
+      <div class="fld"><label for="pCW">${rd?'Диаметр':'Ширина (X)'}</label><input class="inp sm" id="pCW" inputmode="decimal" value="${r1(sel.w)}"></div>
+      ${rd?'':`<div class="fld"><label for="pCL">Длина (Y)</label><input class="inp sm" id="pCL" inputmode="decimal" value="${r1(sel.l)}"></div>`}
       <div class="fld"><label for="pCT">Стенка</label><input class="inp sm" id="pCT" inputmode="decimal" value="${r1(sel.th||0)}"></div>
       ${IS3D?(()=>{ const li=doc.curLv, rt=chimRoofTop(sel), zb=chimBot(sel,li), zt=chimTop(sel,li);
         return (rt!=null?`<div class="fld"><label for="pCR" title="Над самой высокой точкой крыши в месте выхода">Над крышей</label><input class="inp sm" id="pCR" inputmode="decimal" value="${r1(sel.hr==null?600:sel.hr)}"></div>`
           :`<div class="fld"><label for="pCH">Высота</label><input class="inp sm" id="pCH" inputmode="decimal" value="${r1(zt-zb)}"></div>`)
           +`<div class="fld"><label for="pCZ" title="Отметка низа от ±0.000, мм">Низ от ±0</label><input class="inp sm" id="pCZ" inputmode="decimal" value="${r1(zb)}"></div><span class="lbl">верх ${fmtElev(zt)}</span>`; })():''}
-      ${IB('crot','rot','Повернуть на 90°')}
-      ${ICOPY()}${IDEL()}
-      <p class="hint">Тяните дымоход пальцем целиком. Двойное касание или удержание открывает размеры.</p>`;
+      ${rd?'':IB('crot','rot','Повернуть на 90°')}
+      ${ICOPY()}${IDEL()}${colorBtns(sel)}
+      <p class="hint">Тяните дымоход пальцем целиком. Двойное касание — размеры и графика (цвет, толщина, штриховка).</p>`;
   } else if(tool==='grid'){ const d=gridDef();
     h=`<div class="title">Оси</div>
       <div class="fld inl"><label for="gNV" title="Вертикальных осей">║</label><input class="inp xs" id="gNV" inputmode="numeric" value="${d.nV}"></div>
@@ -2739,7 +2766,7 @@ function syncPanel(){
   } else if(tool==='hole'&&holeType==='stair'){ const d=stairDef();
     const SI={str:'<rect x="7" y="3" width="10" height="18"/><path d="M7 7h10M7 11h10M7 15h10"/>',L:'<path d="M4 20V10h10V4h6v16z"/><path d="M4 14h10M14 8h6"/>',U:'<rect x="3" y="3" width="18" height="18"/><path d="M12 9v12M3 9h18M3 14h9M12 14h9"/>',path:'<path d="M4 20c2-8 6-12 16-16"/><path d="M5 15l3 1M8 10l3 2M12 7l2 3"/>'};
     const ST={str:'Прямая',L:'Угловая (3 точки)',U:'П-образная',path:'По траектории (✓ — готово)'};
-    h=`<div class="seg" role="group">${[['win','Окно'],['door','Дверь'],['chim','Дымоход'],['stair','Лестница']].map(([k,n])=>`<button data-htype="${k}" aria-pressed="${holeType===k}">${n}</button>`).join('')}</div>
+    h=`<div class="seg" role="group">${[['win','Окно'],['door','Дверь'],['stair','Лестница']].map(([k,n])=>`<button data-htype="${k}" aria-pressed="${holeType===k}">${n}</button>`).join('')}</div>
       <div class="seg" role="group">${['str','L','U','path'].map(k=>`<button class="sico" data-skind="${k}" aria-pressed="${stairKind===k}" title="${ST[k]}" aria-label="${ST[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">${SI[k]}</svg></button>`).join('')}</div>
       <div class="fld inl"><label for="dsT" title="Шаг ступени (проступь)">Шаг</label><input class="inp xs" id="dsT" inputmode="decimal" value="${d.tm?d.tread:''}" placeholder="авто" title="Пусто — авто: ступени поровну, шаг около 300 мм (290…350)"></div>
       <div class="fld inl"><label for="dsW" title="Ширина марша">Ширина</label><input class="inp xs" id="dsW" inputmode="decimal" value="${d.w}"></div>
@@ -2767,15 +2794,15 @@ function syncPanel(){
       ${IB('stRev','rot','Развернуть направление подъёма')}${ICOPY()}${IDEL()}`;
   } else if(tool==='hole'&&holeType==='chim'){
     const c=chimDef();
-    h=`<div class="fld"><span class="lbl">Что ставим</span><div class="seg" role="group">
-        <button data-htype="win" aria-pressed="false">Окно</button><button data-htype="door" aria-pressed="false">Дверь</button><button data-htype="chim" aria-pressed="true">Дымоход</button><button data-htype="stair" aria-pressed="false">Лестница</button><button data-act="imgImport" title="Вставить картинку-подложку">Картинка</button></div></div>
-      <div class="fld"><label for="cW">Ширина (X)</label><input class="inp sm" id="cW" inputmode="decimal" value="${c.w}"></div>
-      <div class="fld"><label for="cL">Длина (Y)</label><input class="inp sm" id="cL" inputmode="decimal" value="${c.l}"></div>
+    const rd=chimRound(c);
+    h=`<div class="title">Крыша · дымоход</div>${chimShSeg(rd?'round':'rect','csh')}
+      <div class="fld"><label for="cW">${rd?'Диаметр':'Ширина (X)'}</label><input class="inp sm" id="cW" inputmode="decimal" value="${c.w}"></div>
+      ${rd?'':`<div class="fld"><label for="cL">Длина (Y)</label><input class="inp sm" id="cL" inputmode="decimal" value="${c.l}"></div>`}
       <div class="fld"><label for="cT">Стенка</label><input class="inp sm" id="cT" inputmode="decimal" value="${c.th}"></div>`;
   } else if(tool==='hole'){
     const d=holeDef(holeType);
     h=`<div class="fld"><span class="lbl">Что ставим</span><div class="seg" role="group">
-        <button data-htype="win" aria-pressed="${holeType==='win'}">Окно</button><button data-htype="door" aria-pressed="${holeType==='door'}">Дверь</button><button data-htype="chim" aria-pressed="${holeType==='chim'}">Дымоход</button><button data-htype="stair" aria-pressed="false">Лестница</button><button data-act="imgImport" title="Вставить картинку-подложку (план, фото обмера) и задать масштаб">Картинка</button></div></div>
+        <button data-htype="win" aria-pressed="${holeType==='win'}">Окно</button><button data-htype="door" aria-pressed="${holeType==='door'}">Дверь</button><button data-htype="stair" aria-pressed="false">Лестница</button><button data-act="imgImport" title="Вставить картинку-подложку (план, фото обмера) и задать масштаб">Картинка</button></div></div>
       <div class="fld"><label for="hW">Ширина, мм</label><input class="inp sm" id="hW" inputmode="decimal" value="${d.w}"></div>
       <div class="fld"><label for="hH">Высота, мм</label><input class="inp sm" id="hH" inputmode="decimal" value="${d.h}"></div>
       <div class="fld"><label for="hS">${holeType==='win'?'Подоконник':'Низ'}, мм</label><input class="inp sm" id="hS" inputmode="decimal" value="${d.sill}"></div>
@@ -2849,6 +2876,8 @@ panel.addEventListener('click',e=>{
     panel.querySelectorAll('[data-wside]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));return;}
   if(b.dataset.pgn!==undefined){ polyN=+b.dataset.pgn; const i=$('#pgN'); if(i) i.value=polyN; toast('Граней: '+polyN); return; }
   if(b.dataset.dkind!==undefined){drawKind=lineKind=b.dataset.dkind; chain.pts=[];chain.ids=[]; live=null; panelKey=''; syncPanel(); redraw(); return;}
+  if(b.dataset.csh){ const c=chimDef(); if(b.dataset.csh==='round'){ c.sh='round'; c.l=c.w; } else delete c.sh; persist(); panelKey=''; syncPanel(); redraw(); return; }
+  if(b.dataset.pcsh&&sel&&sel.t==='chim'){ pushUndo(); if(b.dataset.pcsh==='round'){ sel.sh='round'; sel.l=sel.w; sel.rot=0; } else delete sel.sh; persist(); panelKey=''; syncPanel(); redraw(); return; }
   if(b.dataset.act==='crot'&&sel&&sel.t==='chim'){pushUndo();sel.rot=((sel.rot||0)+90)%180;persist();panelKey='';syncPanel();redraw();return;}
   if(b.dataset.htype!==undefined){holeType=b.dataset.htype;holeGhost=null;stairDraw=null;stairLive=null;panelKey='';syncPanel();redraw();return;}
   if(b.dataset.skind!==undefined){stairKind=b.dataset.skind;stairDraw=null;stairLive=null;panelKey='';syncPanel();redraw();return;}
@@ -2942,10 +2971,10 @@ function applyProp(t){
   if(t.id==='pgS'){ const v=parseNum(t.value); polyS=v>0?v:0; return; }
   if(t.id==='shW'||t.id==='shH'||t.id==='shD'){ const v=parseNum(t.value), x=v>0?v:0; if(t.id==='shW') shW=x; else if(t.id==='shH') shH=x; else shD=x; return; }
   if(t.id==='cW'||t.id==='cL'||t.id==='cT'){ const v=parseNum(t.value); if(!(v>=0)) return; const c=chimDef();
-    if(t.id==='cW'&&v>0) c.w=v; else if(t.id==='cL'&&v>0) c.l=v; else if(t.id==='cT') c.th=v; persist(); redraw(); return; }
+    if(t.id==='cW'&&v>0){ c.w=v; if(chimRound(c)) c.l=v; } else if(t.id==='cL'&&v>0) c.l=v; else if(t.id==='cT') c.th=v; persist(); redraw(); return; }
   { const sc=doc.items.find(i=>i.id===selId);
     if(sc&&sc.t==='chim'&&/^pC[WLT]$/.test(t.id)){ const v=parseNum(t.value); if(!(v>=0)) return;
-      pushUndo(); if(t.id==='pCW'&&v>0) sc.w=v; else if(t.id==='pCL'&&v>0) sc.l=v; else if(t.id==='pCT') sc.th=v;
+      pushUndo(); if(t.id==='pCW'&&v>0){ sc.w=v; if(chimRound(sc)) sc.l=v; } else if(t.id==='pCL'&&v>0) sc.l=v; else if(t.id==='pCT') sc.th=v;
       persist(); panelKey=''; syncPanel(); redraw(); return; } }
   if(t.id==='hW'||t.id==='hH'||t.id==='hS'){ const v=parseNum(t.value); if(!(v>=0)) return; const d=holeDef(holeType);
     if(t.id==='hW'&&v>0) d.w=v; else if(t.id==='hH'&&v>0) d.h=v; else if(t.id==='hS') d.sill=v; persist(); return; }
@@ -3047,8 +3076,9 @@ const MICO={flat:'<path d="M3 10h18v3H3z"/><path d="M5 13v7M19 13v7"/>',shed:'<p
   split:'<path d="M3 12h7M14 12h7"/><path d="M10 7v10M14 7v10" stroke-width="1.6"/>',
   merge:'<path d="M3 17 12 8l9 9"/><circle cx="12" cy="8" r="2.4"/><path d="M9.5 3.5l5 5M14.5 3.5l-5 5" stroke-width="1.5"/>',
   mirrorc:'<path d="M12 2v20" stroke-dasharray="3 2"/><path d="M9 6 3 18h6z" fill="currentColor"/><path d="M15 6l6 12h-6z"/>',
+  chrect:'<rect x="6" y="4" width="12" height="16"/><rect x="9" y="7" width="6" height="10"/>',chround:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/>',
   mirrorm:'<path d="M12 2v20" stroke-dasharray="3 2"/><path d="M9 6 3 18h6z" stroke-dasharray="2 1.6"/><path d="M15 6l6 12h-6z" fill="currentColor"/>'};
-const MTIP={flat:'Плоская крыша',shed:'Односкатная',gable:'Двускатная',hip:'Вальмовая (четырёхскатная)',pyr:'Пирамидальная (шатровая)',grid:'Координационные оси (А, Б, В… и 1, 2, 3…)',tplain:'Обычный текст',tleader:'Текст с выноской',win:'Рамка: только целиком внутри',cross:'Рамка: всё, что задевает',rot:'Вращать',pick:'Выбор и перемещение',copy:'Копировать перетаскиванием',mirrorc:'Зеркало (копия)',mirrorm:'Зеркало (перенести)',aux:'Конструкционная линия',chain:'Цепочка',seg:'Отрезок',rect:'Прямоугольник',arc:'Дуга по 3 точкам',circ:'Круг',poly:'Многоугольник',split:'Разделить',merge:'Убрать вершину'};
+const MTIP={chrect:'Дымоход прямоугольный',chround:'Дымоход круглый',flat:'Плоская крыша',shed:'Односкатная',gable:'Двускатная',hip:'Вальмовая (четырёхскатная)',pyr:'Пирамидальная (шатровая)',grid:'Координационные оси (А, Б, В… и 1, 2, 3…)',tplain:'Обычный текст',tleader:'Текст с выноской',win:'Рамка: только целиком внутри',cross:'Рамка: всё, что задевает',rot:'Вращать',pick:'Выбор и перемещение',copy:'Копировать перетаскиванием',mirrorc:'Зеркало (копия)',mirrorm:'Зеркало (перенести)',aux:'Конструкционная линия',chain:'Цепочка',seg:'Отрезок',rect:'Прямоугольник',arc:'Дуга по 3 точкам',circ:'Круг',poly:'Многоугольник',split:'Разделить',merge:'Убрать вершину'};
 function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
   const mb=(k,cur,attr)=>`<button data-${attr}="${k}" aria-pressed="${k===cur}" title="${MTIP[k]||MODEN[k]}" aria-label="${MTIP[k]||MODEN[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MICO[k]}</svg></button>`;
   if(t==='line'){ h=`<div class="mh">Стены</div><div class="mg">${['chain','seg','rect','arc'].map(k=>mb(k,wallMode,'wm')).join('')}</div>
@@ -3063,7 +3093,8 @@ function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
   else if(t==='roof'){ const d=roofDef(); h=`<div class="mh">Крыша</div><div class="mr"><div class="seg" role="group">${[['pick','Касание внутри стен'],['sketch','Контур линиями']].map(([k,n])=>`<button data-rfm="${k}" aria-pressed="${(d.mode||'pick')===k}">${n}</button>`).join('')}</div></div><div class="mg">${['flat','shed','gable','hip','pyr'].map(k=>mb(k,d.type,'rft')).join('')}</div>
       <div class="mr"><div class="fld"><label for="rfDA">Уклон, °</label><input class="inp sm" id="rfDA" inputmode="decimal" value="${d.ang}"></div>
       <div class="fld"><label for="rfDO">Свес, мм</label><input class="inp sm" id="rfDO" inputmode="decimal" value="${d.ov}"></div>
-      <div class="fld"><label for="rfDT">Толщина</label><input class="inp sm" id="rfDT" inputmode="decimal" value="${d.th}"></div></div>`; }
+      <div class="fld"><label for="rfDT">Толщина</label><input class="inp sm" id="rfDT" inputmode="decimal" value="${d.th}"></div></div>
+      <div class="mh">Дымоход</div><div class="mg">${mb('chrect',tool==='hole'&&holeType==='chim'&&!chimRound(chimDef())?'chrect':'','chs')}${mb('chround',tool==='hole'&&holeType==='chim'&&chimRound(chimDef())?'chround':'','chs')}</div>`; }
   else if(t==='select'){ h=`<div class="mh">Выбор</div><div class="mg">${['pick','win','cross','copy'].map(k=>mb(k,selMode,'sm')).join('')}</div>`; }
   else if(t==='text'){ h=`<div class="mh">Текст</div><div class="mg">${['tplain','tleader'].map(k=>mb(k,'t'+textMode,'tm')).join('')}</div>
       <div class="mr"><div class="fld"><span class="lbl">Конец выноски</span>${ldEndSeg('ldend',doc.settings.ldEnd||'arrow')}</div></div>`; }
@@ -3078,6 +3109,7 @@ $('#toolMenu').addEventListener('click',e=>{ const b=e.target.closest('button');
   if(b.dataset.tm){ textMode=b.dataset.tm==='tleader'?'leader':'plain'; ldPick=null; pendingText=null; setTool('text'); closeToolMenu(); return; }
   if(b.dataset.ldend){ doc.settings.ldEnd=b.dataset.ldend; persist(); $('#toolMenu').querySelectorAll('[data-ldend]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
   if(b.dataset.sm){ selMode=b.dataset.sm; setTool('select'); closeToolMenu(); rotC=null; return; }
+  if(b.dataset.chs){ const c=chimDef(); if(b.dataset.chs==='chround'){ c.sh='round'; c.l=c.w; } else delete c.sh; holeType='chim'; persist(); setTool('hole'); closeToolMenu(); panelKey=''; syncPanel(); toast('Дымоход '+(c.sh?'круглый Ø'+fmt(c.w):fmt(c.w)+'×'+fmt(c.l))+': коснитесь места на плане'); return; }
   if(b.dataset.rfm){ roofDef().mode=b.dataset.rfm; persist(); setTool('roof'); closeToolMenu(); toast(b.dataset.rfm==='sketch'?'Ставьте углы контура крыши; замкнуть — первая точка или ✓':'Коснитесь внутри контура стен'); return; }
   if(b.dataset.rft){ roofDef().type=b.dataset.rft; persist(); setTool('roof'); closeToolMenu(); return; }
   if(b.dataset.em==='rot'){ if(tool!=='select') setTool('select'); selMode='rot'; rotC=null; syncSelLbl(); closeToolMenu(); panelKey=''; syncPanel(); redraw(); if(!selIds().size) toast('Сначала выделите объекты, затем Изменить → Вращать',true); return; }
@@ -3269,7 +3301,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.21':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.22':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3445,9 +3477,10 @@ function buildDXF0(d,all,rec){
             for(const [a2,b2] of R2.ridges) LINE('ROOF',a2,b2);
             for(const ar of R2.arrows){ const L2=th*3, e2={x:ar.c.x+ar.d.x*L2,y:ar.c.y+ar.d.y*L2}; LINE('ROOF',ar.c,e2); TEXT('ROOF',{x:ar.c.x-ar.d.x*th,y:ar.c.y-ar.d.y*th},th*.7,(Math.round(ar.a*10)/10)+'°',0); } }catch(e){}
         } else if(it.t==='chim'){
+          if(chimRound(it)){ CIRC('CHIMNEY',it.p,it.w/2); if(chimHasIn(it)) CIRC('CHIMNEY',it.p,it.w/2-it.th); } else {
           const O=chimCorners(it); for(let q=0;q<4;q++) LINE('CHIMNEY',O[q],O[(q+1)%4]);
-          if(it.th>0&&it.th*2<Math.min(it.w,it.l)){ const I=chimCorners(it,it.th); for(let q=0;q<4;q++) LINE('CHIMNEY',I[q],I[(q+1)%4]); LINE('CHIMNEY',I[0],I[2]); LINE('CHIMNEY',I[1],I[3]); }
-          TEXT('CHIMNEY',{x:it.p.x,y:it.p.y-it.l/2-th*.9},th*.7,'ДЫМ '+fmt(it.w)+'x'+fmt(it.l),0);
+          if(it.th>0&&it.th*2<Math.min(it.w,it.l)){ const I=chimCorners(it,it.th); for(let q=0;q<4;q++) LINE('CHIMNEY',I[q],I[(q+1)%4]); LINE('CHIMNEY',I[0],I[2]); LINE('CHIMNEY',I[1],I[3]); } }
+          TEXT('CHIMNEY',{x:it.p.x,y:it.p.y-it.l/2-th*.9},th*.7,'ДЫМ '+(chimRound(it)?'%%c'+fmt(it.w):fmt(it.w)+'x'+fmt(it.l)),0);
         } else if(isHole(it)){
           const sy=holeSymbol(it); if(!sy) continue; const L=it.t==='win'?'WINDOWS':'DOORS';
           for(const [a,b2] of sy.lines) LINE(L,a,b2);
@@ -3820,6 +3853,15 @@ function roofJoinSpots(r,li){ const L=doc.levels[li]; if(!L) return []; const ou
     if(!p){ const I=gA.O.filter(q=>inPoly(gB.O,q)).concat(gB.O.filter(q=>inPoly(gA.O,q))); if(!I.length) continue; p=I.reduce((m,q)=>({x:m.x+q.x/I.length,y:m.y+q.y/I.length}),{x:0,y:0}); }
     out.push({B,p,on:roofJoined(r,B)}); }
   return out; }
+function roofJoinSet(r){ try{ return new Set(roofJoinSpots(r,doc.curLv).map(J=>J.B.id)); }catch(e){ return new Set(); } }
+// 5.3: крышу подвинули вплотную к другой — спросить, объединять ли геометрию
+function roofJoinAsk(r,before){ if(!IS3D||!r) return; let S; try{ S=roofJoinSpots(r,doc.curLv); }catch(e){ return; } const nw=S.filter(J=>!(before&&before.has(J.B.id))); if(!nw.length) return; const B=nw[0].B;
+  askSheet('Присоединить крышу к другой крыше как единую геометрию?','Крыши касаются. «Да» — врезать друг в друга с ендовами, «Нет» — оставить отдельными. Позже: значок ⊂⊃ в месте стыка.',[['no','Нет'],['yes','Да, соединить',1]],k=>{
+    pushUndo(); if(k==='yes'){ r.nj=(r.nj||[]).filter(x=>x!==B.id); B.nj=(B.nj||[]).filter(x=>x!==r.id); if(!r.nj.length) delete r.nj; if(!B.nj.length) delete B.nj; toast('Крыши соединены',true); }
+    else { r.nj=[...new Set([...(r.nj||[]),B.id])]; toast('Крыши остаются отдельными',true); } persist(); redraw(); }); }
+function askSheet(title,text,btns,cb){ let el=$('#askSh'); if(!el){ el=document.createElement('div'); el.id='askSh'; el.className='asksh'; document.body.appendChild(el); }
+  el.innerHTML=`<div class="askb" role="dialog" aria-modal="true"><b>${esc(title)}</b><p>${esc(text)}</p><div class="askr">${btns.map(([k,t,go])=>`<button class="btn${go?' go':''}" data-q="${k}">${esc(t)}</button>`).join('')}</div></div>`;
+  el.hidden=false; el.onclick=e=>{ const b=e.target.closest('[data-q]'); if(!b) return; el.hidden=true; cb(b.dataset.q); }; }
 function drawRoofJoinIcons(r){ roofJoinHits=[]; if(tool!=='select') return; for(const J of roofJoinSpots(r,doc.curLv)){ const c=toS(J.p);
     roofJoinHits.push({a:r.id,b:J.B.id,x:c.x,y:c.y,on:J.on}); ctx.save(); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(c.x,c.y,13,0,Math.PI*2);
     ctx.fillStyle=J.on?C.sel:C.surface; ctx.fill(); ctx.strokeStyle=J.on?C.sel:C.dim; ctx.stroke();
@@ -3937,7 +3979,7 @@ function roofChange(r,fn){ const snap=JSON.stringify(r); pushUndo(); fn(r); cons
   persist(); panelKey=''; syncPanel(); redraw(); return true; }
 function editBegin(){ if(!barEdit){ barEdit={snap:JSON.stringify(doc.items),und:undoS.length}; syncModeBtns(); } }
 function roofEdit(r){ if(inlineH) closeInline(false); selId=r.id; moveSel.clear(); selJoint=null; roofEdge=null; roofEd=null; panelKey=''; syncPanel(); roofEd=r.id; editBegin();
-  panelKey=''; syncPanel(); redraw(); toast('Изменить контур: тяните углы (квадраты) или край свеса, цифры — свес. ✓ — готово, ✕ — отмена'); }
+  panelKey=''; syncPanel(); redraw(); toast('Контур: тяните углы (квадраты) и стороны (ромбы) — с привязками и Орто; край свеса, цифры — свес. ✓ — готово'); }
 function roofEaveHit(r,p){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1; let best=null, bd=18;
   for(let i=0;i<n;i++){ const A=P[i],B=P[(i+1)%n], u=unit(A,B), out={x:u.y*sg,y:-u.x*sg}, ov=roofOv(r,i), d=segDist(p.x,p.y,toS({x:A.x+out.x*ov,y:A.y+out.y*ov}),toS({x:B.x+out.x*ov,y:B.y+out.y*ov}));
     if(d<bd){ bd=d; best={i,A,out}; } } return best; }
@@ -3959,7 +4001,9 @@ function drawRoof(it,sel){ let R; try{ R=roofPlan(it); }catch(e){ return; } cons
       const so=toS({x:0,y:0}), od={x:toS(out).x-so.x,y:toS(out).y-so.y}, ol=Math.hypot(od.x,od.y)||1, dd=Math.hypot(se.x-sm.x,se.y-sm.y);
       const lx=dd>44?(sm.x+se.x)/2:se.x+od.x/ol*16, ly=dd>44?(sm.y+se.y)/2:se.y+od.y/ol*16;
       tmpBox(fmt(ov),lx,ly,0); labelHits.push({id:it.id,kind:'rfO',i,one:true,w:toW(lx,ly),x:lx,y:ly,val:ov}); }
-    ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; for(const q of P){ const sq=toS(q); ctx.beginPath(); ctx.rect(sq.x-6,sq.y-6,12,12); ctx.fill(); ctx.stroke(); } ctx.restore(); }
+    ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; for(const q of P){ const sq=toS(q); ctx.beginPath(); ctx.rect(sq.x-6,sq.y-6,12,12); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle=C.sel; for(let i=0;i<n;i++){ const A=P[i],B=P[(i+1)%n], m=toS({x:(A.x+B.x)/2,y:(A.y+B.y)/2}); ctx.beginPath(); ctx.moveTo(m.x,m.y-7); ctx.lineTo(m.x+7,m.y); ctx.lineTo(m.x,m.y+7); ctx.lineTo(m.x-7,m.y); ctx.closePath(); ctx.fill(); }
+    ctx.restore(); }
   if(sel){ for(const b of roofBadges(it)){ const on=g.E[b.i]&&g.E[b.i].s, cur=!!(roofEdge&&roofEdge.id===it.id&&roofEdge.i===b.i); ctx.beginPath(); ctx.arc(b.s.x,b.s.y,cur?13:11,0,Math.PI*2); ctx.fillStyle=on?C.sel:C.surface; ctx.fill(); ctx.lineWidth=cur?3:1.5; ctx.strokeStyle=C.sel; ctx.stroke();
       ctx.fillStyle=on?'#fff':C.sel; ctx.font='700 11px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(on?'⟋':'—',b.s.x,b.s.y+0.5); } }
   ctx.restore(); }
@@ -4046,7 +4090,7 @@ function roofTap(p){ const sel=doc.items.find(i=>i.id===selId); if(!sel||sel.t!=
 function chimRoofTop(it){ let top=null;
   doc.levels.forEach((Lv,k)=>{ for(const r of Lv.items){ if(r.t!=='roof') continue; try{ const g=roofGeom(r,k), O=g.O; let ins=false; const w=it.p;
     for(let i=0,j=O.length-1;i<O.length;j=i++){ if(((O[i].y>w.y)!==(O[j].y>w.y))&&(w.x<(O[j].x-O[i].x)*(w.y-O[i].y)/(O[j].y-O[i].y)+O[i].x)) ins=!ins; }
-    if(ins){ let h=-1e18; for(const q of chimCorners(it)) h=Math.max(h,g.H(q)+g.th); top=top==null?h:Math.max(top,h); } }catch(e){} } });
+    if(ins){ let h=-1e18; for(const q of chimOut(it)) h=Math.max(h,g.H(q)+g.th); top=top==null?h:Math.max(top,h); } }catch(e){} } });
   return top; }
 function chimBot(it,li){ return it.z0!=null?it.z0:doc.levels[li].elev; }
 function chimTop(it,li){ const rt=chimRoofTop(it); if(rt!=null) return Math.round(rt+(it.hr==null?600:it.hr)); return chimBot(it,li)+(it.hgt>0?it.hgt:lvHeight(li)+1500); }
@@ -4061,8 +4105,8 @@ function buildModel(){ const M=Mesh(), save=doc.curLv; geoMemoOn();
             M.cur=it.id; continue; }
           extrude(M,wallFootprint(it,pc.sa,pc.sb),pc.za,pc.zb,fc,'wall',false); }
         wallRoofMesh(M,it,li,fc); wallLines(M,it,li); }
-      else if(it.t==='chim'){ const z0=chimBot(it,li), z1=chimTop(it,li), O=chimCorners(it), col=rgbOf(it.fc,'#8c4a3a');
-        if(it.th>0&&it.th*2<Math.min(it.w,it.l)){ const I=chimCorners(it,it.th); for(let k=0;k<4;k++) extrude(M,[O[k],O[(k+1)%4],I[(k+1)%4],I[k]],z0,z1,col,'chim'); }
+      else if(it.t==='chim'){ const z0=chimBot(it,li), z1=chimTop(it,li), O=chimOut(it), col=rgbOf(it.fc,'#8c4a3a'), n=O.length;
+        if(chimHasIn(it)){ const I=chimOut(it,it.th); for(let k=0;k<n;k++) extrude(M,[O[k],O[(k+1)%n],I[(k+1)%n],I[k]],z0,z1,col,'chim'); }
         else extrude(M,O,z0,z1,col,'chim'); }
       else if(it.t==='stair'){ stairMesh(M,it,L.elev,lvHeight(li)); }
       else if(it.t==='roof'){ roofMeshTagged(M,it,li); } }
@@ -4435,8 +4479,8 @@ function buildIFC0(){ const L=[]; let id=0; const E=s=>{ id++; L.push('#'+id+'='
           const fill=h.t==='win'?E(`IFCWINDOW('${ifcGuid()}',$,${str('Окно '+fmt(h.width)+'×'+fmt(h.height))},$,$,${plc(sp,0)},${extr(thinStrip(it,g.s0,g.s1,60),hs,hh)},$,${n(hh)},${n(g.w)},.WINDOW.,$,$)`)
             :E(`IFCDOOR('${ifcGuid()}',$,${str('Дверь '+fmt(h.width)+'×'+fmt(h.height))},$,$,${plc(sp,0)},${extr(thinStrip(it,g.s0,g.s1,50),hs,hh)},$,${n(hh)},${n(g.w)},.DOOR.,$,$)`);
           E(`IFCRELFILLSELEMENT('${ifcGuid()}',$,$,$,${op},${fill})`); inS.push(fill); } }
-      else if(it.t==='chim'){ const M=Mesh(); const z0=chimBot(it,li)-Lv.elev, z1=chimTop(it,li)-Lv.elev, O=chimCorners(it);
-        if(it.th>0&&it.th*2<Math.min(it.w,it.l)){ const I=chimCorners(it,it.th); for(let k=0;k<4;k++) extrude(M,[O[k],O[(k+1)%4],I[(k+1)%4],I[k]],z0,z1,[1,1,1]); } else extrude(M,O,z0,z1,[1,1,1]);
+      else if(it.t==='chim'){ const M=Mesh(); const z0=chimBot(it,li)-Lv.elev, z1=chimTop(it,li)-Lv.elev, O=chimOut(it), n=O.length;
+        if(chimHasIn(it)){ const I=chimOut(it,it.th); for(let k=0;k<n;k++) extrude(M,[O[k],O[(k+1)%n],I[(k+1)%n],I[k]],z0,z1,[1,1,1]); } else extrude(M,O,z0,z1,[1,1,1]);
         const r=tess(M); if(r) inS.push(E(`IFCCHIMNEY('${ifcGuid()}',$,${str('Дымоход')},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`)); }
       else if(it.t==='stair'){ const M=Mesh(); stairMesh(M,it,0,lvHeight(li)); const r=tess(M); if(r) inS.push(E(`IFCSTAIR('${ifcGuid()}',$,${str('Лестница '+stairGeom(it).n+' ступ.')},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`)); }
       else if(it.t==='roof'){ const M=Mesh(); M.tri=(RU.tri.filter(t=>t.rid===it.id)).map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]])})); for(const t of M.tri) for(const p of t.v) p[2]-=Lv.elev; const r=tess(M); if(r) inS.push(E(`IFCROOF('${ifcGuid()}',$,${str('Крыша: '+(ROOFT[it.type]||''))},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`)); } }
