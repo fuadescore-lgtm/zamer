@@ -76,6 +76,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #gpMap .v3bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--rule)}#gpMap .v3bar .sp{flex:1}
 #gpMap [data-g][aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 #btnMe[aria-pressed="true"]{color:var(--sel)}
+#kp{position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--surface);border-top:1px solid var(--rule);box-shadow:0 -6px 20px var(--shadow);padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);gap:6px;touch-action:manipulation;user-select:none}
+#kp[hidden]{display:none}
+#kp button{height:46px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font:600 21px var(--f-num);display:grid;place-items:center}
+#kp button:active,#kp button.dn{background:var(--sel);color:#fff;border-color:var(--sel)}
+#kp .ok{background:var(--sel);color:#fff;border-color:var(--sel);grid-column:span 2}#kp .z{grid-column:span 2}
+#kp .fn{font-size:18px;color:var(--muted)}
+/* отклик кнопок: лёгкая подсветка при нажатии, без тяжёлых анимаций */
+button{-webkit-tap-highlight-color:transparent}
+.btn:active,.ibn:active,.ib:active,#toolMenu button:active,.seg button:active,.lv:active,.tb:active,[data-tool]:active{filter:brightness(.88);transform:scale(.97)}
+.btn,.ibn,.ib,#toolMenu button,.seg button,[data-tool]{transition:filter .08s,transform .08s,background-color .12s}
+#toolMenu button[aria-pressed="true"],.seg button[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--sel)}
 #btnDel{color:#fff!important;background:#d64545!important;border-color:#d64545!important}#btnDel[hidden]{display:none}
 #hud span.live{background:var(--tape);border-color:transparent;color:var(--tape-ink);font-family:var(--f-num);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;padding:4px 12px}
 #toast{position:absolute;bottom:90px;pointer-events:none;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:color-mix(in srgb,var(--ink) 86%,transparent);color:var(--paper);padding:5px 12px;border-radius:999px;font-size:13px;box-shadow:0 6px 20px var(--shadow);transition:opacity .2s}
@@ -236,6 +247,9 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
     <button class="ib fb danger" id="btnDel" aria-label="Удалить выбранное" title="Удалить выбранное" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>
     </button>
+    <button class="ib fb cxb" id="btnCancel" aria-label="Отмена — убрать незаконченное и выйти" title="Отмена" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
     <button class="ib fb" id="btnHelp" aria-label="Подсказка" title="Подсказка к инструменту">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17.2h.01"/></svg>
     </button>
@@ -247,9 +261,6 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
     </button>
     <button class="ib fb okb" id="btnOk" aria-label="Готово — выйти из режима" title="Готово" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-    </button>
-    <button class="ib fb cxb" id="btnCancel" aria-label="Отмена — убрать незаконченное и выйти" title="Отмена" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
     </div>
     <div id="dynIn" class="dyn" role="group" aria-label="Ввод длины и угла" hidden>
@@ -424,6 +435,7 @@ let view={cx:0,cy:0,scale:.1};
 let W=0,H=0,DPR=1;
 let chain={pts:[],ids:[]};
 let live=null;          // current preview point (world) for line tool
+const KP={touch:matchMedia('(pointer: coarse)').matches||('ontouchstart' in window), el:null, inp:null, t:0};
 let holeMv=null, lastHoleTap=null, dimTapA=null, helpUntil=0, helpT=0, liveSnap=null;      // 'end' | 'align' | null
 let alignGuide=null;
 let dragA=null, dragB=null; // rect/dim draft
@@ -958,7 +970,7 @@ const LW=[0.13,0.18,0.25,0.35,0.5,0.7,1.0], LT={solid:'Сплошная',dash:'�
 const lwPx=(it,def)=>it.lw?1+it.lw*3.5:def;
 function ltDash(it){ const k=Math.max(1,lwPx(it,1.5)/1.5); return it.lt==='dash'?[10*k,6*k]:it.lt==='dot'?[1.5*k,4*k]:it.lt==='dashdot'?[12*k,4*k,2*k,4*k]:[]; }
 cv.addEventListener('pointerdown',()=>{ const ae=document.activeElement; if(ae&&panel.contains(ae)&&ae.matches('input,select')) ae.blur(); },{capture:true});
-function drawGeoUI(){ try{ syncDelBtn(); } catch(e){} try{ ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); const sr=IS3D&&selId&&!moveSel.size?doc.items.find(i=>i.id===selId&&i.t==='roof'):null; if(sr) drawRoofJoinIcons(sr); else roofJoinHits=[]; ctx.restore(); }catch(e){ console.warn(e); } try{ if(typeof drawMe!=='function') return; ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); drawMe(); drawNorthSym(); ctx.restore(); }catch(e){ console.warn(e); } }
+function drawGeoUI(){ try{ syncDelBtn(); syncModeBtns(); } catch(e){} try{ ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); const sr=IS3D&&selId&&!moveSel.size?doc.items.find(i=>i.id===selId&&i.t==='roof'):null; if(sr) drawRoofJoinIcons(sr); else roofJoinHits=[]; ctx.restore(); }catch(e){ console.warn(e); } try{ if(typeof drawMe!=='function') return; ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); drawMe(); drawNorthSym(); ctx.restore(); }catch(e){ console.warn(e); } }
 let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawGeoUI();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
@@ -1409,6 +1421,7 @@ cv.addEventListener('pointerdown',e=>{
   const onHole=tool==='select'&&(()=>{ const h=hit(p.x,p.y); if(h&&isHole(h)) return true; if(!holeMv) return false; const hm=doc.items.find(i=>i.id===holeMv), g=hm&&holeGeom(hm); if(!g) return false; const w=toW(p.x,p.y), sp=g.proj(w), q=toS(g.at(Math.max(0,Math.min(g.L,sp)),0)); return Math.abs(sp-g.c)<=g.w/2+44/view.scale&&Math.hypot(q.x-p.x,q.y-p.y)<34; })();
   if(tool==='select'&&!onCtl&&!onHole&&(selMode==='win'||selMode==='cross')){ const h=hit(p.x,p.y);
     if(!(h&&selIds().has(h.id))){ press.pan=false; press.box={a:{...p},b:{...p}}; return; } }
+  if(tool==='select'&&selMode==='mv'&&selIds().size){ press.pan=false; press.sd=startObjDrag(selIds(),p,true); redraw(); return; }
   if(tool==='select'&&!onCtl&&!onHole&&selMode==='rot'){ const h=hit(p.x,p.y), S=selIds(); press.pan=false;
     if(S.size){ const Cc=rotCenter(), cs=toS(Cc);
       if(Math.hypot(cs.x-p.x,cs.y-p.y)<24){ press.rotC=true; return; }
@@ -1484,7 +1497,7 @@ cv.addEventListener('pointerdown',e=>{
       if(g){ const w=toW(p.x,p.y), sp=g.proj(w), q=toS(g.at(Math.max(0,Math.min(g.L,sp)),0)); if(Math.abs(sp-g.c)<=g.w/2+44/view.scale&&Math.hypot(q.x-p.x,q.y-p.y)<34) h=hm; } }
     if(h&&isHole(h)){ const g=holeGeom(h); if(g){ const w=toW(p.x,p.y), sp=g.proj(w);
       { const now=Date.now(); if(tool==='select'&&lastHoleTap&&lastHoleTap.id===h.id&&now-lastHoleTap.t<420){ holeMv=h.id; lastHoleTap=null; } else lastHoleTap={id:h.id,t:now}; if(holeMv&&holeMv!==h.id) holeMv=null; }
-      press.pan=false; press.hole={it:h,grab:sp-g.c,started:false}; selId=h.id; moveSel.clear(); selJoint=null; panelKey=''; syncPanel(); redraw(); return; } }
+      press.pan=false; press.hole={it:h,grab:sp-g.c,started:false,prev:selId}; selId=h.id; moveSel.clear(); selJoint=null; panelKey=''; syncPanel(); redraw(); return; } }
     if(tool==='hole'&&(holeType==='win'||holeType==='door')){ const gp=holePreview(p); if(gp){ holeGhost=gp; press.pan=false; press.holeTap=true; press.ghost=true; redraw(); return; } }
     if(tool==='hole'){ press.pan=true; press.holeTap=true; return; }
   }
@@ -1639,8 +1652,9 @@ function endPtr(e,cancel){
   if(pr.roofPt){ liveSnap=null; if(pr.roofPt.started){ persist(); toast('Контур крыши изменён'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.roofOv){ if(pr.roofOv.started){ persist(); toast('Свес грани '+(pr.roofOv.i+1)+': '+fmt(roofOv(pr.roofOv.r,pr.roofOv.i))+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.dimOff){ if(pr.dimOff.started){ persist(); } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } panelKey=''; syncPanel(); redraw(); return; }
-  if(pr.box){ if(!pr.moved){ const h=hit(pr.box.a.x,pr.box.a.y); selId=h&&!isHole(h)?h.id:null; moveSel.clear(); selJoint=null; panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.box){ if(!pr.moved){ selTap(pr.box.a.x,pr.box.a.y); return; }
     const ids=boxSelect(pr.box.a,pr.box.b,selMode==='cross'); selJoint=null; moveSel=new Set(ids.size>1?ids:[]); selId=ids.size?[...ids][0]:null;
+    if(selMode==='win'||selMode==='cross'){ selMode='pick'; syncSelLbl(); } // после рамки — снова поштучный выбор
     panelKey=''; syncPanel(); redraw(); toast(ids.size?'Выбрано: '+selCount():'В рамку ничего не попало'); return; }
   if(pr.rotC){ redraw(); return; }
   if(pr.rot){ if(pr.rot.started){ for(const it of doc.items) if(pr.rot.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); toast('Повёрнуто на '+pr.rot.ang+'°'); }
@@ -1676,7 +1690,7 @@ function endPtr(e,cancel){
       else toast((Wt.key==='refL'?'Левый':'Правый')+' размер привязан к выбранной точке. Касание кружка — вернуть авто.');
       persist(); }
     panelKey=''; syncPanel(); redraw(); return; }
-  if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.grp&&editGrp===pr.sd.grp) editGrp=null; if(!pr.sd.started&&!pr.moved&&selJoint) selJoint=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); if(pr.sd.copy) toast('Копия поставлена'); } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.grp&&editGrp===pr.sd.grp) editGrp=null; if(!pr.sd.started&&!pr.moved&&selJoint) selJoint=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); persist(); if(pr.sd.copy) toast('Копия поставлена'); if(selMode==='mv'){ selMode='pick'; syncSelLbl(); } } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } else if(!pr.moved&&tool==='select'&&!pr.sd.copy&&moveSel.size<=1){ selTap(p.x,p.y); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.label&&!pr.moved){ openInline(pr.label); return; }
   if(pr.labelArm){ return; }
   if(pr.lp) clearTimeout(pr.lp);
@@ -1685,14 +1699,14 @@ function endPtr(e,cancel){
     pushUndo(); const o={id:uid(),t:'chim',p:{x:c.x,y:c.y},w:d.w,l:d.l,th:d.th,rot:0}; doc.items.push(o); selId=o.id; persist(); panelKey=''; syncPanel(); redraw();
     toast('Дымоход '+fmt(d.w)+'×'+fmt(d.l)+'. Тяните его целиком, двойное касание — размеры.'); return; }
   if(pr.chim){ chimDrag=null; snapMark=null; if(pr.chim.started) persist(); liveSnap=null; panelKey=''; syncPanel(); redraw(); return; }
-  if(pr.hole){ holeDrag=null; if(pr.hole.started) persist(); panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.hole){ holeDrag=null; if(pr.hole.started) persist(); else if(!pr.moved&&tool==='select'){ selId=pr.hole.prev; selTap(p.x,p.y); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.holeTap&&(pr.ghost||!pr.moved)){ placeHole(pos(e)); return; }
   if(pr.mv){ const M=pr.mv; moveDelta=null; snapMark=null; liveSnap=null;
     if(M.started){ persist(); toast('Сдвинуто'); }
     else if(!pr.moved){ for(const id of M.gi){ if(M.wasNew) moveSel.add(id); else moveSel.delete(id); } }
     syncMoveInfo(); redraw(); return; }
   if(pr.clearSel&&!pr.moved){ moveSel.clear(); syncMoveInfo(); redraw(); return; }
-  if(pr.pan){ if(!pr.moved&&tool==='select'){ const h=hit(p.x,p.y); selId=h?h.id:null; moveSel.clear(); selJoint=null; if(!h||!h.g||h.g!==editGrp) editGrp=null; if(!h||h.id!==editLine) editLine=null; panelKey=''; syncPanel(); redraw(); } return; }
+  if(pr.pan){ if(!pr.moved&&tool==='select') selTap(p.x,p.y); return; }
   if(tool==='line'&&isShape()&&dragA){ makeShape(dragA,dragB); dragA=dragB=null; }
   else if(tool==='line'&&live){ addChainPoint(live); if(!pr.mouse) live=null; }
   else if(tool==='rect'&&dragA&&dragB){
@@ -1740,7 +1754,7 @@ function placeInline(){ if(!inlineH) return; const p=toS(inlineH.w); ied.style.l
 function openInline(h){
   if(h.y>H*0.42){ view.cy-=(h.y-H*0.3)/view.scale; }
   inlineH=h; selId=h.id; selJoint=null; panelKey=''; syncPanel();
-  ied.inputMode=h.kind==='tx'?'text':'decimal'; ied.style.width=h.kind==='tx'?'min(260px,70vw)':'';
+  ied.inputMode=h.kind==='tx'?'text':(KP.touch?'none':'decimal'); if(h.kind==='tx') delete ied.dataset.num; else ied.dataset.num='1'; ied.style.width=h.kind==='tx'?'min(260px,70vw)':'';
   ied.value=h.kind==='tx'?String(h.val):h.kind==='ang'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
   inlineOpenT=Date.now(); ied.focus(); ied.select();
 }
@@ -2257,8 +2271,17 @@ function setLevel(i){
   undoS=[];redoS=[]; chain.pts=[];chain.ids=[]; live=null; selId=null; selJoint=null; moveSel.clear(); pendingText=null;
   panelKey=''; syncPanel(); syncTop(); renderLevels(); redraw(); toast(doc.levels[i].name+(doc.levels[i].gp?'':' '+fmtElev(doc.levels[i].elev)));
 }
+// этаж скопирован вверх — крыши с нижнего этажа переезжают наверх: на уровень над новым верхним этажом (обычно «Крыша»)
+function liftRoofs(fi,ti){ const S=doc.levels[fi], roofs=S.items.filter(i=>i.t==='roof'); if(!roofs.length) return;
+  const up=doc.levels[ti+1]&&!doc.levels[ti+1].gp?doc.levels[ti+1]:null, dst=up||doc.levels[ti];
+  for(const r of roofs){ const sv=doc.curLv; doc.curLv=fi; let off=0; try{ off=roofBase(r,fi)-roofBaseLevel(r,fi).elev; }catch(e){} doc.curLv=sv;
+    S.items.splice(S.items.indexOf(r),1);
+    if(up){ r.onTop=false; r.bl=up.id; r.bo=r1(off); if(r.src==='walls'){ r.sl=-1; r.wk=null; } }
+    else { r.onTop=true; delete r.bl; r.bo=r1(off); if(r.src==='walls'){ r.sl=0; r.wk=null; } }
+    // перенос по плану — тот же; стены нового этажа скопированы с тех же мест
+    dst.items.push(r); } }
 function copyLevel(fi,ti){ const idm={},out=[],src=doc.levels[fi].items;
-  for(const it of src){ if(isHole(it)) continue; const c=JSON.parse(JSON.stringify(it)); c.id=uid(); idm[it.id]=c.id; out.push(c); }
+  for(const it of src){ if(isHole(it)||it.t==='roof') continue; const c=JSON.parse(JSON.stringify(it)); c.id=uid(); idm[it.id]=c.id; out.push(c); }
   for(const it of src){ if(!isHole(it)||!idm[it.wall]) continue; const c=JSON.parse(JSON.stringify(it)); c.id=uid(); c.wall=idm[it.wall]; out.push(c); }
   for(const c of out) if(c.t==='dim') for(const k of ['ra','rb']) if(c[k]){ if(idm[c[k].id]) c[k]={...c[k],id:idm[c[k].id]}; else delete c[k]; }
   doc.levels[ti].items.push(...out); return out.length; }
@@ -2349,9 +2372,11 @@ function orientLoop(lines,pts){
   for(const l of lines) if(l.t==='line'&&l.L==='walls'&&l.side!==sd){l.side=sd;ch=true;}
   return ch;
 }
-function hit(sx,sy){
-  let best=null,bd=20;
-  for(const it of doc.items){ let d=Infinity;
+function hit(sx,sy){ const L=hitAll(sx,sy); return L.length?L[0]:null; }
+// все объекты под пальцем: ближе — первым, при равенстве — верхний (нарисован позже)
+function hitAll(sx,sy){
+  const all=[];
+  doc.items.forEach((it,ix)=>{ let d=Infinity;
     if(it.t==='line'&&isArc(it)){ const G=arcG(it), pr=arcProj(G,toW(sx,sy)), o=isWall(it)?offs(it):{L:0,R:0};
       if(!pr.inside){ d=Math.min(Math.hypot(sx-toS(it.a).x,sy-toS(it.a).y),Math.hypot(sx-toS(it.b).x,sy-toS(it.b).y)); }
       else d=(pr.k<=o.L&&pr.k>=-o.R)?0:Math.min(Math.abs(pr.k-o.L),Math.abs(pr.k+o.R))*view.scale; }
@@ -2372,10 +2397,24 @@ function hit(sx,sy){
     else if(it.t==='img'){ const w=toW(sx,sy), r=-(it.rot||0)*Math.PI/180, dx=w.x-it.p.x, dy=w.y-it.p.y, lx=dx*Math.cos(r)-dy*Math.sin(r), ly=dx*Math.sin(r)+dy*Math.cos(r); if(Math.abs(lx)<=it.w/2&&Math.abs(ly)<=it.h/2) d=19.5; }
     else { const p=toS(it.p),fs=Math.max(it.h*view.scale,9); ctx.font='500 '+fs+'px '+FTXT; const w=ctx.measureText(it.s).width/2;
       if(Math.abs(sx-p.x)<w+6&&Math.abs(sy-p.y)<fs/2+6) d=0; }
-    if(d<bd){bd=d;best=it;}
-  }
-  return best;
+    if(d<20) all.push({it,d,ix});
+  });
+  all.sort((a,b)=>(Math.round(a.d*2)/2-Math.round(b.d*2)/2)||(b.ix-a.ix)); return all.map(o=>o.it);
 }
+// касание в режиме выбора (как в Revit): первое — верхний объект; следующие касания в той же точке — следующий под ним, по кругу;
+// двойное касание — подробная правка выделенного (графика, контур, ступени, проём)
+let CYC=null, CYCt=0, detailSel=null;
+function selTap(sx,sy){ const now=Date.now(), same=CYC&&Math.hypot(sx-CYC.x,sy-CYC.y)<16;
+  if(same&&now-CYC.t<380&&selId){ clearTimeout(CYCt); CYC=null; enterDetail(); return; }
+  const L=hitAll(sx,sy);
+  const apply=h=>{ selId=h?h.id:null; moveSel.clear(); selJoint=null; detailSel=null; if(!h||!h.g||h.g!==editGrp) editGrp=null; if(!h||h.id!==editLine) editLine=null; panelKey=''; syncPanel(); redraw(); };
+  const i=same&&selId?L.findIndex(o=>o.id===selId):-1;
+  CYC={x:sx,y:sy,t:now}; clearTimeout(CYCt);
+  if(i>=0&&L.length>1){ CYCt=setTimeout(()=>{ CYCt=0; apply(L[(i+1)%L.length]); },390); return; } // ждём: вдруг это двойное касание
+  if(i>=0) return; apply(L[0]||null); }
+function enterDetail(){ const it=doc.items.find(i=>i.id===selId); if(!it) return;
+  if(it.t==='roof'){ roofEdit(it); return; } if(it.t==='stair'){ stairEdit(it); return; } if(isHole(it)){ holeMv=it.id; redraw(); return; }
+  detailSel=moveSel.size>1?'*':it.id; panelKey=''; syncPanel(); redraw(); }
 
 /* ---------- drawing ops ---------- */
 function startPoint(){
@@ -2518,7 +2557,7 @@ let polyN=6, polyS=0, shW=0, shH=0, shD=0, fixMode='a', moreOpen=false, wMore=fa
 const SIDEI={1:'<rect x="3" y="5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 13h20" stroke-dasharray="3 2"/>',
   0:'<rect x="3" y="8.5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 12h20" stroke-dasharray="3 2"/>',
   '-1':'<rect x="3" y="12" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 11h20" stroke-dasharray="3 2"/>'};
-const ICO={edges:'<path d="M3 17 12 7l9 10"/><path d="M1.5 19.5 12 8.2l10.5 11.3" stroke-dasharray="2.2 2"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/>',box:'<path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
+const ICO={mv:'<path d="M12 2v20M2 12h20"/><path d="M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/>',lvl:'<path d="M3 8h18M3 16h18"/><path d="M12 4v16M9 17l3 3 3-3"/>',edges:'<path d="M3 17 12 7l9 10"/><path d="M1.5 19.5 12 8.2l10.5 11.3" stroke-dasharray="2.2 2"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/>',box:'<path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
   del:'<path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
   ungrp:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M15 3h6v6M3 15v6h6" stroke-dasharray="2 2"/>',
   flip:'<path d="M3 9h18M3 15h18"/><path d="M8 5l-3 4 3 4M16 11l3 4-3 4"/>',
@@ -2532,7 +2571,7 @@ const ICOPY=()=>IB('copyObj','copy','Копировать'), IDEL=()=>IB('del','
 function ldEndSeg(name,v){ const I={arrow:'<path d="M3 12h12"/><path d="M21 12l-7-4v8z" fill="currentColor"/>',dot:'<path d="M3 12h12"/><circle cx="18" cy="12" r="3.5" fill="currentColor"/>',none:'<path d="M3 12h18"/>'}, N={arrow:'Стрелка',dot:'Точка',none:'Без знака'};
   return `<div class="seg" role="group">${['arrow','dot','none'].map(k=>`<button class="sico" data-${name}="${k}" aria-pressed="${v===k}" title="${N[k]}" aria-label="${N[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${I[k]}</svg></button>`).join('')}</div>`; }
 // цвет линии (и заливки, и штриховка — у стены); пусто = цвет слоя по умолчанию
-function colorBtns(it,multi){ const w=multi?true:isWall(it), cv=v=>v||'';
+function colorBtns(it,multi){ if(multi?detailSel!=='*':detailSel!==(it&&it.id)) return ''; const w=multi?true:isWall(it), cv=v=>v||'';
   const sw=(id,val,def,t)=>`<label class="csw" title="${t}"><input type="color" id="${id}" value="${val||def}"><span style="background:${val||'transparent'}"></span><i>${t.split(' ')[0]}</i></label>`;
   return `${sw('pLc',multi?'':it.lc,'#e8e6e1','Линия')}${w?sw('pFc',multi?'':it.fc,'#3a4442','Заливка'):''}
     ${w?`<select class="inp" id="pHp" title="Штриховка" style="width:auto">${Object.entries(HATCH).map(([k,n])=>`<option value="${k}"${(multi?'none':(it.hp||'none'))===k?' selected':''}>${n}</option>`).join('')}</select>`:''}
@@ -2553,6 +2592,7 @@ function layoutPanel(){ if(panel.hidden||panel.contains(document.activeElement)&
 window.addEventListener('resize',()=>{ try{ if(panel.contains(document.activeElement)) return; layoutPanel(); }catch(e){} });
 function placePanel(){ /* панель свойств закреплена над нижней панелью инструментов */ }
 function syncPanel(){
+  if(detailSel&&detailSel!=='*'&&detailSel!==selId) detailSel=null; if(detailSel==='*'&&moveSel.size<2) detailSel=null;
   if(holeMv&&(selId!==holeMv||tool!=='select')) holeMv=null;
   const sel=doc.items.find(i=>i.id===selId);
   const key=tool+'|'+selMode+'|'+(rotC?1:0)+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'');
@@ -2611,13 +2651,14 @@ function syncPanel(){
       <button class="btn" data-act="imgCal" title="Масштаб по двум точкам и размеру">⟷ Масштаб</button>${IDEL()}`;
   } else if(tool==='select'&&moveSel.size&&selIds().size){
     const mw=doc.items.filter(i=>selIds().has(i.id)&&isWall(i)), ws=[...new Set(mw.map(i=>i.w))];
-    h=`<div class="title">Выбрано <b>${selCount()}</b>${mw.length?`<span class="lbl">стен: ${mw.length}</span>`:''}</div>
+    h=`${IB('grpMove','mv','Сдвинуть группу: тяните в любом месте')}<div class="title">Выбрано <b>${selCount()}</b>${mw.length?`<span class="lbl">стен: ${mw.length}</span>`:''}</div>
       ${mw.length?`<div class="fld"><label for="mW">Толщина</label><input class="inp sm" id="mW" inputmode="decimal" value="${ws.length===1?r3(ws[0]):''}" placeholder="разная"></div>`:''}
       ${colorBtns(null,true)}
       <div class="fld"><label for="mvLen">Сдвиг, мм</label><input class="inp" id="mvLen" inputmode="decimal" autocomplete="off" placeholder="500"></div>
       <div class="fld"><span class="lbl">Куда</span><div class="dirs" role="group" aria-label="Направление сдвига">
         <button data-mdir="180" aria-label="Влево">←</button><button data-mdir="90" aria-label="Вверх">↑</button><button data-mdir="270" aria-label="Вниз">↓</button><button data-mdir="0" aria-label="Вправо">→</button></div></div>
-      ${ICOPY()}${IB('selAll','all','Выбрать все')}${IB('selNone','none','Снять выбор')}${IDEL()}
+      <select class="inp" id="grpLv" title="Перенести выбранное на другой уровень" style="width:auto"><option value="">⇅ На уровень…</option>${doc.levels.map((l,i)=>i===doc.curLv||l.gp?'':`<option value="${i}">${esc(l.name)}</option>`).join('')}</select>
+      ${IB('grpRot','rot','Повернуть группу')}${ICOPY()}${IB('selAll','all','Выбрать все')}${IB('selNone','none','Снять выбор')}${IDEL()}
       <p class="hint">Тяните любой выбранный объект — двигаются все вместе, с магнитом. Касание другого объекта — снова один.</p>`;
   } else if((tool==='select'||tool==='hole')&&sel&&isHole(sel)){
     const g=holeGeom(sel)||{w:sel.width,s0:0,s1:0,L:0}, isW=sel.t==='win';
@@ -2752,7 +2793,7 @@ function syncPanel(){
       <div class="fld"><label for="tH">Высота, мм</label><input class="inp sm" id="tH" inputmode="decimal" value="${doc.settings.noteH||doc.settings.textH}"></div>
       <span class="sp"></span><button class="btn" data-act="cancelText">Отмена</button><button class="btn go" data-act="placeText">Поставить</button>`;
   }
-  { const D=IDEL(), Cp=ICOPY(); if(h.includes(D)){ h=h.replace(D,''); let pre=D; if(h.includes(Cp)){ h=h.replace(Cp,''); pre=D+Cp; } h=pre+h; } }
+  { const D=IDEL(), Cp=ICOPY(); if(h.includes(D)){ h=h.replace(D,''); let pre=D; if(h.includes(Cp)){ h=h.replace(Cp,''); pre=D+Cp; } h=pre+h; } const GM=IB('grpMove','mv','Сдвинуть группу: тяните в любом месте'); if(h.includes(GM)) h=GM+h.replace(GM,''); }
   panel.innerHTML=h; panel.hidden=!h; syncDelBtn(); layoutPanel(); syncLineHint(); if(tool==='move') syncMoveInfo(); redraw(); placePanel();
 }
 panel.addEventListener('click',e=>{
@@ -2778,6 +2819,8 @@ panel.addEventListener('click',e=>{
     case 'ang':{const a=parseNum($('#inAng').value); if(isNaN(a)){toast('Введите угол в градусах');return;} addByLen(a);break;}
     case 'close':closeChain();break;
     case 'copy':copyOn=!copyOn;b.setAttribute('aria-pressed',String(copyOn));toast(copyOn?'Режим копии: оригинал останется на месте':'Режим копии выключен');break;
+    case 'grpMove':{ selMode=selMode==='mv'?'pick':'mv'; syncSelLbl(); panelKey=''; syncPanel(); redraw(); if(selMode==='mv') toast('Тяните в любом месте — группа сдвинется',true); break; }
+    case 'grpRot':{ selMode='rot'; rotC=null; syncSelLbl(); panelKey=''; syncPanel(); redraw(); break; }
     case 'selAll':moveSel=new Set(doc.items.filter(i=>!isHole(i)&&i.t!=='aux').map(i=>i.id)); if(!selId) selId=[...moveSel][0]||null; panelKey='';syncPanel();redraw();break;
     case 'selNone':moveSel.clear(); selId=null; editGrp=null; panelKey='';syncPanel();redraw();break;
     case 'more':{moreOpen=!moreOpen;const m=$('#lineMore');m.hidden=!moreOpen;b.setAttribute('aria-expanded',String(moreOpen));
@@ -2849,6 +2892,7 @@ function applyProp(t){
   if(t.id==='pFix'){fixMode=t.value;return;}
   if(t.id==='pLt'||t.id==='pLw'){ styleSet(t.id==='pLt'?'lt':'lw',t.value); return; }
   if(t.id==='pLc'||t.id==='pFc'||t.id==='pHp'){ styleSet(t.id==='pLc'?'lc':t.id==='pFc'?'fc':'hp',t.value); const sw=t.parentElement&&t.parentElement.querySelector('span'); if(sw) sw.style.background=t.value; return; }
+  if(t.id==='grpLv'){ if(t.value!=='') moveSelToLevel(+t.value); return; }
   if(t.id==='mW'){ const v=parseNum(t.value); if(!(v>=0)) return; const S=selIds(); pushUndo(); let n=0; for(const it of doc.items) if(S.has(it.id)&&isWall(it)){ it.w=v; n++; }
     persist(); panelKey=''; syncPanel(); redraw(); toast('Толщина '+fmt(v)+' мм у стен: '+n); return; }
   if(t.id==='pCD'){ const so=doc.items.find(i=>i.id===selId), v=parseNum(t.value); if(so&&so.t==='circ'&&v>0){ pushUndo(); so.r=r3(v/2); persist(); panelKey=''; syncPanel(); redraw(); } return; }
@@ -2940,6 +2984,13 @@ function setTool(t){ dimTapA=null; if(t==='move') t='select'; if(tool==='select'
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{ const t=b.dataset.tool, wasOpen=!$('#toolMenu').hidden&&menuFor===t;
   setTool(t); if(['line','draw','edit','select','text','roof'].includes(t)&&!wasOpen) openToolMenu(t,b); else closeToolMenu(); }));
 /* ---------- раскрывающиеся меню инструментов ---------- */
+// перенос выделенного на другой уровень: стены вместе с окнами и дверями, расстояния и связи внутри набора сохраняются
+function moveSelToLevel(ti){ const T=doc.levels[ti]; if(!T||ti===doc.curLv) return; const S=selIds(); if(!S.size) return;
+  const take=doc.items.filter(i=>S.has(i.id)||(isHole(i)&&S.has(i.wall))), ids=new Set(take.map(i=>i.id)); pushUndo();
+  for(const it of take) if(it.t==='dim') for(const k of ['ra','rb']) if(it[k]&&!ids.has(it[k].id)) delete it[k];
+  doc.items=doc.items.filter(i=>!ids.has(i.id)); T.items.push(...take); selId=null; moveSel.clear(); persist(); panelKey=''; syncPanel(); redraw();
+  toast('Перенесено на «'+T.name+'»: '+take.length,true); }
+function syncSelLbl(){ const l=$('#lblSel'); if(l) l.textContent=selMode==='copy'?'Копия':selMode==='rot'?'Вращать':selMode==='mv'?'Сдвиг':selMode==='win'||selMode==='cross'?'Рамка':'Выбор'; }
 let selMode='pick', menuFor=null, arcWall=true, mirrorSel=new Set(), editSel=new Set();
 function closeToolMenu(){ $('#toolMenu').hidden=true; menuFor=null; }
 // значки режимов (как символы на ленте Revit/AutoCAD)
@@ -2971,10 +3022,10 @@ function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
       <div class="mr"><div class="fld"><label for="rfDA">Уклон, °</label><input class="inp sm" id="rfDA" inputmode="decimal" value="${d.ang}"></div>
       <div class="fld"><label for="rfDO">Свес, мм</label><input class="inp sm" id="rfDO" inputmode="decimal" value="${d.ov}"></div>
       <div class="fld"><label for="rfDT">Толщина</label><input class="inp sm" id="rfDT" inputmode="decimal" value="${d.th}"></div></div>`; }
-  else if(t==='select'){ h=`<div class="mh">Выбор</div><div class="mg">${['pick','win','cross','copy','rot'].map(k=>mb(k,selMode,'sm')).join('')}</div>`; }
+  else if(t==='select'){ h=`<div class="mh">Выбор</div><div class="mg">${['pick','win','cross','copy'].map(k=>mb(k,selMode,'sm')).join('')}</div>`; }
   else if(t==='text'){ h=`<div class="mh">Текст</div><div class="mg">${['tplain','tleader'].map(k=>mb(k,'t'+textMode,'tm')).join('')}</div>
       <div class="mr"><div class="fld"><span class="lbl">Конец выноски</span>${ldEndSeg('ldend',doc.settings.ldEnd||'arrow')}</div></div>`; }
-  else if(t==='edit'){ h=`<div class="mh">Изменить</div><div class="mg">${['split','merge','mirrorc','mirrorm'].map(k=>mb(k,editMode,'em')).join('')}</div>`; }
+  else if(t==='edit'){ h=`<div class="mh">Изменить</div><div class="mg">${['split','merge','mirrorc','mirrorm'].map(k=>mb(k,editMode,'em')).join('')}${mb('rot',selMode,'em')}</div>`; }
   m.innerHTML=h; m.hidden=false;
   const r=btn.getBoundingClientRect(), sr=stage.getBoundingClientRect(), w=m.offsetWidth;
   m.style.left=Math.max(8,Math.min(sr.width-w-8,r.left-sr.left+r.width/2-w/2))+'px'; }
@@ -2987,6 +3038,7 @@ $('#toolMenu').addEventListener('click',e=>{ const b=e.target.closest('button');
   if(b.dataset.sm){ selMode=b.dataset.sm; setTool('select'); closeToolMenu(); rotC=null; return; }
   if(b.dataset.rfm){ roofDef().mode=b.dataset.rfm; persist(); setTool('roof'); closeToolMenu(); toast(b.dataset.rfm==='sketch'?'Ставьте углы контура крыши; замкнуть — первая точка или ✓':'Коснитесь внутри контура стен'); return; }
   if(b.dataset.rft){ roofDef().type=b.dataset.rft; persist(); setTool('roof'); closeToolMenu(); return; }
+  if(b.dataset.em==='rot'){ if(tool!=='select') setTool('select'); selMode='rot'; rotC=null; syncSelLbl(); closeToolMenu(); panelKey=''; syncPanel(); redraw(); if(!selIds().size) toast('Сначала выделите объекты, затем Изменить → Вращать',true); return; }
   if(b.dataset.em){ editMode=b.dataset.em; saveModes(); setTool('edit'); closeToolMenu(); return; }
   if(b.dataset.wside!==undefined){ doc.settings.wallSide=+b.dataset.wside; persist(); $('#toolMenu').querySelectorAll('[data-wside]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
   if(b.dataset.pgn!==undefined){ polyN=+b.dataset.pgn; const i=$('#pgN'); if(i) i.value=polyN; toast('Граней: '+polyN); return; } });
@@ -3074,10 +3126,13 @@ function styleSet(key,val){ styleBegin(); const S=selIds(); for(const it of doc.
 function styleEnd(apply){ if(!styleEdit) return; const E=styleEdit; styleEdit=null;
   if(!apply) for(const it of doc.items){ const o=E.snap[it.id]; if(!o) continue; for(const k of ['lc','fc','hp','lt','lw']){ if(o[k]===undefined) delete it[k]; else it[k]=o[k]; } }
   persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Применено':'Отменено'); }
-function syncModeBtns(){ const on=tool!=='select'||!!styleEdit||!!barEdit; $('#btnOk').hidden=!on; $('#btnCancel').hidden=!on; }
+function syncModeBtns(){ const on=tool!=='select'||!!styleEdit||!!barEdit; $('#btnOk').hidden=!on; const cx=on||selCancelable(); if($('#btnCancel').hidden===cx) $('#btnCancel').hidden=!cx; }
+// в режиме выбора «Отмена» видна, когда есть что прервать: выделение, вращение, сдвиг, правка контура, режим проёма
+function selCancelable(){ try{ return tool==='select'&&(!!selId||moveSel.size>0||selMode!=='pick'||!!roofEd||!!stEd||!!holeMv||!!detailSel||!!editGrp||!!editLine); }catch(e){ return false; } }
 syncModeBtns();
 $('#btnOk').addEventListener('click',()=>{ if((roofEd||stEd)&&barEdit){ roofEd=null; stEd=null; panelKey=''; syncPanel(); redraw(); } if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)) ae.blur(); const had=!!barEdit; barEdit=null; if(styleEdit) styleEnd(true); else { syncModeBtns(); if(had) toast('Сохранено'); } return; } if(stairDraw){ finishStair(); return; } if(tool==='roof'&&roofSk){ if(roofSk.pts.length>=3){ finishRoofSketch(); return; } roofSk=null; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
-$('#btnCancel').addEventListener('click',()=>{ if(roofEd) roofEd=null; if(stEd) stEd=null; if(roofSk){ roofSk=null; roofSkLive=null; redraw(); toast('Эскиз крыши отменён'); return; } if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)){ if('defaultValue' in ae) ae.value=ae.defaultValue; ae.blur(); }
+$('#btnCancel').addEventListener('click',()=>{ if(tool==='select'&&!barEdit&&!styleEdit&&!roofSk){ clearTimeout(CYCt); selId=null; moveSel.clear(); selJoint=null; selMode='pick'; rotC=null; roofEd=null; stEd=null; holeMv=null; detailSel=null; editGrp=null; editLine=null; syncSelLbl(); panelKey=''; syncPanel(); redraw(); syncModeBtns(); return; }
+  if(roofEd) roofEd=null; if(stEd) stEd=null; if(roofSk){ roofSk=null; roofSkLive=null; redraw(); toast('Эскиз крыши отменён'); return; } if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)){ if('defaultValue' in ae) ae.value=ae.defaultValue; ae.blur(); }
     if(barEdit){ doc.items=JSON.parse(barEdit.snap); if(undoS.length>barEdit.und) undoS.length=barEdit.und; } barEdit=null;
     if(styleEdit) styleEnd(false); else { persist(); panelKey=''; syncPanel(); redraw(); syncModeBtns(); toast('Отменено'); } return; }
   if(tool==='line'&&chain.ids&&chain.ids.length){ pushUndo(); const ids=new Set(chain.ids); doc.items=doc.items.filter(i=>!ids.has(i.id)); persist(); toast('Незаконченный контур убран'); }
@@ -3109,7 +3164,7 @@ function placeDyn(){
   if(!dynActive()){ if(!dynEl.hidden){ dynEl.hidden=true; } return; }
   const last=dynLast();
   dynEl.hidden=false; const w=dynEl.offsetWidth||300, h=dynEl.offsetHeight||46;
-  const lim=H-(panel.hidden?10:panel.offsetHeight+16); let x=W/2+gripOff.dyn.x, y=lim-h/2+gripOff.dyn.y;
+  const lim=H-(panel.hidden?10:panel.offsetHeight+16)-(KP.lift||0); let x=W/2+gripOff.dyn.x, y=lim-h/2+gripOff.dyn.y;
   dynEl.style.left=Math.max(w/2+6,Math.min(W-w/2-6,x))+'px'; dynEl.style.top=Math.max(h/2+60,Math.min(lim-h/2,y))+'px';
   if(document.activeElement!==dynLen) dynLen.placeholder=lineKind==='arc'&&arcB?(live&&bulge3(last,arcB,live)?'R '+fmt(arcG({a:last,b:arcB,bg:bulge3(last,arcB,live)}).r):'радиус'):live&&!near(live,last,0.5)?fmt(Math.hypot(live.x-last.x,live.y-last.y)):'длина';
   if(document.activeElement!==dynAng) dynAng.placeholder=fmt(dynDir())+'°';
@@ -3170,7 +3225,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.18':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.19':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3237,7 +3292,7 @@ sheet.addEventListener('click',e=>{
       lvDelConfirm=null; const cur=doc.levels[doc.curLv]; doc.levels.splice(i,1); let ci=doc.levels.indexOf(cur); if(ci<0) ci=Math.max(0,i-1);
       doc.curLv=-1; setLevel(ci); persist(); renderLevels(); openLevels(); break;}
     case 'lvcopy':{const f=+$('#cpFrom').value,t=+$('#cpTo').value; if(f===t){toast('Выберите разные уровни');break;}
-      pushUndo(); const n=copyLevel(f,t); persist(); sheet.hidden=true; doc.curLv=-1; setLevel(t); toast('Скопировано объектов: '+n+' → '+doc.levels[t].name); break;}
+      pushUndo(); const n=copyLevel(f,t); if(t>f) liftRoofs(f,t); persist(); sheet.hidden=true; doc.curLv=-1; setLevel(t); toast('Скопировано объектов: '+n+' → '+doc.levels[t].name); break;}
     case 'allW':{pushUndo();let n=0;for(const it of doc.items) if(it.t==='line'&&it.L==='walls'){it.w=doc.settings.wallW;n++;}
       persist();redraw();toast('Толщина изменена у стен: '+n);break;}
     case 'open':openDoc(id);sheet.hidden=true;break;
@@ -4678,6 +4733,30 @@ function mapFixIt(){ const el=$('#gpMap'), c=el.querySelector('canvas'); mapDraw
   L.items.unshift(it); doc.geoLast={lat:MP.lat,lon:MP.lon,Z:MP.Z,src:MP.src}; const n=NR(); if(!n.lock&&n.m!=='compass'&&n.m!=='wall') n.m='map';
   el.hidden=true; setLevel(li); setTool('select'); selId=it.id; persist(); renderLevels(); fitView(); panelKey=''; syncPanel(); redraw(); }
 
+/* ---------- компактная цифровая клавиатура для всех числовых полей (вместо системной) ---------- */
+const isNumInp=el=>el&&el.tagName==='INPUT'&&(el.dataset.num==='1'||/^(decimal|numeric)$/i.test(el.getAttribute('inputmode')||''));
+function kpMark(root){ if(!KP.touch) return; (root.querySelectorAll?root:document).querySelectorAll('input[inputmode="decimal"],input[inputmode="numeric"]').forEach(i=>{ i.dataset.num='1'; i.setAttribute('inputmode','none'); }); if(root.tagName==='INPUT'&&/^(decimal|numeric)$/.test(root.getAttribute('inputmode')||'')){ root.dataset.num='1'; root.setAttribute('inputmode','none'); } }
+function kpEl(){ if(KP.el) return KP.el; const el=document.createElement('div'); el.id='kp'; el.hidden=true;
+  el.innerHTML=['7','8','9','⌫','4','5','6','−','1','2','3','.'].map(k=>`<button type="button" data-k="${k}"${/[⌫−.]/.test(k)?' class="fn"':''}>${k}</button>`).join('')+'<button type="button" data-k="0" class="z">0</button><button type="button" data-k="ok" class="ok">✓</button>';
+  el.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); const b=e.target.closest('[data-k]'); if(!b) return; b.classList.add('dn'); setTimeout(()=>b.classList.remove('dn'),120); kpKey(b.dataset.k); });
+  document.body.appendChild(el); KP.el=el; return el; }
+function kpKey(k){ const i=KP.inp; if(!i||document.activeElement!==i) return;
+  if(k==='ok'){ i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true,cancelable:true})); if(document.activeElement===i) i.blur(); return; }
+  let v=i.value, a=i.selectionStart??v.length, b=i.selectionEnd??v.length;
+  if(k==='⌫'){ if(a===b&&a>0) a--; v=v.slice(0,a)+v.slice(b); b=a; }
+  else { const ch=k==='−'?'-':k; if(ch==='-'){ if(v.startsWith('-')){ v=v.slice(1); a=Math.max(0,a-1); b=a; } else { v='-'+v; a=b+1; b=a; } }
+    else { if(ch==='.'&&/[.,]/.test(v.slice(0,a)+v.slice(b))) return; v=v.slice(0,a)+ch+v.slice(b); a=a+1; b=a; } }
+  i.value=v; try{ i.setSelectionRange(a,b); }catch(e){} i.dispatchEvent(new Event('input',{bubbles:true})); }
+function kpLift(on){ const kh=on?KP.el.offsetHeight:0, sb=innerHeight-stage.getBoundingClientRect().bottom, lift=Math.max(0,kh-sb);
+  panel.style.bottom=on&&lift?(6+lift)+'px':''; KP.lift=on?lift:0; document.body.classList.toggle('kpon',!!on);
+  const sh=document.querySelector('#sheet .sheet-body'); if(sh) sh.style.paddingBottom=on?(kh+12)+'px':'';
+  if(on&&KP.inp&&KP.inp.closest('#sheet,#elev,#gpMap')){ try{ KP.inp.scrollIntoView({block:'center'}); }catch(e){} } }
+if(KP.touch){ kpMark(document);
+  new MutationObserver(ms=>{ for(const m of ms) for(const n of m.addedNodes) if(n.nodeType===1) kpMark(n); }).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('focusin',e=>{ const i=e.target; if(!isNumInp(i)) return; clearTimeout(KP.t); KP.inp=i; const el=kpEl(); const was=el.hidden; el.hidden=false; if(was) kpLift(true);
+    if(i.value&&i.selectionStart===i.selectionEnd) try{ i.select(); }catch(_){} });
+  document.addEventListener('focusout',e=>{ if(e.target!==KP.inp) return; clearTimeout(KP.t); KP.t=setTimeout(()=>{ if(isNumInp(document.activeElement)) return; KP.inp=null; if(KP.el&&!KP.el.hidden){ KP.el.hidden=true; kpLift(false); } },60); });
+}
 /* ---------- boot ---------- */
 readColors();
 const mq=matchMedia('(prefers-color-scheme: dark)');
