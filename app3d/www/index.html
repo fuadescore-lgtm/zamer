@@ -592,6 +592,10 @@ function cornerMode(it,key,o,k){ const v=it.jt&&it.jt[key]; if(v) return v; cons
     if(Math.abs(A.z1-B.z1)>1||Math.abs(A.z0-B.z0)>1){ const ha=A.z1-A.z0, hb=B.z1-B.z0; return (ha>hb+1||(Math.abs(ha-hb)<=1&&A.z1>B.z1))?'p':'s'; } }catch(e){} }
   return 'm'; }
 // узел, где сходятся ровно две прямые стены: [стена, конец, стена, конец]
+// соединение в углах выделенной стены (как в Revit): Скос / Стык / Срез + какая стена проходит — для меню двойного касания
+function wallJoinSegs(w){ let out=''; for(const k of ['a','b']){ const J=w[k], c=cornerPair(J); if(!c) continue; const md=cornerMode(c[0],c[1],c[2],c[3]), t=md==='m'?'m':(md==='p'||md==='s')?'b':'q';
+    out+=`<div class="seg" role="group" title="Соединение в углу ${k==='a'?'в начале':'в конце'} стены (как в Revit)"><span class="lbl" style="padding:0 6px">Угол ${k==='a'?'1':'2'}</span>${[['m','Скос','<path d="M4 20V4h16"/><path d="M4 4l6 6" stroke-dasharray="2 2"/><path d="M10 10V20M10 10h10"/>'],['b','Стык','<path d="M4 20V4h16"/><path d="M4 10h16M10 10v10"/>'],['q','Срез','<path d="M4 20V4h16v6H10v10H4z"/>']].map(([m,n,ic])=>`<button class="sico" data-wjt="${k}:${m}" aria-pressed="${t===m}" title="${n}" aria-label="${n}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></button>`).join('')}${t!=='m'?`<button class="sico" data-wjs="${k}" title="Какая стена проходит, какая упирается" aria-label="Поменять">⇄</button>`:''}</div>`; }
+  return out; }
 function cornerPair(J){ const os=[]; for(const o of doc.items){ if(!isWall(o)) continue; for(const k of ['a','b']) if(near(o[k],J)&&!nj(o,k)) os.push([o,k]); }
   if(os.length!==2||isArc(os[0][0])||isArc(os[1][0])) return null; return [os[0][0],os[0][1],os[1][0],os[1][1]]; }
 function setCorner(J,mode,passFirst){ const c=cornerPair(J); if(!c) return false; const [A,ka,B,kb]=c;
@@ -2881,9 +2885,9 @@ function syncPanel(){
       ${IS3D?(()=>{ const li=doc.curLv, rt=chimRoofTop(sel), zb=chimBot(sel,li), zt=chimTop(sel,li);
         return (rt!=null?`<div class="fld"><label for="pCR" title="Над самой высокой точкой крыши в месте выхода">Над крышей</label><input class="inp sm" id="pCR" inputmode="decimal" value="${r1(sel.hr==null?600:sel.hr)}"></div>`
           :`<div class="fld"><label for="pCH">Высота</label><input class="inp sm" id="pCH" inputmode="decimal" value="${r1(zt-zb)}"></div>`)
-          +`<div class="fld"><label for="pCZ" title="Отметка низа от ±0.000, мм">Низ от ±0</label><input class="inp sm" id="pCZ" inputmode="decimal" value="${r1(zb)}"></div><span class="lbl">верх ${fmtElev(zt)}</span>`; })():''}
+          +`<span class="lbl">верх ${fmtElev(zt)}</span>`; })():''}
       ${colorBtns(sel)}`
-      :`${ICOPY()}${IDEL()}${rd?'':IB('crot','rot','Повернуть на 90°')}${IDET()}${lvSel(sel)}
+      :`${ICOPY()}${IDEL()}${rd?'':IB('crot','rot','Повернуть на 90°')}${IS3D?`<div class="fld inl"><label for="pCZ" title="Отметка низа дымохода от ±0.000, мм">Низ от ±0</label><input class="inp xs" id="pCZ" inputmode="decimal" value="${r1(chimBot(sel,doc.curLv))}"></div>`:''}${IDET()}${lvSel(sel)}
       <p class="hint">Тяните дымоход пальцем целиком. Двойное касание — размеры и графика.</p>`}`;
   } else if(tool==='grid'){ const d=gridDef();
     h=`<div class="title">Оси</div>
@@ -2914,10 +2918,9 @@ function syncPanel(){
        :`<div class="fld inl"><label for="rfA" title="Уклон всех скатов">∠</label><input class="inp xs" id="rfA" inputmode="decimal" value="${Math.round((sel.ang||30)*10)/10}" title="Уклон, °"></div>`}
       <div class="fld inl"><label for="rfO" title="Свес">Свес</label><input class="inp xs" id="rfO" inputmode="decimal" value="${r1(sel.ov==null?500:sel.ov)}"></div>
       <div class="fld inl"><label for="rfT" title="Толщина">Толщ.</label><input class="inp xs" id="rfT" inputmode="decimal" value="${r1(sel.th||250)}"></div>
-      ${(()=>{ const BL=roofBaseLevel(sel,doc.curLv), off=r1(roofBase(sel,doc.curLv)-BL.elev); return `<div class="fld inl"><label for="rfB" title="Смещение низа крыши от её уровня, мм">Смещ.</label><input class="inp xs" id="rfB" inputmode="decimal" value="${off}"></div>`; })()}
       ${ridgeFld(sel)}<span class="lbl">Касание ската — его уклон, конька — высота</span>`
       :`${ICOPY()}${IDEL()}${IB('rfEd','pen','Изменить крышу: контур, скаты, свесы (двойное касание)')}${lvSel(sel)}
-      ${ridgeFld(sel)}
+      ${ridgeFld(sel)}${(()=>{ const BL=roofBaseLevel(sel,doc.curLv), off=r1(roofBase(sel,doc.curLv)-BL.elev); return `<div class="fld inl"><label for="rfB" title="Смещение низа крыши от её уровня, мм">Низ</label><input class="inp xs" id="rfB" inputmode="decimal" value="${off}"></div>`; })()}
       ${IB('v3d','box','Показать в 3D')}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='stair'&&!moveSel.size){ const g=stairGeom(sel);
     const trs=g.tr.map(t=>Math.round(t)), trTxt=[...new Set(trs)].join(' / ');
@@ -2976,14 +2979,14 @@ function syncPanel(){
       const wRoofB=IS3D&&isWall(sel)?(()=>{ const canR=!isArc(sel)&&roofsOver(doc.levels[doc.curLv]).length>0, md=canR&&wallRoofs(sel,doc.curLv)?'roof':sel.ht?'own':'lvl', z=wallZ(sel,doc.curLv);
         return `<div class="seg" role="group" aria-label="Верх стены">${[['lvl','⤒ До уровня','Верх стены — на отметке следующего уровня'],['own','↕ Своя','Своя высота стены — введите число'],...(canR?[['roof','⌂ С крышей','Связать с крышей: верх стены по низу крыши, одно тело']]:[])].map(([k,n,t])=>`<button data-wtop="${k}" aria-pressed="${md===k}" title="${t}">${n}</button>`).join('')}</div>
           ${md==='own'?`<div class="fld inl"><label for="pHt" title="Высота стены, мм">H</label><input class="inp xs" id="pHt" inputmode="decimal" value="${r1(z.z1-z.z0)}"></div>`:''}`; })():'';
-      h=!isDet(sel)?`${ICOPY()}${IDEL()}${wRoofB}${IDET()}${lvSel(sel)}`:`<div class="fld inl"><label for="pLen" title="Длина">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(LEN)}" title="Длина, мм"></div>
+      h=!isDet(sel)?`${ICOPY()}${IDEL()}${wRoofB}${IS3D&&isWall(sel)?`<div class="fld inl"><label for="pBo" title="Смещение низа стены от её уровня, мм">Низ</label><input class="inp xs" id="pBo" inputmode="decimal" value="${r1(sel.bo||0)}"></div>`:''}${IDET()}${lvSel(sel)}`:`<div class="fld inl"><label for="pLen" title="Длина">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(LEN)}" title="Длина, мм"></div>
         ${AG?'':`<div class="fld inl"><label for="pAng" title="Угол к горизонтали">∠</label><input class="inp xs" id="pAng" inputmode="decimal" value="${Math.round(ANG*100)/100}" title="Угол, °"></div>`}
         ${AG?`<div class="fld inl"><label for="pR">R</label><input class="inp xs" id="pR" inputmode="decimal" value="${r1(AG.r)}"></div>`:''}
         ${sel.L==='walls'?`<div class="fld inl"><label for="pW" title="Толщина стены">⟷</label><input class="inp xs" id="pW" inputmode="decimal" value="${r3(sel.w||0)}" title="Толщина стены, мм"></div>
 
 `:''}
         <span style="display:contents">
-        ${sel.L==='walls'?`${sideSeg('pside',sel.side||0)}${IS3D&&isWall(sel)?(()=>{ return `<div class="fld inl"><label for="pBo" title="Смещение низа от уровня">Низ</label><input class="inp xs" id="pBo" inputmode="decimal" value="${r1(sel.bo||0)}" title="Смещение низа, мм"></div>`; })():''}`:''}
+        ${sel.L==='walls'?`${sideSeg('pside',sel.side||0)}${isWall(sel)?wallJoinSegs(sel):''}`:''}
         ${colorBtns(sel)}
         <select class="inp" id="pLayer" title="Слой" style="width:auto">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select></span>`;
     } else if(sel.t==='circ'){
@@ -3026,6 +3029,9 @@ panel.addEventListener('click',e=>{
   if(b.dataset.dir!==undefined) return addByLen(+b.dataset.dir);
   if(b.dataset.mdir!==undefined){ lastMoveDir=+b.dataset.mdir; return moveBy(lastMoveDir); }
   const sel=doc.items.find(i=>i.id===selId);
+  if((b.dataset.wjt||b.dataset.wjs)&&sel&&isWall(sel)){ const [k,m]=(b.dataset.wjt||b.dataset.wjs+':').split(':'), J={...sel[k]}, c=cornerPair(J); if(!c) return; editBegin(); pushUndo();
+    if(b.dataset.wjt){ setCorner(J,m); toast({m:'Скос',b:'Стык',q:'Срез под прямым углом'}[m]); } else { const md=cornerMode(c[0],c[1],c[2],c[3]), aPass=md==='p'||md==='qp'; setCorner(J,md==='qp'||md==='qs'?'q':'b',!aPass); toast('Проходит другая стена'); }
+    persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); return; }
   if(b.dataset.jt&&selJoint){ editBegin(); pushUndo(); setCorner(selJoint,b.dataset.jt); persist(); panelKey=''; syncPanel(); redraw(); toast({m:'Скос',b:'Стык',q:'Срез под прямым углом'}[b.dataset.jt]); return; }
   if(b.dataset.rtype&&sel&&sel.t==='roof'){ editBegin(); pushUndo(); roofPreset(sel,b.dataset.rtype); roofDef().type=b.dataset.rtype; roofEdge=null; persist(); panelKey=''; syncPanel(); redraw(); return; }
   if(b.dataset.wside!==undefined){doc.settings.wallSide=+b.dataset.wside;persist();
@@ -3508,7 +3514,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.31':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.32':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
