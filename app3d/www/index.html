@@ -428,7 +428,7 @@ function loadStore(){
 }
 let store=loadStore();
 let doc=store.docs[store.current];
-function persist(){ try{ if(doc&&doc.levels&&!persist.inL){ persist.inL=1; try{ enforceLocks(); } finally{ persist.inL=0; } } }catch(e){ console.warn(e); } try{ if(doc&&doc.levels) syncRoofs(); }catch(e){} doc.updated=Date.now();try{localStorage.setItem(STORE,JSON.stringify(store));}catch(e){ if(!persist.warned){ persist.warned=1; setTimeout(()=>toast('Память устройства переполнена: удалите лишние картинки-подложки или старые чертежи'),50); } }}
+function persist(){ try{ if(doc&&doc.levels&&!persist.inL){ persist.inL=1; try{ enforceLocks(); } finally{ persist.inL=0; } } }catch(e){ console.warn(e); } try{ if(doc&&doc.levels) syncRoofs(); }catch(e){} try{ if(doc&&doc.levels) roofLevelsFix(); }catch(e){ console.warn('roofLevelsFix',e); } doc.updated=Date.now();try{localStorage.setItem(STORE,JSON.stringify(store));}catch(e){ if(!persist.warned){ persist.warned=1; setTimeout(()=>toast('Память устройства переполнена: удалите лишние картинки-подложки или старые чертежи'),50); } }}
 
 /* ---------- state ---------- */
 let tool='line', curLayer='walls', axisMode='ortho', snapOn=true, osnapOn=true, snapMark=null;
@@ -842,7 +842,7 @@ function snapGeo(ex){
     } else if(it.t==='dim'){ pts.push({p:it.a,k:'end'},{p:it.b,k:'end'}); }
     else if(it.t==='grid'){ segs.push({a:it.a,b:it.b,k:'axis'}); }
     else if(it.t==='aux'){ const d=unit(it.a,it.b); segs.push({a:{x:it.a.x-d.x*1e6,y:it.a.y-d.y*1e6},b:{x:it.a.x+d.x*1e6,y:it.a.y+d.y*1e6},k:'aux'}); }
-    else if(it.t==='chim'){ const c=chimCorners(it); pts.push({p:it.p,k:'center'}); for(let i=0;i<4;i++){pts.push({p:c[i],k:'corner'},{p:mid(c[i],c[(i+1)%4]),k:'mid'}); segs.push({a:c[i],b:c[(i+1)%4],k:'face'});} }
+    else if(it.t==='chim'){ const c=chimCorners(it); pts.push({p:it.p,k:'center'}); for(let i=0;i<4;i++){pts.push({p:c[i],k:'corner'},{p:mid(c[i],c[(i+1)%4]),k:'mid'}); segs.push({a:c[i],b:c[(i+1)%4],k:'face',it});} }
     else if(isHole(it)){ const g=holeGeom(it); if(g){ for(const q of [g.L0,g.L1,g.R0,g.R1]) pts.push({p:{x:r3(q.x),y:r3(q.y)},k:'corner'}); const m=g.at(g.c,0); pts.push({p:{x:r3(m.x),y:r3(m.y)},k:'mid'}); } }
     else if(it.t==='circ'){ pts.push({p:it.c,k:'center'}); circs.push({c:it.c,r:it.r}); for(const [dx,dy] of [[1,0],[0,1],[-1,0],[0,-1]]) pts.push({p:{x:r3(it.c.x+dx*it.r),y:r3(it.c.y+dy*it.r)},k:'quad'}); }
   }
@@ -1673,7 +1673,7 @@ function endPtr(e,cancel){ if(copyHi&&press&&press.moved&&(press.sd||press.mv||p
   if(!press||press.id!==e.pointerId) return;
   const pr=press; press=null; if(pr.lpSel){ clearTimeout(pr.lpSel); pr.lpSel=null; } if(pr.lpJoint) clearTimeout(pr.lpJoint);
   if(pr.roofTap&&!pr.moved&&!cancel&&roofDef().mode==='sketch'){ roofSketchTap({x:pr.sx,y:pr.sy}); return; }
-  if(pr.roofTap&&!pr.moved&&!cancel){ const r=roofAt(toW(pr.sx,pr.sy)); if(r){ pushUndo(); doc.items.push(r); persist(); setTool('select'); selId=r.id; roofEdge=null; panelKey=''; syncPanel(); redraw();
+  if(pr.roofTap&&!pr.moved&&!cancel){ const r=roofAt(toW(pr.sx,pr.sy)); if(r){ pushUndo(); doc.items.push(r); persist(); setTool('select'); selId=r.id; roofEdge=null; followSel(r.id); panelKey=''; syncPanel(); redraw();
       toast('Крыша: '+ROOFT[r.type]+'. Кружки на гранях — скат грани и его угол'); } return; }
   if(pr.joint){ jointDrag=null; if(pr.joint.started){persist();} liveSnap=null; alignGuide=null; panelKey=''; syncPanel();
     if(selJoint){ const sp=toS(selJoint), lim=H-(panel.hidden?0:panel.offsetHeight)-40; if(sp.y>lim) view.cy-=(sp.y-lim+20)/view.scale; }
@@ -2133,6 +2133,7 @@ function tempDimList(){
     let ref=(tdDrag&&tdDrag.dir===dir)?tdDrag.pt:(sel.tref&&sel.tref[dir]); let t=null, at=null, man=false;
     if(ref){ const rt=hz?ref.x:ref.y; if((rt-(hz?(sg>0?x1:x0):(sg>0?y1:y0)))*sg>0.5){ t=rt; at=hz?Math.max(y0,Math.min(y1,ref.y)):Math.max(x0,Math.min(x1,ref.x)); man=true; } }
     let tw=null; if(t===null&&best[dir]){ t=best[dir].t; at=best[dir].at; tw=best[dir].it||null; }
+    else if(man){ for(const sg2 of segs){ if(!sg2.it) continue; const vx=Math.abs(sg2.a.x-sg2.b.x)<0.5, vy=Math.abs(sg2.a.y-sg2.b.y)<0.5; if(hz?!vx:!vy) continue; const c=hz?sg2.a.x:sg2.a.y; if(Math.abs(c-t)>1) continue; const lo=Math.min(hz?sg2.a.y:sg2.a.x,hz?sg2.b.y:sg2.b.x)-1, hi=Math.max(hz?sg2.a.y:sg2.a.x,hz?sg2.b.y:sg2.b.x)+1, rq=hz?ref.y:ref.x; if(rq<lo||rq>hi) continue; tw=sg2.it; break; } }
     if(t===null) continue; const d=(t-e)*sg; if(d<0.5&&!man) continue;
     out.push({dir,d,man,ref:man?ref:null,m,tw,A:hz?{x:e,y:at}:{x:at,y:e},B:hz?{x:t,y:at}:{x:at,y:t}});
   }
@@ -2157,15 +2158,15 @@ function drawTempDims(){
     const tx=fmt(t.d), w=ctx.measureText(tx).width; ctx.fillStyle=C.surface; ctx.fillRect(-w/2-4,-9,w+8,18); ctx.strokeStyle=C.sel; ctx.lineWidth=1; ctx.strokeRect(-w/2-4,-9,w+8,18);
     ctx.fillStyle=C.sel; ctx.fillText(tx,0,0); ctx.restore();
     // замочек: зафиксировать это расстояние между стенами (ограничение геометрии)
-    const sw=doc.items.find(i=>i.id===selId); if(t.tw&&sw&&!moveSel.size&&lockable(sw)&&lockable(t.tw)&&lockAx(sw)===lockAx(t.tw)&&lockAx(sw)===(hz?'x':'y')){ const on=!!findLock(sw.id,t.tw.id), sgL=t.dir[0]==='+'?1:-1, k={x:m.x+(hz?sgL*(w/2+18):0),y:m.y+(hz?0:-sgL*(w/2+18))};
+    const sw=doc.items.find(i=>i.id===selId); if(t.tw&&sw&&t.tw.id!==sw.id&&!moveSel.size&&lockable(sw)&&lockable(t.tw)&&lockAxOk(sw,hz?'x':'y')&&lockAxOk(t.tw,hz?'x':'y')){ const on=!!findLock(sw.id,t.tw.id), sgL=t.dir[0]==='+'?1:-1, k={x:m.x+(hz?sgL*(w/2+18):0),y:m.y+(hz?0:-sgL*(w/2+18))};
       drawLock(k.x,k.y,on); lockHits.push({x:k.x,y:k.y,a:sw.id,b:t.tw.id,ax:hz?'x':'y',on}); } }
 }
 let lockHits=[];
 function drawLock(x,y,on){ ctx.save(); ctx.fillStyle=on?C.sel:C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.strokeStyle=on?'#fff':C.sel; ctx.fillStyle=on?'#fff':C.sel; ctx.lineWidth=1.6; ctx.fillRect(x-4.5,y-1,9,6.5); ctx.beginPath(); if(on) ctx.arc(x,y-1.5,3.2,Math.PI,0); else ctx.arc(x+2.5,y-2.5,3.2,Math.PI*1.1,-0.2); ctx.stroke(); ctx.restore(); }
 // стена/линия, параллельная оси X или Y — такую можно зафиксировать размером
-const lockable=it=>it&&it.t==='line'&&!isArc(it)&&(Math.abs(it.a.x-it.b.x)<0.5||Math.abs(it.a.y-it.b.y)<0.5);
-const lockAx=it=>Math.abs(it.a.x-it.b.x)<0.5?'x':'y', lockCo=(it,ax)=>(it.a[ax]+it.b[ax])/2;
+const lockable=it=>it&&((it.t==='line'&&!isArc(it)&&(Math.abs(it.a.x-it.b.x)<0.5||Math.abs(it.a.y-it.b.y)<0.5))||it.t==='chim');
+const lockAx=it=>it.t==='chim'?null:Math.abs(it.a.x-it.b.x)<0.5?'x':'y', lockCo=(it,ax)=>it.t==='chim'?it.p[ax]:(it.a[ax]+it.b[ax])/2, lockAxOk=(it,ax)=>it.t==='chim'||lockAx(it)===ax;
 function locksOf(){ const L=doc.levels[doc.curLv]; if(!L.locks) L.locks=[]; return L.locks; }
 function findLock(a,b){ return locksOf().find(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a)); }
 function toggleLock(h){ const ls=locksOf(), f=findLock(h.a,h.b); pushUndo();
@@ -2174,7 +2175,7 @@ function toggleLock(h){ const ls=locksOf(), f=findLock(h.a,h.b); pushUndo();
   persist(); redraw(); }
 // соблюдение зафиксированных размеров: сдвинули одну стену — вторая едет следом (вместе с примыкающими)
 function enforceLocks(){ const L=doc.levels[doc.curLv]; if(!L||!L.locks||!L.locks.length) return; const by=new Map(doc.items.map(i=>[i.id,i]));
-  L.locks=L.locks.filter(l=>{ const A=by.get(l.a), B=by.get(l.b); return A&&B&&lockable(A)&&lockable(B)&&lockAx(A)===l.ax&&lockAx(B)===l.ax; });
+  L.locks=L.locks.filter(l=>{ const A=by.get(l.a), B=by.get(l.b); return A&&B&&lockable(A)&&lockable(B)&&lockAxOk(A,l.ax)&&lockAxOk(B,l.ax); });
   let bad=false;
   for(let it=0;it<6;it++){ let ch=false;
     for(const l of L.locks){ const A=by.get(l.a), B=by.get(l.b), ca=lockCo(A,l.ax), cb=lockCo(B,l.ax), err=(cb-ca)-l.d; if(Math.abs(err)<0.5){ l.pa=ca; l.pb=cb; continue; }
@@ -2333,7 +2334,7 @@ function lvMenu(open){ const m=$('#lvBar'); m.hidden=!open; $('#lvBtn').setAttri
 $('#lvBtn').addEventListener('click',e=>{ e.stopPropagation(); lvMenu($('#lvBar').hidden); });
 document.addEventListener('pointerdown',e=>{ if(!$('#lvBar').hidden&&!e.target.closest('.lvdd')) lvMenu(false); });
 function setLevel(i){
-  if(i===doc.curLv) return; doc.curLv=i; persist();
+  if(i===doc.curLv) return; doc.curLv=i; barEdit=null; persist();
   undoS=[];redoS=[]; chain.pts=[];chain.ids=[]; live=null; selId=null; selJoint=null; moveSel.clear(); pendingText=null;
   panelKey=''; syncPanel(); syncTop(); renderLevels(); redraw(); toast(doc.levels[i].name+(doc.levels[i].gp?'':' '+fmtElev(doc.levels[i].elev)));
 }
@@ -2479,8 +2480,8 @@ function selTap(sx,sy){ const now=Date.now(), same=CYC&&Math.hypot(sx-CYC.x,sy-C
   if(i>=0&&L.length>1){ CYCt=setTimeout(()=>{ CYCt=0; apply(L[(i+1)%L.length]); },390); return; } // ждём: вдруг это двойное касание
   if(i>=0) return; apply(L[0]||null); }
 function enterDetail(){ const it=doc.items.find(i=>i.id===selId); if(!it) return;
-  if(it.t==='roof'){ roofEdit(it); return; } if(it.t==='stair'){ stairEdit(it); return; } if(isHole(it)){ holeMv=it.id; redraw(); return; }
-  detailSel=moveSel.size>1?'*':it.id; panelKey=''; syncPanel(); redraw(); }
+  if(it.t==='roof'){ roofEdit(it); return; } if(it.t==='stair'){ stairEdit(it); return; } if(isHole(it)){ holeMv=it.id; detailSel=it.id; panelKey=''; syncPanel(); redraw(); syncModeBtns(); return; }
+  detailSel=moveSel.size>1?'*':it.id; panelKey=''; syncPanel(); redraw(); syncModeBtns(); }
 
 /* ---------- drawing ops ---------- */
 function startPoint(){
@@ -2623,7 +2624,7 @@ let polyN=6, polyS=0, shW=0, shH=0, shD=0, fixMode='a', moreOpen=false, wMore=fa
 const SIDEI={1:'<rect x="3" y="5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 13h20" stroke-dasharray="3 2"/>',
   0:'<rect x="3" y="8.5" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 12h20" stroke-dasharray="3 2"/>',
   '-1':'<rect x="3" y="12" width="18" height="7" fill="currentColor" stroke="none" opacity=".45"/><path d="M2 11h20" stroke-dasharray="3 2"/>'};
-const ICO={mv:'<path d="M12 2v20M2 12h20"/><path d="M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/>',lvl:'<path d="M3 8h18M3 16h18"/><path d="M12 4v16M9 17l3 3 3-3"/>',edges:'<path d="M3 17 12 7l9 10"/><path d="M1.5 19.5 12 8.2l10.5 11.3" stroke-dasharray="2.2 2"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/>',box:'<path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
+const ICO={pen:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',mv:'<path d="M12 2v20M2 12h20"/><path d="M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/>',lvl:'<path d="M3 8h18M3 16h18"/><path d="M12 4v16M9 17l3 3 3-3"/>',edges:'<path d="M3 17 12 7l9 10"/><path d="M1.5 19.5 12 8.2l10.5 11.3" stroke-dasharray="2.2 2"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/>',box:'<path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
   del:'<path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
   ungrp:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/><path d="M15 3h6v6M3 15v6h6" stroke-dasharray="2 2"/>',
   flip:'<path d="M3 9h18M3 15h18"/><path d="M8 5l-3 4 3 4M16 11l3 4-3 4"/>',
@@ -2634,6 +2635,14 @@ const ICO={mv:'<path d="M12 2v20M2 12h20"/><path d="M9 5l3-3 3 3M9 19l3 3 3-3M5 
   align:'<path d="M4 20V4M4 20h16"/><path d="M9 15l4-4 2 2 4-4" stroke-dasharray="2 1.5"/>'};
 const IB=(act,k,t,cls)=>`<button class="ibn${cls?' '+cls:''}" data-act="${act}" title="${t}" aria-label="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg></button>`;
 const ICOPY=()=>IB('copyObj','copy','Копировать'), IDEL=()=>IB('del','del','Удалить','danger');
+// короткое меню (одно касание) и правка (двойное касание): в правке — только параметры, без кнопок короткого меню
+const isDet=it=>!!it&&(detailSel===it.id||roofEd===it.id||stEd===it.id||holeMv===it.id);
+const IDET=()=>IB('detail','pen','Изменить параметры (двойное касание)');
+function lvSel(it){ const L=doc.levels[doc.curLv]; if(isHole(it)) return `<span class="lbl" title="Окно и дверь стоят в стене — уровень как у стены">ур. ${esc(L.name)}</span>`;
+  return `<div class="fld inl"><label for="pLv" title="Уровень, на котором находится объект — можно перенести">Уровень</label><select class="inp" id="pLv" style="width:auto">${doc.levels.map((l,i)=>l.gp?'':`<option value="${i}"${i===doc.curLv?' selected':''}>${esc(l.name)}</option>`).join('')}</select></div>`; }
+function moveItToLevel(ti){ const id=selId, it=doc.items.find(i=>i.id===id); if(!it||ti===doc.curLv||!doc.levels[ti]) return; const from=doc.curLv;
+  moveSelToLevel(ti); if(it.t==='roof'&&it.src==='walls') it.sl=(it.sl||0)-(ti-from);
+  doc.curLv=ti; selId=id; moveSel.clear(); detailSel=null; barEdit=null; roofEd=null; stEd=null; holeMv=null; persist(); renderLevels(); syncTop(); panelKey=''; syncPanel(); redraw(); }
 function ldEndSeg(name,v){ const I={arrow:'<path d="M3 12h12"/><path d="M21 12l-7-4v8z" fill="currentColor"/>',dot:'<path d="M3 12h12"/><circle cx="18" cy="12" r="3.5" fill="currentColor"/>',none:'<path d="M3 12h18"/>'}, N={arrow:'Стрелка',dot:'Точка',none:'Без знака'};
   return `<div class="seg" role="group">${['arrow','dot','none'].map(k=>`<button class="sico" data-${name}="${k}" aria-pressed="${v===k}" title="${N[k]}" aria-label="${N[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${I[k]}</svg></button>`).join('')}</div>`; }
 // цвет линии (и заливки, и штриховка — у стены); пусто = цвет слоя по умолчанию
@@ -2662,7 +2671,7 @@ function syncPanel(){
   if(detailSel&&detailSel!=='*'&&detailSel!==selId) detailSel=null; if(detailSel==='*'&&moveSel.size<2) detailSel=null;
   if(holeMv&&(selId!==holeMv||tool!=='select')) holeMv=null;
   const sel=doc.items.find(i=>i.id===selId);
-  const key=tool+'|'+selMode+'|'+(rotC?1:0)+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'');
+  const key=tool+'|'+selMode+'|'+(rotC?1:0)+'|'+(editGrp||'')+'|'+(tool==='select'?[...moveSel].join(','):'')+'|'+lineKind+'|'+holeType+'|'+((tool==='select'||tool==='hole')&&sel?sel.id:'')+'|'+(pendingText?'t':'')+'|'+(tool==='select'&&selJoint?selJoint.x+','+selJoint.y:'')+'|'+(sel&&isDet(sel)?'D':'');
   if(roofEd&&(!sel||sel.id!==roofEd||tool!=='select')) roofEd=null;
   if(stEd&&(!sel||sel.id!==stEd||tool!=='select')) stEd=null;
   if(key===panelKey) return; if(barEdit&&panelKey&&key.split('|').slice(0,8).join('|')!==panelKey.split('|').slice(0,8).join('|')){ barEdit=null; setTimeout(syncModeBtns,0); }
@@ -2730,15 +2739,14 @@ function syncPanel(){
   } else if((tool==='select'||tool==='hole')&&sel&&isHole(sel)){
     const g=holeGeom(sel)||{w:sel.width,s0:0,s1:0,L:0}, isW=sel.t==='win';
     h=`<div class="title">${isW?'Окно':'Дверь'} <b>${fmt(g.w)}×${fmt(sel.height)} мм</b></div>
-      <div class="fld"><label for="pHW">Ширина</label><input class="inp sm" id="pHW" inputmode="decimal" value="${r1(sel.width)}"></div>
+      ${isDet(sel)?`<div class="fld"><label for="pHW">Ширина</label><input class="inp sm" id="pHW" inputmode="decimal" value="${r1(sel.width)}"></div>
       <div class="fld"><label for="pHH">Высота</label><input class="inp sm" id="pHH" inputmode="decimal" value="${r1(sel.height)}"></div>
-      <div class="fld"><label for="pHS">${isW?'Подокон.':'Низ'}</label><input class="inp sm" id="pHS" inputmode="decimal" value="${r1(sel.sill)}"></div>
-      ${isW?'':'<button class="btn" data-act="hinge" title="Петли на другую сторону" aria-label="Петли на другую сторону">⇆</button><button class="btn" data-act="swing" title="Открывание внутрь или наружу" aria-label="Открывание внутрь или наружу">⇅</button>'}
-      ${ICOPY()}${IDEL()}`;
+      <div class="fld"><label for="pHS">${isW?'Подокон.':'Низ'}</label><input class="inp sm" id="pHS" inputmode="decimal" value="${r1(sel.sill)}"></div>`
+      :`${ICOPY()}${IDEL()}${isW?'':'<button class="btn" data-act="hinge" title="Петли на другую сторону" aria-label="Петли на другую сторону">⇆</button><button class="btn" data-act="swing" title="Открывание внутрь или наружу" aria-label="Открывание внутрь или наружу">⇅</button>'}${IDET()}${lvSel(sel)}`}`;
   } else if((tool==='select'||tool==='hole'||tool==='move')&&sel&&sel.t==='chim'){
     const rd=chimRound(sel);
     h=`<div class="title">Дымоход <b>${rd?'Ø'+fmt(sel.w):fmt(sel.w)+'×'+fmt(sel.l)} мм</b><span class="lbl">${sel.th>0?'стенка '+fmt(sel.th):'сплошной'}</span></div>
-      ${chimShSeg(rd?'round':'rect','pcsh')}
+      ${isDet(sel)?`${chimShSeg(rd?'round':'rect','pcsh')}
       <div class="fld"><label for="pCW">${rd?'Диаметр':'Ширина (X)'}</label><input class="inp sm" id="pCW" inputmode="decimal" value="${r1(sel.w)}"></div>
       ${rd?'':`<div class="fld"><label for="pCL">Длина (Y)</label><input class="inp sm" id="pCL" inputmode="decimal" value="${r1(sel.l)}"></div>`}
       <div class="fld"><label for="pCT">Стенка</label><input class="inp sm" id="pCT" inputmode="decimal" value="${r1(sel.th||0)}"></div>
@@ -2746,9 +2754,9 @@ function syncPanel(){
         return (rt!=null?`<div class="fld"><label for="pCR" title="Над самой высокой точкой крыши в месте выхода">Над крышей</label><input class="inp sm" id="pCR" inputmode="decimal" value="${r1(sel.hr==null?600:sel.hr)}"></div>`
           :`<div class="fld"><label for="pCH">Высота</label><input class="inp sm" id="pCH" inputmode="decimal" value="${r1(zt-zb)}"></div>`)
           +`<div class="fld"><label for="pCZ" title="Отметка низа от ±0.000, мм">Низ от ±0</label><input class="inp sm" id="pCZ" inputmode="decimal" value="${r1(zb)}"></div><span class="lbl">верх ${fmtElev(zt)}</span>`; })():''}
-      ${rd?'':IB('crot','rot','Повернуть на 90°')}
-      ${ICOPY()}${IDEL()}${colorBtns(sel)}
-      <p class="hint">Тяните дымоход пальцем целиком. Двойное касание — размеры и графика (цвет, толщина, штриховка).</p>`;
+      ${colorBtns(sel)}`
+      :`${ICOPY()}${IDEL()}${rd?'':IB('crot','rot','Повернуть на 90°')}${IDET()}${lvSel(sel)}
+      <p class="hint">Тяните дымоход пальцем целиком. Двойное касание — размеры и графика.</p>`}`;
   } else if(tool==='grid'){ const d=gridDef();
     h=`<div class="title">Оси</div>
       <div class="fld inl"><label for="gNV" title="Вертикальных осей">║</label><input class="inp xs" id="gNV" inputmode="numeric" value="${d.nV}"></div>
@@ -2772,26 +2780,26 @@ function syncPanel(){
       <div class="fld inl"><label for="dsW" title="Ширина марша">Ширина</label><input class="inp xs" id="dsW" inputmode="decimal" value="${d.w}"></div>
       ${stairKind==='U'?`<div class="fld inl"><label for="dsG" title="Зазор между маршами">Зазор</label><input class="inp xs" id="dsG" inputmode="decimal" value="${d.gap}"></div>`:''}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='roof'&&!moveSel.size){ const re=roofEdge&&roofEdge.id===sel.id&&roofEdge.i<sel.pts.length?roofEdge.i:null, E=sel.edges||[], ed=re!=null?E[re]:null;
-    h=`${['flat','shed','gable','hip','pyr'].map(k=>`<button class="ibn" data-rtype="${k}" aria-pressed="${sel.type===k}" title="${MTIP[k]}" aria-label="${MTIP[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${MICO[k]}</svg></button>`).join('')}
+    h=isDet(sel)?`${['flat','shed','gable','hip','pyr'].map(k=>`<button class="ibn" data-rtype="${k}" aria-pressed="${sel.type===k}" title="${MTIP[k]}" aria-label="${MTIP[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${MICO[k]}</svg></button>`).join('')}
       ${ed?`<div class="title">Грань ${re+1}</div><button class="btn" data-act="rfEdge" aria-pressed="${!!ed.s}">${ed.s?'⟋ Скат':'— Без ската'}</button>
         ${ed.s?`<div class="fld inl"><label for="rfEA">∠</label><input class="inp xs" id="rfEA" inputmode="decimal" value="${Math.round(ed.a*10)/10}" title="Уклон этой грани, °"></div>`:''}`
        :`<div class="fld inl"><label for="rfA" title="Уклон всех скатов">∠</label><input class="inp xs" id="rfA" inputmode="decimal" value="${Math.round((sel.ang||30)*10)/10}" title="Уклон, °"></div>`}
       <div class="fld inl"><label for="rfO" title="Свес">Свес</label><input class="inp xs" id="rfO" inputmode="decimal" value="${r1(sel.ov==null?500:sel.ov)}"></div>
       <div class="fld inl"><label for="rfT" title="Толщина">Толщ.</label><input class="inp xs" id="rfT" inputmode="decimal" value="${r1(sel.th||250)}"></div>
-      ${(()=>{ const BL=roofBaseLevel(sel,doc.curLv), off=r1(roofBase(sel,doc.curLv)-BL.elev); return `<div class="fld inl"><label for="rfL" title="Базовый уровень низа крыши">Уровень</label><select class="inp" id="rfL" style="width:auto">${doc.levels.filter(l=>!l.gp).map(l=>`<option value="${l.id}"${l===BL?' selected':''}>${esc(l.name)}</option>`).join('')}</select></div>
-      <div class="fld inl"><label for="rfB" title="Смещение низа крыши от базового уровня, мм">Смещ.</label><input class="inp xs" id="rfB" inputmode="decimal" value="${off}"></div>`; })()}
-      ${roofEd===sel.id?'<span class="lbl">Тяните край · цифры — свес</span>':IB('rfEd','edges','Края крыши: свесы (двойное касание по крыше)')}
+      ${(()=>{ const BL=roofBaseLevel(sel,doc.curLv), off=r1(roofBase(sel,doc.curLv)-BL.elev); return `<div class="fld inl"><label for="rfB" title="Смещение низа крыши от её уровня, мм">Смещ.</label><input class="inp xs" id="rfB" inputmode="decimal" value="${off}"></div>`; })()}
+      <span class="lbl">Тяните углы и стороны · цифры — свес</span>`
+      :`${ICOPY()}${IDEL()}${IB('rfEd','pen','Изменить крышу: контур, скаты, свесы (двойное касание)')}${lvSel(sel)}
       <span class="lbl">конёк ${(()=>{ try{ const g=roofGeom(sel); let m=-1e18; for(const f of g.faces) for(const q of f.P) m=Math.max(m,g.H(q)+g.th); return fmtElev(m); }catch(e){ return ''; } })()}</span>
-      ${IB('v3d','box','Показать в 3D')}${ICOPY()}${IDEL()}`;
+      ${IB('v3d','box','Показать в 3D')}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='stair'&&!moveSel.size){ const g=stairGeom(sel);
     const trs=g.tr.map(t=>Math.round(t)), trTxt=[...new Set(trs)].join(' / ');
-    h=`<div class="title"><b>${g.n}</b> ступ.</div>
+    h=!isDet(sel)?`<div class="title"><b>${g.n}</b> ступ.</div>${ICOPY()}${IDEL()}${IB('stRev','rot','Развернуть направление подъёма')}${IB('stEd','pen','Изменить лестницу (двойное касание)')}${lvSel(sel)}`
+     :`<div class="title"><b>${g.n}</b> ступ.</div>
       <div class="fld inl"><label for="stT" title="Шаг ступени (проступь)">Шаг</label><input class="inp sm" id="stT" inputmode="decimal" style="min-width:${Math.max(4,String(sel.tm?r1(sel.tread):trTxt).length*0.62+1.2)}em" value="${sel.tm?r1(sel.tread):trTxt}" title="${sel.tm?'Задан вручную':'Авто: ступени поровну, около 300 мм (290…350)'}"></div>
       <button class="btn${sel.tm?'':' go'}" data-act="stAuto" title="Авто: шаг подбирается сам (290…350 мм, ближе к 300)">${sel.tm?'Ручн.':'Авто'}</button>
-      ${stEd===sel.id?'<span class="lbl">Тяните край · цифры — длина</span>':IB('stEd','edges','Изменить длину: тянуть края (двойное касание по лестнице)')}
+      <span class="lbl">Тяните край · цифры — длина</span>
       <div class="fld inl"><label for="stW">Ширина</label><input class="inp xs" id="stW" inputmode="decimal" value="${sel.w}"></div>
-      ${sel.kind==='U'?`<div class="fld inl"><label for="stG">Зазор</label><input class="inp xs" id="stG" inputmode="decimal" value="${sel.gap}"></div>${IB('stFlip','flip','Второй марш на другую сторону')}`:''}
-      ${IB('stRev','rot','Развернуть направление подъёма')}${ICOPY()}${IDEL()}`;
+      ${sel.kind==='U'?`<div class="fld inl"><label for="stG">Зазор</label><input class="inp xs" id="stG" inputmode="decimal" value="${sel.gap}"></div>${IB('stFlip','flip','Второй марш на другую сторону')}`:''}`;
   } else if(tool==='hole'&&holeType==='chim'){
     const c=chimDef();
     const rd=chimRound(c);
@@ -2810,8 +2818,8 @@ function syncPanel(){
   } else if(tool==='select'&&sel&&!selJoint){
     if(sel.g&&editGrp!==sel.g){ const n=doc.items.filter(i=>i.g===sel.g).length;
       h=`<div class="title" style="flex-basis:auto">Фигура <b>${n} ${n%10===1&&n!==11?'грань':(n%10>=2&&n%10<=4&&(n<10||n>20)?'грани':'граней')}</b></div>
-        ${ICOPY()}${IB('ungrp','ungrp','Разбить на отдельные')}${IDEL()}
-        ${sel.t==='line'&&!isArc(sel)?`<div class="fld inl"><label for="pLen" title="Длина выбранной грани">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(lineLen(sel))}"></div>
+        ${!isDet(sel)?`${ICOPY()}${IB('ungrp','ungrp','Разбить на отдельные')}${IDEL()}${IDET()}${lvSel(sel)}`:''}
+        ${isDet(sel)&&sel.t==='line'&&!isArc(sel)?`<div class="fld inl"><label for="pLen" title="Длина выбранной грани">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(lineLen(sel))}"></div>
         <div class="fld inl"><label for="pAng" title="Угол выбранной грани">∠</label><input class="inp xs" id="pAng" inputmode="decimal" value="${Math.round(Math.atan2(sel.b.y-sel.a.y,sel.b.x-sel.a.x)*18000/Math.PI)/100}"></div>`:''}
         ${colorBtns(sel)}
         <p class="hint">Тяните грань — двигается только она, тяните вершину — угол. Всю фигуру целиком двигает «Сдвиг». Синие цифры — расстояния до стен, коснитесь и введите.</p>`;
@@ -2819,33 +2827,33 @@ function syncPanel(){
       // мини-панель стены/линии: длина и угол — прямо на чертеже (касание синей цифры), тут только свойства
       const AG=isArc(sel)?arcG(sel):null;
       const LEN=lineLen(sel); let ANG=Math.atan2(sel.b.y-sel.a.y,sel.b.x-sel.a.x)*180/Math.PI;
-      h=`${ICOPY()}${IDEL()}<div class="fld inl"><label for="pLen" title="Длина">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(LEN)}" title="Длина, мм"></div>
+      const wRoofB=IS3D&&isWall(sel)&&!isArc(sel)&&roofsOver(doc.levels[doc.curLv]).length?(()=>{ const on=!!wallRoofs(sel,doc.curLv); return `<button class="btn${on?' go':''}" data-act="wRoof" title="${on?'Стена доходит до крыши (верх по низу крыши) — нажмите, чтобы отсоединить':'Стена не доходит до крыши — нажмите, чтобы присоединить верх к крыше'}">⌂ ${on?'До крыши':'Без крыши'}</button>`; })():'';
+      h=!isDet(sel)?`${ICOPY()}${IDEL()}${wRoofB}${IDET()}${lvSel(sel)}`:`<div class="fld inl"><label for="pLen" title="Длина">L</label><input class="inp xs" id="pLen" inputmode="decimal" value="${r1(LEN)}" title="Длина, мм"></div>
         ${AG?'':`<div class="fld inl"><label for="pAng" title="Угол к горизонтали">∠</label><input class="inp xs" id="pAng" inputmode="decimal" value="${Math.round(ANG*100)/100}" title="Угол, °"></div>`}
         ${AG?`<div class="fld inl"><label for="pR">R</label><input class="inp xs" id="pR" inputmode="decimal" value="${r1(AG.r)}"></div>`:''}
         ${sel.L==='walls'?`<div class="fld inl"><label for="pW" title="Толщина стены">⟷</label><input class="inp xs" id="pW" inputmode="decimal" value="${r3(sel.w||0)}" title="Толщина стены, мм"></div>
           ${IS3D&&isWall(sel)?(()=>{ const z=wallZ(sel,doc.curLv), att=!sel.ht; return `<div class="fld inl"><label for="pHt" title="Высота стены">H</label><input class="inp xs" id="pHt" inputmode="decimal" value="${r1(z.z1-z.z0)}" ${att?'readonly':''} title="Высота стены, мм"></div>`; })():''}
-          ${IS3D&&isWall(sel)&&!isArc(sel)&&roofsOver(doc.levels[doc.curLv]).length?(()=>{ const on=!!wallRoofs(sel,doc.curLv); return `<button class="btn${on?' go':''}" data-act="wRoof" title="${on?'Стена доходит до крыши (верх по низу крыши) — нажмите, чтобы отсоединить':'Стена не доходит до крыши — нажмите, чтобы присоединить верх к крыше'}">⌂ ${on?'До крыши':'Без крыши'}</button>`; })():''}`:''}
+`:''}
         <span style="display:contents">
         ${sel.L==='walls'?`${sideSeg('pside',sel.side||0)}${IS3D&&isWall(sel)?(()=>{ const att=!sel.ht; return `<button class="btn${att?' go':''}" data-act="wAtt" title="${att?'Высота привязана к уровню выше — нажмите, чтобы задать свою':'Своя высота — нажмите, чтобы привязать к уровню выше'}">${att?'⤒ До уровня':'⤓ Своя'}</button>
           <div class="fld inl"><label for="pBo" title="Смещение низа от уровня">Низ</label><input class="inp xs" id="pBo" inputmode="decimal" value="${r1(sel.bo||0)}" title="Смещение низа, мм"></div>`; })():''}`:''}
         ${colorBtns(sel)}
         <select class="inp" id="pLayer" title="Слой" style="width:auto">${['walls','open','misc'].map(k=>`<option value="${k}"${sel.L===k?' selected':''}>${LAYERS[k].n}</option>`).join('')}</select></span>`;
     } else if(sel.t==='circ'){
-      h=`<div class="title">Круг <b>Ø${fmt(sel.r*2)} мм</b></div>
-        <div class="fld"><label for="pCD">Диаметр, мм</label><input class="inp" id="pCD" inputmode="decimal" value="${r1(sel.r*2)}"></div>
-        ${ICOPY()}${IDEL()}`;
+      h=`<div class="title">Круг <b>Ø${fmt(sel.r*2)} мм</b></div>${isDet(sel)?`
+        <div class="fld"><label for="pCD">Диаметр, мм</label><input class="inp" id="pCD" inputmode="decimal" value="${r1(sel.r*2)}"></div>${colorBtns(sel)}`:`${ICOPY()}${IDEL()}${IDET()}${lvSel(sel)}`}`;
     } else if(sel.t==='aux'){
-      h=`<div class="title">Конструкционная линия</div>${ICOPY()}${IDEL()}`;
+      h=`<div class="title">Конструкционная линия</div>${ICOPY()}${IDEL()}${lvSel(sel)}`;
     } else if(sel.t==='dim'){
-      h=`<div class="title">Размер <b>${fmt(dimGeom(sel).len)} мм</b></div>
+      h=!isDet(sel)?`<div class="title">Размер <b>${fmt(dimGeom(sel).len)} мм</b></div>${ICOPY()}${IDEL()}${IB('flip','flip','На другую сторону')}${IDET()}${lvSel(sel)}`:`<div class="title">Размер <b>${fmt(dimGeom(sel).len)} мм</b></div>
         <div class="fld"><label for="pOff">Отступ от линии, мм</label><input class="inp" id="pOff" inputmode="decimal" value="${r3(sel.off)}"></div>
         <div class="fld"><span class="lbl">Тип размера</span><div class="seg" role="group">${[['h','Гориз.'],['v','Верт.'],['a','По наклону']].map(([k,n])=>`<button data-dtype="${k}" aria-pressed="${(sel.dir||'a')===k}">${n}</button>`).join('')}</div></div>
-        ${IB('flip','flip','На другую сторону')}${ICOPY()}${IDEL()}`;
+`;
     } else {
       h=`<div class="fld"><label for="pText">Текст</label><input class="inp wide" id="pText" value="${esc(sel.s)}"></div>
         <div class="fld"><label for="pH">Высота, мм</label><input class="inp sm" id="pH" inputmode="decimal" value="${r3(sel.h)}"></div>
-        ${sel.ld?`${ldEndSeg('pldend',sel.ld.end||'arrow')}<button class="btn" data-act="ldDel" title="Убрать выноску">− выноска</button>`:'<button class="btn" data-act="ldAdd" title="Добавить выноску">+ выноска</button>'}
-        ${ICOPY()}${IDEL()}`;
+        ${sel.ld?`${ldEndSeg('pldend',sel.ld.end||'arrow')}<button class="btn" data-act="ldDel" title="Убрать выноску">− выноска</button>`:'<button class="btn" data-act="ldAdd" title="Добавить выноску">+ выноска</button>'}`;
+      if(!isDet(sel)) h=`<div class="title">Текст <b>${esc(String(sel.s||'').slice(0,18))}</b></div>${ICOPY()}${IDEL()}${IDET()}${lvSel(sel)}`;
     }
   } else if(tool==='select'&&selJoint){
     const jl=jointLines(selJoint);
@@ -2919,6 +2927,7 @@ panel.addEventListener('click',e=>{
     case 'stEd':if(sel&&sel.t==='stair') stairEdit(sel);break;
     case 'gFit':if(sel&&sel.t==='grid'){ editBegin(); pushUndo(); const n=gridFit(); persist(); panelKey=''; syncPanel(); redraw(); toast(n?'Оси дотянуты до пересечений ('+n+')':'Нет пересекающихся осей'); }break;
     case 'rfEd':if(sel&&sel.t==='roof') roofEdit(sel);break;
+    case 'detail':enterDetail();break;
     case 'stFlip':if(sel&&sel.t==='stair'){ pushUndo(); sel.flip=!sel.flip; persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'stRev':if(sel&&sel.t==='stair'){ pushUndo(); if(sel.kind==='U'){ const g=stairGeom(sel), A=sel.pts[0],B=sel.pts[1], d=sel.w+(sel.gap||0), u=unit(A,B), nn=lft(u), sg=sel.flip?-1:1; sel.pts=[{x:r3(A.x+nn.x*d*sg),y:r3(A.y+nn.y*d*sg)},{x:r3(B.x+nn.x*d*sg),y:r3(B.y+nn.y*d*sg)}]; sel.flip=!sel.flip; } else sel.pts=sel.pts.slice().reverse(); persist(); panelKey=''; syncPanel(); redraw(); }break;
     case 'imgCal':if(sel&&sel.t==='img') startCal(sel.id);break;
@@ -2951,6 +2960,7 @@ function applyProp(t){
       roofChange(sr,r=>{ if(t.id==='rfA'){ r.ang=v; (r.edges||[]).forEach(e=>{ e.a=v; }); if(r.type==='pyr') roofPreset(r,'pyr'); if(v>=1&&v<=75) roofDef().ang=v; }
         else if(t.id==='rfEA'&&roofEdge&&r.edges&&r.edges[roofEdge.i]){ r.edges[roofEdge.i].a=v; r.type='custom'; }
         else if(t.id==='rfO'){ r.ov=v; (r.edges||[]).forEach(e=>{ delete e.ov; }); } else if(t.id==='rfT') r.th=v; else if(t.id==='rfB'){ const BL=roofBaseLevel(r,doc.curLv); r.bl=BL.id; r.bo=v; } }); return; }
+    if(t.id==='pLv'){ const ti=+t.value; if(ti>=0) moveItToLevel(ti); return; }
     if(sr&&sr.t==='roof'&&t.id==='rfL'){ const B=doc.levels.find(l=>l.id===t.value); if(!B) return; roofChange(sr,r=>{ const off=roofBase(r,doc.curLv)-roofBaseLevel(r,doc.curLv).elev; r.bl=B.id; r.bo=r1(off); }); return; }
     if(sr&&isWall(sr)&&(t.id==='pHt'||t.id==='pBo')){ const v=parseNum(t.value); if(isNaN(v)) return; pushUndo();
       if(!fitGuard(()=>{ if(t.id==='pHt'&&v>0) sr.ht=v; else if(t.id==='pBo') sr.bo=v||0; if(!sr.bo) delete sr.bo; })){ undoS.pop(); panelKey=''; syncPanel(); redraw(); return; } persist(); panelKey=''; syncPanel(); redraw(); return; }
@@ -3059,7 +3069,7 @@ document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',(
 function moveSelToLevel(ti){ const T=doc.levels[ti]; if(!T||ti===doc.curLv) return; const S=selIds(); if(!S.size) return;
   const take=doc.items.filter(i=>S.has(i.id)||(isHole(i)&&S.has(i.wall))), ids=new Set(take.map(i=>i.id)); pushUndo();
   for(const it of take) if(it.t==='dim') for(const k of ['ra','rb']) if(it[k]&&!ids.has(it[k].id)) delete it[k];
-  doc.items=doc.items.filter(i=>!ids.has(i.id)); T.items.push(...take); selId=null; moveSel.clear(); persist(); panelKey=''; syncPanel(); redraw();
+  doc.items=doc.items.filter(i=>!ids.has(i.id)); T.items.push(...take); barEdit=null; selId=null; moveSel.clear(); persist(); panelKey=''; syncPanel(); redraw();
   toast('Перенесено на «'+T.name+'»: '+take.length,true); }
 function syncSelLbl(){ const l=$('#lblSel'); if(l) l.textContent=selMode==='copy'?'Копия':selMode==='rot'?'Вращать':selMode==='mv'?'Сдвиг':selMode==='win'||selMode==='cross'?'Рамка':'Выбор'; }
 let selMode='pick', menuFor=null, arcWall=true, mirrorSel=new Set(), editSel=new Set();
@@ -3200,11 +3210,12 @@ function styleSet(key,val){ styleBegin(); const S=selIds(); for(const it of doc.
 function styleEnd(apply){ if(!styleEdit) return; const E=styleEdit; styleEdit=null;
   if(!apply) for(const it of doc.items){ const o=E.snap[it.id]; if(!o) continue; for(const k of ['lc','fc','hp','lt','lw']){ if(o[k]===undefined) delete it[k]; else it[k]=o[k]; } }
   persist(); syncModeBtns(); panelKey=''; syncPanel(); redraw(); toast(apply?'Применено':'Отменено'); }
-function syncModeBtns(){ const on=tool!=='select'||!!styleEdit||!!barEdit||(typeof orgEd!=='undefined'&&!!orgEd); $('#btnOk').hidden=!on; const cx=on||selCancelable(); if($('#btnCancel').hidden===cx) $('#btnCancel').hidden=!cx; }
+function syncModeBtns(){ let dt=false; try{ const s0=selId&&doc.items.find(i=>i.id===selId); dt=tool==='select'&&!moveSel.size&&isDet(s0); }catch(e){} const on=tool!=='select'||dt||!!styleEdit||!!barEdit||(typeof orgEd!=='undefined'&&!!orgEd); $('#btnOk').hidden=!on; const cx=on||selCancelable(); if($('#btnCancel').hidden===cx) $('#btnCancel').hidden=!cx; }
 // в режиме выбора «Отмена» видна, когда есть что прервать: выделение, вращение, сдвиг, правка контура, режим проёма
 function selCancelable(){ try{ return tool==='select'&&(!!selId||moveSel.size>0||selMode!=='pick'||!!roofEd||!!stEd||!!holeMv||!!detailSel||!!editGrp||!!editLine); }catch(e){ return false; } }
 syncModeBtns();
 $('#btnOk').addEventListener('click',()=>{ if(orgEd){ pushUndo(); doc.org={x:r3(orgEd.p.x),y:r3(orgEd.p.y)}; if(!doc.org.x&&!doc.org.y) delete doc.org; orgEd=null; persist(); syncModeBtns(); updateHud(); redraw(); toast('Начало координат перенесено — геометрия на месте',true); return; }
+  { const s0=tool==='select'&&selId&&doc.items.find(i=>i.id===selId); if(s0&&!moveSel.size&&isDet(s0)&&!stairDraw){ const ae=document.activeElement; if(ae&&panel.contains(ae)) ae.blur(); if(styleEdit) styleEnd(true); barEdit=null; roofEd=null; stEd=null; holeMv=null; detailSel=null; roofEdge=null; panelKey=''; syncPanel(); redraw(); syncModeBtns(); return; } } // правка → обратно в короткое меню
   if((roofEd||stEd)&&barEdit){ roofEd=null; stEd=null; panelKey=''; syncPanel(); redraw(); } if(barEdit||styleEdit){ const ae=document.activeElement; if(ae&&panel.contains(ae)) ae.blur(); const had=!!barEdit; barEdit=null; if(styleEdit) styleEnd(true); else { syncModeBtns(); if(had) toast('Сохранено'); } return; } if(stairDraw){ finishStair(); return; } if(tool==='roof'&&roofSk){ if(roofSk.pts.length>=3){ finishRoofSketch(); return; } roofSk=null; } if(tool==='text'&&pendingText){ const ti=$('#tText'); if(ti&&ti.value.trim()){ placeText(); setTool('select'); toast('Надпись поставлена'); return; } } if(tool==='line'&&chain.pts.length) endChain(); dragA=dragB=null; pendingText=null; chimPrev=null; setTool('select'); toast('Готово'); });
 $('#btnCancel').addEventListener('click',()=>{ if(orgEd){ orgEd=null; syncModeBtns(); updateHud(); redraw(); return; }
   if(tool==='select'&&!barEdit&&!styleEdit&&!roofSk){ clearTimeout(CYCt); selId=null; moveSel.clear(); selJoint=null; selMode='pick'; rotC=null; roofEd=null; stEd=null; holeMv=null; detailSel=null; editGrp=null; editLine=null; syncSelLbl(); panelKey=''; syncPanel(); redraw(); syncModeBtns(); return; }
@@ -3301,7 +3312,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.22':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.23':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -3699,6 +3710,18 @@ function polySelfX(P){ const n=P.length, X=(a,b,c,d)=>{ const o=(p,q,r)=>(q.x-p.
 function inPoly(P,w){ let ins=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ if(((P[i].y>w.y)!==(P[j].y>w.y))&&(w.x<(P[j].x-P[i].x)*(w.y-P[i].y)/(P[j].y-P[i].y)+P[i].x)) ins=!ins; } return ins; }
 function roofBase(r,li){ if(li==null) li=doc.curLv; if(r.bl){ const B=doc.levels.find(l=>l.id===r.bl); if(B) return B.elev+(r.bo||0); } const L=doc.levels[li]; return L.elev+(r.onTop?lvHeight(li):0)+(r.bo||0); }
 // базовый уровень крыши (как в Revit): явно выбранный или тот, на котором сейчас низ
+// крыша живёт на своём базовом уровне (как в Revit): там она видна целиком и правится, на этаже ниже — пунктиром
+function roofLevelsFix(){ const LV=doc.levels; let moved=null;
+  for(let li=0;li<LV.length;li++){ const L=LV[li]; if(L.gp) continue;
+    for(const r of L.items.slice()){ if(r.t!=='roof') continue; let B; try{ B=roofBaseLevel(r,li); }catch(e){ continue; } const bi=LV.indexOf(B); if(bi<0||bi===li||B.gp) continue;
+      const off=roofBase(r,li)-B.elev; L.items.splice(L.items.indexOf(r),1); r.onTop=false; delete r.bl; r.bo=r1(off); if(r.src==='walls'){ r.sl=(r.sl||0)-(bi-li); }
+      B.items.push(r); if(li===doc.curLv&&(r.id===selId||moveSel.has(r.id))) moved={r,bi}; } }
+  if(moved){ doc.curLv=moved.bi; barEdit=null; selId=moved.r.id; moveSel.clear(); roofEd=null; try{ renderLevels(); syncTop(); }catch(e){} panelKey=''; setTimeout(()=>{ panelKey=''; syncPanel(); redraw(); },0);
+    toast('Крыша теперь на уровне «'+LV[moved.bi].name+'»: здесь она правится, на этаже ниже видна пунктиром',true); }
+  return !!moved; }
+// выбранный объект оказался на другом уровне (крыша над этажом) — перейти туда
+function followSel(id){ if(doc.items.some(i=>i.id===id)) return false; const li=doc.levels.findIndex(L=>L.items.some(i=>i.id===id)); if(li<0) return false;
+  doc.curLv=li; barEdit=null; selId=id; moveSel.clear(); try{ renderLevels(); syncTop(); }catch(e){} toast('Крыша на уровне «'+doc.levels[li].name+'»: здесь она правится, на этаже ниже видна пунктиром',true); return true; }
 function roofBaseLevel(r,li){ if(r.bl){ const B=doc.levels.find(l=>l.id===r.bl); if(B) return B; } const L=doc.levels[li]; if(r.onTop){ const N=doc.levels[li+1]; if(N&&!N.gp) return N; } return L; }
 function roofOv(r,i){ const e=r.edges&&r.edges[i]; return e&&e.ov!=null?e.ov:(r.ov==null?500:r.ov); }
 function roofGeom(r,li){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, zb=roofBase(r,li), ov=r.ov==null?500:r.ov, th=r.th||250;
@@ -3789,19 +3812,30 @@ function roofUnionPlan(){ const li=doc.curLv, L=doc.levels[li]; if(!L) return nu
 // крыша, край которой упирается в другую крышу, продлевается внутрь неё (как «Соединить крыши» в Revit):
 // лишнее потом срезается поверхностью другой крыши, остаются ендовы
 const roofJoined=(a,b)=>!((a.nj||[]).includes(b.id)||(b.nj||[]).includes(a.id));
+// свес края i целиком: от угла до угла контура свесов (пересечение со свесами соседних краёв)
+function roofEaveFull(r,i){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1; const L=k=>{ k=(k+n)%n; const A=P[k],B=P[(k+1)%n], u=unit(A,B), o={x:u.y*sg,y:-u.x*sg}, ov=roofOv(r,k); return {p:{x:A.x+o.x*ov,y:A.y+o.y*ov},u}; };
+  const a=L(i-1), b=L(i), c=L(i+1), X1=xLines(a.p,a.u,b.p,b.u), X2=xLines(b.p,b.u,c.p,c.u); if(!X1||!X2) return null; const m={x:(X1.x+X2.x)/2,y:(X1.y+X2.y)/2}; return [X1,m,X2]; }
+// точка внутри многоугольника с запасом tol мм от края
+function inPolyIn(O,q,tol){ if(!inPoly(O,q)) return false; for(let k=0;k<O.length;k++){ if(segDistW(q,O[k],O[(k+1)%O.length])<tol) return false; } return true; }
+function segDistW(p,a,b){ const vx=b.x-a.x, vy=b.y-a.y, L2=vx*vx+vy*vy||1, t=Math.max(0,Math.min(1,((p.x-a.x)*vx+(p.y-a.y)*vy)/L2)); return Math.hypot(p.x-a.x-vx*t,p.y-a.y-vy*t); }
+// r — крыло крыши B: какой-то её свес целиком внутри B, а у B — нет (если оба, крыло — меньшая)
+function roofIsWingOf(r,B,li){ const has=(X,Y)=>{ let OY; try{ OY=roofGeom(Y,li).O; }catch(e){ return false; } for(let i=0;i<X.pts.length;i++){ const e=roofEaveFull(X,i); if(e&&e.every(q=>inPolyIn(OY,q,1))) return true; } return false; };
+  if(!has(r,B)) return false; if(!has(B,r)) return true; return Math.abs(polyArea2(r.pts))<Math.abs(polyArea2(B.pts))||(Math.abs(polyArea2(r.pts))===Math.abs(polyArea2(B.pts))&&r.id<B.id); }
 function roofExtended(r,li){ const L=doc.levels[li]; if(!L) return r; const others=L.items.filter(i=>i.t==='roof'&&i!==r&&roofJoined(r,i)); if(!others.length) return r;
   const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, d=new Array(n).fill(0); let any=false;
   const topOf=g=>{ let m=-1e18; for(const f of g.faces) for(const q of f.P){ try{ m=Math.max(m,g.H(q)); }catch(e){} } return m; };
   let gA=null; try{ gA=roofGeom(r,li); }catch(e){}
-  for(const B of others){ let OB,gB; try{ gB=roofGeom(B,li); OB=gB.O; }catch(e){ continue; } const cB=B.pts.reduce((m,q)=>({x:m.x+q.x/B.pts.length,y:m.y+q.y/B.pts.length}),{x:0,y:0});
-    const through=gA&&topOf(gA)+(gA.th||0)>topOf(gB)+(gB.th||0)+1; // крыло выше конька — проходит насквозь
-    for(let i=0;i<n;i++){ const A=P[i],Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+Bp.x)/2,y:(A.y+Bp.y)/2}, ov=roofOv(r,i), me={x:m.x+out.x*ov,y:m.y+out.y*ov};
-      const ea={x:A.x+out.x*ov,y:A.y+out.y*ov}, eb={x:Bp.x+out.x*ov,y:Bp.y+out.y*ov}; if(!(inPoly(OB,me)&&inPoly(OB,ea)&&inPoly(OB,eb))) continue; // край целиком внутри другой крыши
-      let dd=(cB.x-m.x)*out.x+(cB.y-m.y)*out.y; if(through){ for(const q of OB) dd=Math.max(dd,(q.x-m.x)*out.x+(q.y-m.y)*out.y); } if(dd>d[i]){ d[i]=dd; any=true; } } }
+  for(const B of others){ if(!roofIsWingOf(r,B,li)) continue; let OB,gB; try{ gB=roofGeom(B,li); OB=gB.O; }catch(e){ continue; } const cB=B.pts.reduce((m,q)=>({x:m.x+q.x/B.pts.length,y:m.y+q.y/B.pts.length}),{x:0,y:0});
+    // вариант А: примыкающая крыша (крыло) доходит до конька основной и никогда не выходит с другой стороны
+    for(let i=0;i<n;i++){ const e=roofEaveFull(r,i); if(!e||!(e.every(q=>inPolyIn(OB,q,1)))) continue; // свес края целиком (с боковыми свесами) внутри другой крыши
+      const A=P[i],Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+Bp.x)/2,y:(A.y+Bp.y)/2};
+      const dd=(cB.x-m.x)*out.x+(cB.y-m.y)*out.y; if(dd>d[i]){ d[i]=dd; any=true; } } }
   if(!any) return r;
   const lines=P.map((A,i)=>{ const Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}; return {p:{x:A.x+out.x*d[i],y:A.y+out.y*d[i]},u}; });
   const NP=P.map((_,i)=>{ const a=lines[(i+n-1)%n], b=lines[i], X=xLines(a.p,a.u,b.p,b.u); return X&&Math.hypot(X.x-b.p.x,X.y-b.p.y)<50000?{x:X.x,y:X.y}:b.p; });
-  return Object.assign({},r,{pts:NP}); }
+  if(!(r.edges&&r.edges.length===n)) return Object.assign({},r,{pts:NP});
+  const E=r.edges.map((e,i)=>d[i]>0?{...e,ov:0}:{...e,ov:roofOv(r,i)}); // у врезанного края свеса нет — не торчит за конёк
+  return Object.assign({},r,{pts:NP,edges:E}); }
 // ---- стена до крыши (как «Присоединить верх к крыше» в Revit): верх стены идёт по низу крыши, стена — одно тело ----
 // it.ra: true — присоединена, false — отсоединена (своя высота), нет — авто: наружные стены под краем крыши присоединяются
 function roofsOver(li){ const out=[], add=(L,lv,cond)=>{ if(!L) return; for(const r of L.items) if(r.t==='roof'&&cond(r)){ try{ const sv=doc.curLv; doc.curLv=lv; try{ out.push({r,g:roofGeom(roofExtended(r,lv),lv)}); } finally{ doc.curLv=sv; } }catch(e){} } };
@@ -3931,7 +3965,7 @@ function finishRoofSketch(){ if(!roofSk) return; let P=cleanPoly(roofSk.pts); ro
   const cur=doc.curLv, hasW=li=>doc.levels[li].items.some(isWall), onTop=hasW(cur)||!(cur>0&&hasW(cur-1));
   const d=roofDef(), r={id:uid(),t:'roof',pts:P.map(q=>({x:r3(q.x),y:r3(q.y)})),type:d.type,ang:d.ang,ov:d.ov,th:d.th,onTop:hasW(cur)?true:(cur>0&&hasW(cur-1)?false:true),bo:0}; roofPreset(r,d.type);
   const err=roofCheck(r); if(err){ toast('Не соответствует: '+err); redraw(); return; }
-  pushUndo(); doc.items.push(r); persist(); setTool('select'); selId=r.id; roofEdge=null; panelKey=''; syncPanel(); redraw(); toast('Крыша по эскизу: '+ROOFT[r.type]+'. Двойное касание — изменить контур и свесы'); }
+  pushUndo(); doc.items.push(r); persist(); setTool('select'); selId=r.id; roofEdge=null; followSel(r.id); panelKey=''; syncPanel(); redraw(); toast('Крыша по эскизу: '+ROOFT[r.type]+'. Двойное касание — изменить контур и свесы'); }
 function drawRoofSketch(){ if(tool!=='roof'||!roofSk||!roofSk.pts.length) return; const P=roofSk.pts.map(toS); ctx.save(); ctx.strokeStyle=C.sel; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(P[0].x,P[0].y); for(let i=1;i<P.length;i++) ctx.lineTo(P[i].x,P[i].y); if(roofSkLive){ const L=toS(roofSkLive); ctx.lineTo(L.x,L.y); } ctx.stroke();
   if(P.length>=2){ ctx.setLineDash([5,4]); ctx.globalAlpha=.6; const L=roofSkLive?toS(roofSkLive):P[P.length-1]; line(L,P[0]); } ctx.restore(); ctx.setLineDash([]);
@@ -4083,7 +4117,7 @@ function syncRoofs(){ if(syncRoofs.busy) return false; syncRoofs.busy=1; let ch=
     if(pk!==r.pk) r.seed=seed; r.wk=wk; r.pk=ptsKey(r.pts); } }
   catch(e){ console.warn('syncRoofs',e); } finally{ syncRoofs.busy=0; } return ch; }
 function roofTap(p){ const sel=doc.items.find(i=>i.id===selId); if(!sel||sel.t!=='roof') return false;
-  for(const b of roofBadges(sel)) if(Math.hypot(b.s.x-p.x,b.s.y-p.y)<22){ roofEdge={id:sel.id,i:b.i}; panelKey=''; syncPanel(); redraw(); return true; }
+  for(const b of roofBadges(sel)) if(Math.hypot(b.s.x-p.x,b.s.y-p.y)<22){ if(roofEd!==sel.id) roofEdit(sel); roofEdge={id:sel.id,i:b.i}; panelKey=''; syncPanel(); redraw(); return true; }
   return false; }
 
 // дымоход: низ — своя отметка от ±0.000 (по умолчанию уровень), верх — над самой высокой точкой крыши в месте выхода
