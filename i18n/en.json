@@ -1052,5 +1052,10 @@
 "Соединение: край не продлевается к соседним крышам": "Join: the edge does not extend to neighbouring roofs",
 "Высоту задаёт уровень или крыша — выберите «Своя": "Height is set by the level or the roof — choose “Custom",
 "Соединение": "Join",
-"Примыкать": "Attach"
+"Примыкать": "Attach",
+"Размер привязан к выбранной точке. Касание кружка — снова до края ската": "Dimension anchored to the chosen point. Tap the circle to measure to the slope edge again",
+"Точка должна быть по эту сторону окна": "The point must be on this side of the window",
+"Размер снова до края ската": "Dimension measured to the slope edge again",
+"Мансардное окно на скате": "Skylight placed on the slope",
+"Можно ставить ещё": "You can place more"
 }
