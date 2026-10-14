@@ -555,7 +555,7 @@
 "Только по оси": "Along the axis only",
 "горизонтально": "horizontally",
 "Точно удалить": "Delete for sure",
-"Выход из меню": "Exit the menu",
+"Выход из меню": "Close menu",
 "Пирамидальная": "Pyramid",
 "Не помещается": "Does not fit",
 "правого ската": "right slope",
@@ -681,7 +681,7 @@
 "Применено": "Applied",
 "Сохранено": "Saved",
 "Сохранить": "Save",
-"Параметры": "Parameters",
+"Параметры": "Settings",
 "не менять": "keep",
 "Размеры в": "Dimensions in",
 "Вальмовая": "Hip",
@@ -1044,5 +1044,7 @@
 "Эллипс": "Ellipse",
 "Скругл": "Fillet",
 "Волна": "Wave",
-"Волн": "Waves"
+"Волн": "Waves",
+"Конфиденциальность": "Privacy",
+"Политика конфиденциальности": "Privacy policy"
 }
