@@ -1046,5 +1046,11 @@
 "Волна": "Wave",
 "Волн": "Waves",
 "Конфиденциальность": "Privacy",
-"Политика конфиденциальности": "Privacy policy"
+"Политика конфиденциальности": "Privacy policy",
+"Соединение: авто — край сам примыкает к соседней крыше, если она рядом": "Join: auto — the edge joins a neighbouring roof by itself when one is next to it",
+"Соединение: край продлевается до соседней крыши и подрезается по ней": "Join: the edge extends to the neighbouring roof and is trimmed by it",
+"Соединение: край не продлевается к соседним крышам": "Join: the edge does not extend to neighbouring roofs",
+"Высоту задаёт уровень или крыша — выберите «Своя": "Height is set by the level or the roof — choose “Custom",
+"Соединение": "Join",
+"Примыкать": "Attach"
 }
