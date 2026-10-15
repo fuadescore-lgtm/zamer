@@ -1207,5 +1207,9 @@
 "Соединение края": "Edge join",
 "Соединить": "Join",
 "снято": "removed",
-"торец не попадает на выбранный скат — выделите край, обращённый к нему, или другой скат": "the end does not land on the chosen slope — select the edge facing it or another slope"
+"торец не попадает на выбранный скат — выделите край, обращённый к нему, или другой скат": "the end does not land on the chosen slope — select the edge facing it or another slope",
+"с соседом снята — край двигается свободно": "with the neighbour removed — the edge moves freely",
+"Снять связь 🔗 ската с соседом": "Remove the 🔗 slope link with the neighbour",
+"Отвязать скат": "Unlink slope",
+"Связь 🔗 ската": "The 🔗 link of slope"
 }
