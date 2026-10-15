@@ -3,6 +3,8 @@ package PKG;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -28,5 +30,20 @@ public class MainActivity extends BridgeActivity {
             return WindowInsetsCompat.CONSUMED;
         });
         ViewCompat.requestApplyInsets(wv);
+        // «Назад»: сначала спрашиваем страницу (закрыть клавиатуру, меню, выделение, 3D/фасад);
+        // если закрывать нечего — обычное поведение (свернуть приложение)
+        final OnBackPressedCallback back = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                ((WebView) wv).evaluateJavascript("(window.__bsBack&&window.__bsBack())?1:0", v -> {
+                    if (!"1".equals(v)) {
+                        setEnabled(false);
+                        getOnBackPressedDispatcher().onBackPressed();
+                        setEnabled(true);
+                    }
+                });
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, back);
     }
 }

@@ -1213,5 +1213,15 @@
 "Отвязать скат": "Unlink slope",
 "Связь 🔗 ската": "The 🔗 link of slope",
 "ската с соседом": "slope link with the neighbour",
-"Снять связь": "Remove the link"
+"Снять связь": "Remove the link",
+"остаётся на своей отметке, когда двигают нижний уровень": "stays at its elevation when the level below moves",
+"зафиксирована: уровень едет вместе с нижним": "is locked: the level moves with the one below",
+"замок открыт) — нужно не меньше": "lock open) — needs at least",
+"Отмена: оставить как было": "Cancel: keep as it was",
+"уровень должен быть выше": "the level must be above",
+"Высота этажа под": "Story height below",
+"Эскиз профиля": "Profile sketch",
+"упирается в": "runs into",
+"нет уровня": "no level",
+"минимум на": "by at least"
 }
