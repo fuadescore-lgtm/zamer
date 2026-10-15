@@ -3580,7 +3580,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.39':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.40':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -4040,7 +4040,7 @@ function roofGeom(r,li){ if(isExt(r)) return extGeom(r,li); const P=r.pts, n=P.l
   let H=q=>{ if(!pl.length) return zb; let m=1e18; for(const p of pl) m=Math.min(m,p.nx*q.x+p.ny*q.y+p.c); return m; };
   const faces=[];
   if(!pl.length) faces.push({P:O,pl:null});
-  else if(!isConvexPoly(P)&&r.dec&&(()=>{ try{ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U){ roofGeom._u=U; return true; } }catch(e){} return false; })()){ const U=roofGeom._u; roofGeom._u=null; return U; } // разбивка на объём+крылья — только по выбору (r.dec)
+  else if(!isConvexPoly(P)&&r.dec!==false&&(()=>{ try{ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U){ roofGeom._u=U; return true; } }catch(e){} return false; })()){ const U=roofGeom._u; roofGeom._u=null; return U; } // разбивка на объём+крылья — только по выбору (r.dec)
   else if(!isConvexPoly(P)){ // Г, Т, П-образный дом: прямой скелет (ендовы и коньки как в Revit)
     const O2=offsetConvex(P,P.map((_,i)=>roofOv(r,i))), rev=polyArea2(P)<0, orig=j=>rev?((n-2-j)%n+n)%n:j, plOf={}; for(const p of pl) plOf[p.i]=p;
     let sk; try{ sk=roofSkeleton(O2,O2.map((_,j)=>E[orig(j)].s?kOf(orig(j)):0)); }catch(e){ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U) return U; throw e; } // скелет не сошёлся (фронтон у уступа) — объём + крылья
@@ -4072,14 +4072,21 @@ function roofDecomp(r,P,E,zE,kOf,th,zb){ const n=P.length; if(n<6||n>16) return 
     let bi=-1, bl=0; for(let i=0;i<n;i++){ const a=Q[i],b=Q[(i+1)%n]; let ol=0; if(ln.h){ if(Math.abs(a.y-ln.y)<1&&Math.abs(b.y-ln.y)<1) ol=Math.min(Math.max(a.x,b.x),ln.b)-Math.max(Math.min(a.x,b.x),ln.a); } else if(Math.abs(a.x-ln.x)<1&&Math.abs(b.x-ln.x)<1) ol=Math.min(Math.max(a.y,b.y),ln.b)-Math.max(Math.min(a.y,b.y),ln.a); if(ol>bl+1){ bl=ol; bi=i; } }
     return bi<0?null:{i:bi,s:!!E[bi].s,a:E[bi].a,ov:roofOv(r,bi)}; }; // свойства — от самого длинного края на этой прямой
   const pieces=[]; for(const R of rects){ const sd=[0,1,2,3].map(k=>sideOf(R,k)); if(R.main){ if(sd.some(x=>!x)) return null; }
-    else { let inner=-1; for(let k=0;k<4;k++) if(!sd[k]){ if(inner>=0) return null; inner=k; } if(inner<0) return null; const ext=inner===0?R.y0-M0.y0>-1&&false:0; // крыло врезается в основной объём до его середины
-      const d=inner===0?R.y0-mc.y:inner===2?mc.y-R.y1:inner===1?mc.x-R.x1:R.x0-mc.x; if(!(d>0)) return null; sd[inner]={i:-1,s:false,a:0,ov:0,ext:d}; }
+    else { // примыкающая к основному объёму сторона крыла (может частично выходить наружу)
+      const tch=k=>{ const ov=(a0,a1,b0,b1)=>Math.min(a1,b1)-Math.max(a0,b0); if(k===3) return Math.abs(R.x0-M0.x1)<1&&ov(R.y0,R.y1,M0.y0,M0.y1)>1; if(k===1) return Math.abs(R.x1-M0.x0)<1&&ov(R.y0,R.y1,M0.y0,M0.y1)>1; if(k===0) return Math.abs(R.y0-M0.y1)<1&&ov(R.x0,R.x1,M0.x0,M0.x1)>1; return Math.abs(R.y1-M0.y0)<1&&ov(R.x0,R.x1,M0.x0,M0.x1)>1; };
+      let inner=-1; for(let k=0;k<4;k++) if(tch(k)){ if(inner>=0) return null; inner=k; } if(inner<0) return null; if(!sd[(inner+2)%4]) return null;
+      if(inner===1||inner===3){ if(Math.abs(R.y0-M0.y0)<1||Math.abs(R.y1-M0.y1)<1) return null; } else if(Math.abs(R.x0-M0.x0)<1||Math.abs(R.x1-M0.x1)<1) return null; // Г-образный (стена крыла продолжает стену дома) — прямой скелет лучше const ext=inner===0?R.y0-M0.y0>-1&&false:0; // крыло врезается в основной объём до его середины
+      const d=inner===0?R.y0-mc.y:inner===2?mc.y-R.y1:inner===1?mc.x-R.x1:R.x0-mc.x; if(!(d>0)) return null; const op=sd[(inner+2)%4], inside=inner===1||inner===3?(R.y0>=M0.y0-1&&R.y1<=M0.y1+1):(R.x0>=M0.x0-1&&R.x1<=M0.x1+1); sd[inner]=inside?{i:op.i,s:op.s,a:op.a,ov:op.ov,ext:d+op.ov}:{i:op.i,s:op.s,a:op.a,ov:op.ov}; } // крыло шире стороны основного объёма — не продлевается (как у отдельных крыш) // как у отдельной крыши: скат у основного объёма есть, край продлён внутрь (там он ниже и скрыт)
     // контур куска со свесами (врезанный край — без свеса, продлён)
     const o=k=>sd[k].ext?sd[k].ext:sd[k].ov, X0=R.x0-o(3), X1=R.x1+o(1), Y0=R.y0-o(0), Y1=R.y1+o(2), Op=[wld(X0,Y0),wld(X1,Y0),wld(X1,Y1),wld(X0,Y1)];
     const sgw=polyArea2(Op)>0?1:-1, Opc=sgw>0?Op:Op.slice().reverse(), pl=[];
     const lines=[[{x:R.x0,y:R.y0},{x:R.x1,y:R.y0},{x:0,y:1}],[{x:R.x1,y:R.y0},{x:R.x1,y:R.y1},{x:-1,y:0}],[{x:R.x1,y:R.y1},{x:R.x0,y:R.y1},{x:0,y:-1}],[{x:R.x0,y:R.y1},{x:R.x0,y:R.y0},{x:1,y:0}]];
-    for(let k=0;k<4;k++){ const S=sd[k]; if(!S.s) continue; const A=wld(lines[k][0].x,lines[k][0].y), nn=wld(lines[k][2].x,lines[k][2].y), kk=kOf(S.i), zw=zE+kk*(E[S.i].zo!=null?E[S.i].zo:S.ov); pl.push({i:S.i,nx:nn.x*kk,ny:nn.y*kk,c:zw-(nn.x*A.x+nn.y*A.y)*kk,dn:nn}); }
-    if(!pl.length) return null; pieces.push({Op:Opc,pl}); }
+    for(let k=0;k<4;k++){ const S=sd[k]; if(!S.s) continue; const A=wld(lines[k][0].x,lines[k][0].y), nn=wld(lines[k][2].x,lines[k][2].y), kk=kOf(S.i), zw=zE+kk*(S.ext?S.ov:(E[S.i].zo!=null?E[S.i].zo:S.ov)); pl.push({i:S.i,nx:nn.x*kk,ny:nn.y*kk,c:zw-(nn.x*A.x+nn.y*A.y)*kk,dn:nn}); }
+    if(!pl.length) return null;
+    // та же часть как отдельная крыша (для 3D: стыки считаются как у соединённых крыш — без лишних линий)
+    const ib=k=>sd[k].ext?sd[k].ext-sd[k].ov:0, rx0=R.x0-ib(3), rx1=R.x1+ib(1), ry0=R.y0-ib(0), ry1=R.y1+ib(2), rp=[wld(rx0,ry0),wld(rx1,ry0),wld(rx1,ry1),wld(rx0,ry1)];
+    const re=[0,1,2,3].map(k=>{ const S=sd[k]; if(!S.s) return {s:false,a:S.a||30,ov:S.ov}; const e={s:true,a:E[S.i].a,ov:S.ov}; if(S.ext) e.zo=S.ov-(S.ext-S.ov); else if(E[S.i].zo!=null) e.zo=E[S.i].zo; return e; });
+    pieces.push({Op:Opc,pl,pseudo:{c0:wld((R.x0+R.x1)/2,(R.y0+R.y1)/2),pts:polyArea2(rp)>0?rp:rp.slice().reverse(),edges:polyArea2(rp)>0?re:[re[0],re[3],re[2],re[1]]}}); }
   const Hp=(pc,q)=>{ let m=1e18; for(const p of pc.pl) m=Math.min(m,p.nx*q.x+p.ny*q.y+p.c); return m; };
   const H=q=>{ let z=null; for(const pc of pieces) if(inPoly(pc.Op,q)){ const h=Hp(pc,q); if(z==null||h>z) z=h; } if(z!=null) return z; let bd=1e18; for(const pc of pieces){ const c=pc.Op.reduce((m,v)=>({x:m.x+v.x/4,y:m.y+v.y/4}),{x:0,y:0}), d=Math.hypot(c.x-q.x,c.y-q.y); if(d<bd){ bd=d; z=Hp(pc,q); } } return z==null?zE:z; };
   const faces=[], allPl=[];
@@ -4088,7 +4095,7 @@ function roofDecomp(r,P,E,zE,kOf,th,zb){ const n=P.length; if(n<6||n>16) return 
       const np=[]; for(const F0 of parts){ let cur=F0; for(const f of C){ const out=clipHalf(cur,-f[0],-f[1],-f[2]); if(out.length>=3&&Math.abs(polyArea2(out))>1) np.push(out); cur=clipHalf(cur,f[0],f[1],f[2]); if(cur.length<3) break; } } parts=np; if(!parts.length) break; }
     for(const F2 of parts){ const F3=cleanPoly(F2); if(F3.length>=3&&Math.abs(polyArea2(F3))>1) faces.push({P:F3,pl:p}); } }
   if(!faces.length) return null;
-  const O2=offsetConvex(P,P.map((_,i)=>roofOv(r,i))); return {P,O:O2,zb,th,ov:r.ov==null?500:r.ov,pl:allPl,H,faces,E,sg:polyArea2(P)>0?1:-1,skel:true,dec:true}; }
+  const O2=offsetConvex(P,P.map((_,i)=>roofOv(r,i))); return {P,O:O2,zb,th,ov:r.ov==null?500:r.ov,pl:allPl,H,faces,E,sg:polyArea2(P)>0?1:-1,skel:true,dec:true,decP:pieces.map(q=>q.pseudo)}; }
 // ---- крыши, врезанные друг в друга: общая поверхность = верхняя из двух (как единое тело) ----
 // треугольники крыши A, оказавшиеся под верхом другой крыши B (в её плане и выше её карниза), вырезаются;
 // по линии, где скаты равны по высоте, рисуется ендова. Высоты и типы крыш любые.
@@ -4281,7 +4288,7 @@ function dormEdDrag(it,k,w){ const F=insFrame(it); if(!F) return; const D=dormSh
   let v=k==='F'?-pb:k==='L'?-pu-D.R:pu-D.R; v=Math.max(0,Math.min(1500,Math.round(v/10)*10)); it[{F:'ovF',L:'ovL',R:'ovR'}[k]]=v; }
 function insHitD(it,sx,sy){ const Pn=insPlan(it), w=toW(sx,sy); if(!Pn||Pn.bad){ const c=toS(it.p); return Math.hypot(c.x-sx,c.y-sy)<14?-0.05:1e9; } const P=it.t==='skyl'?Pn.out:Pn.roof; return inPoly(P,w)?-0.05:1e9; }
 function insOutline(it){ const Pn=insPlan(it); if(!Pn||Pn.bad) return null; return it.t==='skyl'?[Pn.out,Pn.inner]:[Pn.roof,Pn.body].concat(Pn.ridge?[[Pn.ridge[0],Pn.ridge[1]]]:[]); }
-function roofUnion(M){ const by=new Map(), RB=new Map(); for(const L of doc.levels) for(const it of L.items) if(it.t==='roof') RB.set(it.id,it); const J=(x,y)=>{ const a=RB.get(x), b=RB.get(y); return !(a&&b)||roofJoined(a,b); };
+function roofUnion(M){ const by=new Map(), RB=new Map(); for(const L of doc.levels) for(const it of L.items) if(it.t==='roof') RB.set(it.id,it); for(const k in (M.pseudo||{})) RB.set(k,M.pseudo[k]); const J=(x,y)=>{ const a=RB.get(x), b=RB.get(y); return !(a&&b)||roofJoined(a,b); };
   for(const t of M.tri) if(t.rid){ if(!by.has(t.rid)) by.set(t.rid,{tri:[],top:[],zmin:1e18}); const R=by.get(t.rid); R.tri.push(t); for(const p of t.v) R.zmin=Math.min(R.zmin,p[2]); }
   if(by.size<2) return M;
   const plane=v=>{ const [a,b,c]=v, ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2], wx=c[0]-a[0],wy=c[1]-a[1],wz=c[2]-a[2], nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx;
@@ -4307,7 +4314,7 @@ function roofUnion(M){ const by=new Map(), RB=new Map(); for(const L of doc.leve
   const keep=[], ids=[...by.keys()], DS=new Set(); for(const L of doc.levels) for(const it of L.items) if(it.t==='dorm') DS.add(it.id);
   // встречные скаты (две односкатные навстречу, конёк между крышами): общая поверхность — НИЖНЯЯ (как один конёк),
   // лишнее выше другой крыши срезается; в ендовах и у крыльев — как раньше, ВЕРХНЯЯ
-  const cOf=new Map(); for(const [rid] of by){ const r=RB.get(rid); if(r&&r.pts&&r.pts.length) cOf.set(rid,r.pts.reduce((m,q)=>({x:m.x+q.x/r.pts.length,y:m.y+q.y/r.pts.length}),{x:0,y:0})); }
+  const cOf=new Map(); for(const [rid] of by){ const r=RB.get(rid); if(r&&r.c0) cOf.set(rid,r.c0); else if(r&&r.pts&&r.pts.length) cOf.set(rid,r.pts.reduce((m,q)=>({x:m.x+q.x/r.pts.length,y:m.y+q.y/r.pts.length}),{x:0,y:0})); }
   const hostOf=t=>{ const X=by.get(t.rid); if(!X||!X.top.length) return null; const c={x:(t.v[0][0]+t.v[1][0]+t.v[2][0])/3,y:(t.v[0][1]+t.v[1][1]+t.v[2][1])/3};
     for(const T of X.top) if(inPoly(T.P,c)) return T; let bt=null,bd=1e18; for(const T of X.top){ const m={x:(T.bb[0]+T.bb[2])/2,y:(T.bb[1]+T.bb[3])/2}, d=Math.hypot(m.x-c.x,m.y-c.y); if(d<bd){ bd=d; bt=T; } } return bt; };
   const coplanar=(T,U)=>!!T&&Math.abs(T.pl.a-U.pl.a)<2e-3&&Math.abs(T.pl.b-U.pl.b)<2e-3&&Math.abs(T.pl.c-U.pl.c)<4; // скаты в одной плоскости: перекрытие свесов — одна кровля (без мерцания)
@@ -4512,7 +4519,10 @@ function roofJoinTap(p){ if(tool!=='select') return false; for(const h of roofJo
       pushUndo(); if(h.on){ A.nj=[...new Set([...(A.nj||[]),B.id])]; toast('Крыши отсоединены: каждая сама по себе',true); }
       else { A.nj=(A.nj||[]).filter(x=>x!==B.id); B.nj=(B.nj||[]).filter(x=>x!==A.id); if(!A.nj.length) delete A.nj; if(!B.nj.length) delete B.nj; toast('Крыши соединены: врезаны друг в друга, ендовы',true); setTimeout(()=>roofJoinHeightAsk(A,B),60); }
       persist(); redraw(); return true; } } return false; }
-function roofMeshTagged(M,r,li){ const t0=M.tri.length, l0=M.lines.length; roofMesh(M,roofExtended(r,li),li); roofCheeks(M,r,li); for(let k=t0;k<M.tri.length;k++) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) M.lines[k].rid=r.id; }
+function roofMeshTagged(M,r,li){ const t0=M.tri.length, l0=M.lines.length;
+  { let g=null; try{ g=roofGeom(roofExtended(r,li),li); }catch(e){} if(g&&g.dec&&g.decP){ g.decP.forEach((q,k)=>{ const t1=M.tri.length, l1=M.lines.length; const pr={...r,id:r.id+'#'+k,pts:q.pts,edges:q.edges,type:'custom',c0:q.c0}; delete pr.ext; delete pr.nj; (M.pseudo=M.pseudo||{})[pr.id]=pr; try{ roofMesh(M,pr,li); }catch(e){} for(let j=t1;j<M.tri.length;j++) M.tri[j].rid=pr.id; for(let j=l1;j<M.lines.length;j++) M.lines[j].rid=pr.id; });
+      for(let k=t0;k<M.tri.length;k++) if(!M.tri[k].rid) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) if(!M.lines[k].rid) M.lines[k].rid=r.id; return; } }
+  roofMesh(M,roofExtended(r,li),li); roofCheeks(M,r,li); for(let k=t0;k<M.tri.length;k++) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) M.lines[k].rid=r.id; }
 function roofMesh(M,r,li){ const g=roofGeom(r,li), col=rgbOf(r.fc,'#b5533c'), zt=q=>g.H(q)+g.th, zl=q=>g.H(q);
   const HO=insHoles(r.id,li);
   for(const f of g.faces){ const zf=f.pl?(q=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c):zl, zft=q=>zf(q)+g.th;
@@ -4788,6 +4798,7 @@ function buildModel(){ const M=Mesh(), save=doc.curLv; geoMemoOn();
     // перекрытие (пол) под стенами этажа — тонкая плита по контуру стен
   }); } finally { doc.curLv=save; geoMemoOff(); }
   try{ roofUnion(M); }catch(e){ console.warn('roofUnion',e); }
+  for(const t of M.tri) if(t.rid&&t.rid.includes('#')) t.rid=t.rid.split('#')[0]; for(const l of M.lines) if(l.rid&&l.rid.includes('#')) l.rid=l.rid.split('#')[0]; // части крыши с уступом — снова одна крыша
   return M; }
 // контурные линии стены: только наружный контур и рамки проёмов (без швов между кусками)
 function wallLines(M,it,li){ const {z0,z1}=wallZ(it,li), pcs=wallPieces(it,li), F=cleanPoly(wallFootprint(it,-1e6,1e6)), n=F.length, arc=isArc(it), G=arc?arcG(it):null, L=arc?G.L:lineLen(it), u=arc?null:unit(it.a,it.b), nv=arc?null:lft(u);
