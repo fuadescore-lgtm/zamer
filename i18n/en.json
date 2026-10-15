@@ -1129,5 +1129,17 @@
 "колонны": "column",
 "нужно": "need",
 "вниз": "down",
-"К": "C"
+"К": "C",
+"Колонна: высота этажа": "Column: floor height",
+"Колонна: своя высота — введите число": "Column: own height — type a value",
+"Колонна присоединена к перекрытию: верх по низу плиты": "Column attached to the slab: top at the slab underside",
+"Высота этажа": "Floor height",
+"Своя высота": "Own height",
+"Верх по низу крыши": "Top at the roof underside",
+"Верх по низу перекрытия": "Top at the slab underside",
+"Высота колонны, мм": "Column height, mm",
+"Верх колонны": "Column top",
+"при этом уклоне и этой высоте конька встречный скат не помещается — уменьшите уклон или снимите «Фикс. конёк": "with this slope and ridge height the opposite slope does not fit — reduce the slope or turn off “Fix ridge",
+"встречный скат получился бы": "the opposite slope would be",
+"вне": "outside"
 }
