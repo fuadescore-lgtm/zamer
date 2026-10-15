@@ -3644,7 +3644,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.41':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.42':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -4456,12 +4456,15 @@ function segDistW(p,a,b){ const vx=b.x-a.x, vy=b.y-a.y, L2=vx*vx+vy*vy||1, t=Mat
 function roofIsWingOf(r,B,li){ const has=(X,Y)=>{ let OY; try{ OY=roofGeom(Y,li).O; }catch(e){ return false; } for(let i=0;i<X.pts.length;i++){ const e=roofEaveFull(X,i); if(e&&e.every(q=>inPolyIn(OY,q,1))) return true; } return false; };
   if(!has(r,B)) return false; if(!has(B,r)) return true; return Math.abs(polyArea2(r.pts))<Math.abs(polyArea2(B.pts))||(Math.abs(polyArea2(r.pts))===Math.abs(polyArea2(B.pts))&&r.id<B.id); }
 function roofExtended(r,li){ const L=doc.levels[li]; if(!L) return r; const others=L.items.filter(i=>i.t==='roof'&&i!==r&&roofJoined(r,i)); if(!others.length) return r;
-  const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, d=new Array(n).fill(0); let any=false;
+  const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, d=new Array(n).fill(0), flat=new Set(); let any=false;
   const topOf=g=>{ let m=-1e18; for(const f of g.faces) for(const q of f.P){ try{ m=Math.max(m,g.H(q)); }catch(e){} } return m; };
   let gA=null; try{ gA=roofGeom(r,li); }catch(e){}
   const jm=i=>(r.edges&&r.edges[i]&&r.edges[i].j)||'auto'; // соединение края: auto | join (примыкать) | free (свободно)
   for(const B of others){ let OB,gB; try{ gB=roofGeom(B,li); OB=gB.O; }catch(e){ continue; } const cB=B.pts.reduce((m,q)=>({x:m.x+q.x/B.pts.length,y:m.y+q.y/B.pts.length}),{x:0,y:0}); const wing=roofIsWingOf(r,B,li), mainOf=!wing&&roofIsWingOf(B,r,li);
-    for(let i=0;i<n;i++){ const mode=jm(i); if(mode==='free') continue; const e=roofEaveFull(r,i); if(!e) continue;
+    // скаты в одной плоскости с соседней крышей (тот же низ и уклон): внутренний торец (вальма/скат внутри соседней) убирается — одна кровля
+    const sameP=(p,q)=>Math.abs(p.nx-q.nx)<2e-3&&Math.abs(p.ny-q.ny)<2e-3&&Math.abs(p.c-q.c)<4, cop=gA?gA.pl.filter(p=>gB.pl.some(q=>sameP(p,q))).map(p=>p.i):[];
+    if(cop.length) for(let i=0;i<n;i++){ if(jm(i)==='free'||cop.includes(i)) continue; const A0=P[i],B0=P[(i+1)%n], e=[A0,{x:(A0.x+B0.x)/2,y:(A0.y+B0.y)/2},B0]; if(!e.every(q=>inPoly(OB,q)||segDistPoly(OB,q)<2)) continue; if(!(cop.includes((i+n-1)%n)||cop.includes((i+1)%n))) continue; flat.add(i); any=true; }
+    for(let i=0;i<n;i++){ const mode=jm(i); if(mode==='free'||flat.has(i)) continue; const e=roofEaveFull(r,i); if(!e) continue;
       const A=P[i],Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+Bp.x)/2,y:(A.y+Bp.y)/2};
       // вариант А: примыкающая крыша (крыло) доходит до конька основной и никогда не выходит с другой стороны
       if(wing&&e.every(q=>inPolyIn(OB,q,1))){ const dd=(cB.x-m.x)*out.x+(cB.y-m.y)*out.y; if(dd>d[i]){ d[i]=dd; any=true; } continue; }
@@ -4476,7 +4479,7 @@ function roofExtended(r,li){ const L=doc.levels[li]; if(!L) return r; const othe
   const lines=P.map((A,i)=>{ const Bp=P[(i+1)%n], u=unit(A,Bp), out={x:u.y*sg,y:-u.x*sg}; return {p:{x:A.x+out.x*d[i],y:A.y+out.y*d[i]},u}; });
   const NP=P.map((_,i)=>{ const a=lines[(i+n-1)%n], b=lines[i], X=xLines(a.p,a.u,b.p,b.u); return X&&Math.hypot(X.x-b.p.x,X.y-b.p.y)<50000?{x:X.x,y:X.y}:b.p; });
   if(!(r.edges&&r.edges.length===n)) return Object.assign({},r,{pts:NP});
-  const E=r.edges.map((e,i)=>d[i]>0?{...e,ov:0,xt:true,ov0:roofOv(r,i),zo:(e.zo!=null?e.zo:roofOv(r,i))-d[i]}:{...e,ov:roofOv(r,i)}); // zo: плоскость ската та же, что до продления // у врезанного края свеса нет — не торчит за конёк
+  const E=r.edges.map((e,i)=>flat.has(i)?{...e,s:false,ov:roofOv(r,i)}:d[i]>0?{...e,ov:0,xt:true,ov0:roofOv(r,i),zo:(e.zo!=null?e.zo:roofOv(r,i))-d[i]}:{...e,ov:roofOv(r,i)}); // flat: торец внутри соседней кровли в одной плоскости — без ската // zo: плоскость ската та же, что до продления // у врезанного края свеса нет — не торчит за конёк
   return Object.assign({},r,{pts:NP,edges:E}); }
 // ---- стена до крыши (как «Присоединить верх к крыше» в Revit): верх стены идёт по низу крыши, стена — одно тело ----
 // it.ra: true — присоединена, false — отсоединена (своя высота), нет — авто: наружные стены под краем крыши присоединяются
@@ -4654,7 +4657,8 @@ function roofPlan(r){ if(isExt(r)){ const g=roofGeom(r), ridges=[], arrows=[], F
   const big=new Map(); for(const f of g.faces){ if(!f.pl) continue; const A=Math.abs(polyArea2(f.P)), o=big.get(f.pl); if(!o||A>o.A) big.set(f.pl,{f,A}); }
   let co=null; try{ const li=roofLi(r); co=doc.levels[li].items.filter(B=>B.t==='roof'&&B!==r&&B.id<r.id&&roofJoined(r,B)).map(B=>{ try{ return onLvG(li,()=>roofGeom(B,li)); }catch(e){ return null; } }).filter(Boolean); }catch(e){}
   const same=(p,q)=>Math.abs(p.nx-q.nx)<2e-3&&Math.abs(p.ny-q.ny)<2e-3&&Math.abs(p.c-q.c)<4;
-  const arrows=[]; for(const [pl,{f}] of big){ const c=f.P.reduce((m,q)=>({x:m.x+q.x/f.P.length,y:m.y+q.y/f.P.length}),{x:0,y:0});
+  let XE=null; try{ const X=roofExtended(r,roofLi(r)); if(X!==r) XE=X.edges; }catch(e){}
+  const arrows=[]; for(const [pl,{f}] of big){ if(XE&&XE[pl.i]&&!XE[pl.i].s) continue; const c=f.P.reduce((m,q)=>({x:m.x+q.x/f.P.length,y:m.y+q.y/f.P.length}),{x:0,y:0});
     if(co&&co.some(G=>G.faces.some(h=>h.pl&&same(h.pl,pl)&&(f.P.some(q=>inPoly(h.P,q)||segDistPoly(h.P,q)<5)||h.P.some(q=>inPoly(f.P,q)))))) continue;
     arrows.push({c,i:pl.i,d:{x:-pl.dn.x,y:-pl.dn.y},a:g.E[pl.i].a}); }
   return {g,ridges,arrows}; }
@@ -4731,14 +4735,24 @@ function roofConstrain(r){ const M=roofMainOf(r); if(M){ const tm=roofTop(M), tr
 // поворот ската при смене уклона: до изменения запоминаем плоскости, после — подбираем zo (смещение плоскости) только у изменённых скатов
 function roofPivot0(r){ if(!r||r.t!=='roof'||isExt(r)||r.plate||!r.edges||r.edges.length!==r.pts.length) return null; const li=roofLi(r);
   try{ const g=onLvG(li,()=>roofGeom(r,li)); return {li,g,E:r.edges.map(e=>({s:!!e.s,a:e.a,zo:e.zo})),fixT:r.fixT,bo:r.bo||0,bl:r.bl,on:r.onTop,n:r.pts.length,P:JSON.stringify(r.pts)}; }catch(e){ return null; } }
-function roofPivot1(r,S){ if(!S||!r.edges||r.edges.length!==S.n||JSON.stringify(r.pts)!==S.P) return; if((r.bo||0)!==S.bo||r.bl!==S.bl||r.onTop!==S.on||(r.fixT!=null&&S.fixT!=null&&Math.abs(r.fixT-S.fixT)>0.5)||(r.fixT==null)!==(S.fixT==null)) return; // смена низа или высоты конька — уклоны уже пересчитаны
+function roofPivot1(r,S){ if(!S||!r.edges||r.edges.length!==S.n||JSON.stringify(r.pts)!==S.P) return null; if((r.bo||0)!==S.bo||r.bl!==S.bl||r.onTop!==S.on||(r.fixT!=null&&S.fixT!=null&&Math.abs(r.fixT-S.fixT)>0.5)||(r.fixT==null)!==(S.fixT==null)) return null; // смена низа или высоты конька — уклоны уже пересчитаны
   const zb=onLvG(S.li,()=>roofBase(r,S.li)), K=a=>Math.tan(Math.min(80,Math.max(1,a||30))*Math.PI/180), ch=[];
-  r.edges.forEach((e,i)=>{ const o=S.E[i]; if(!e.s||!o.s||Math.abs((e.a||30)-(o.a||30))<1e-6) return; const k0=K(o.a), k1=K(e.a), ov=roofOv(r,i), zw0=zb+k0*(o.zo!=null?o.zo:ov);
-    if(r.fixT!=null){ let zt=-1e18, dt=0; for(const f of S.g.faces){ if(!f.pl||f.pl.i!==i) continue; for(const q of f.P){ const z=f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c; if(z>zt){ zt=z; dt=(z-zw0)/k0; } } } if(zt<-1e17) return;
-      e.zo=r3((zt-k1*dt-zb)/k1); } // скат поворачивается вокруг своего конька
-    else if(o.zo!=null){ const ze=zw0-k0*ov; e.zo=r3((ze+k1*ov-zb)/k1); } // низ ската остаётся на месте
-    if(e.zo!=null&&Math.abs(e.zo-ov)<0.05) delete e.zo; ch.push(i); });
-  if(ch.length) roofSnapPlanes(r,S.li,ch,zb); }
+  // низ ската (край свеса) всегда на месте — меняется только уклон
+  r.edges.forEach((e,i)=>{ const o=S.E[i]; if(!e.s||!o.s||Math.abs((e.a||30)-(o.a||30))<1e-6) return; const k0=K(o.a), k1=K(e.a), ov=roofOv(r,i);
+    if(o.zo!=null){ const ze=zb+k0*o.zo-k0*ov; e.zo=r3((ze+k1*ov-zb)/k1); if(Math.abs(e.zo-ov)<0.05) delete e.zo; } ch.push(i); });
+  if(r.fixT==null||!ch.length) return null;
+  if(ch.length>1){ S.newTop=true; return null; } // все скаты сразу — конёк по уклонам
+  // конёк зафиксирован: низ и высота конька на месте — конёк сдвигается вбок, встречный скат пересчитывает уклон
+  const i=ch[0], P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, U=k=>unit(P[k],P[(k+1)%n]), NN=k=>{ const u=U(k); return {x:-u.y*sg,y:u.x*sg}; };
+  const Fi=S.g.faces.filter(f=>f.pl&&f.pl.i===i); let j=-1, bd=1e18;
+  for(let k=0;k<n;k++){ if(k===i||!r.edges[k].s) continue; const a=U(i), b=U(k); if(a.x*b.x+a.y*b.y>-0.999) continue; const Fk=S.g.faces.filter(f=>f.pl&&f.pl.i===k);
+    const touch=Fi.some(f=>f.P.some(q=>Fk.some(h=>h.P.some(v=>Math.hypot(v.x-q.x,v.y-q.y)<2)))); if(!touch) continue; const ni=NN(i), d=(P[k].x-P[i].x)*ni.x+(P[k].y-P[i].y)*ni.y; if(d>0&&d<bd){ bd=d; j=k; } }
+  if(j<0) return null; // встречного ската нет (вальма, односкатная) — конёк и так на месте
+  const th=r.th||250, ZT=r.fixT-th, ei=r.edges[i], ej=r.edges[j], oi=roofOv(r,i), oj=roofOv(r,j), ki=K(ei.a), kj0=K(S.E[j].a);
+  const zei=zb+ki*(ei.zo!=null?ei.zo:oi)-ki*oi, zej=zb+kj0*(S.E[j].zo!=null?S.E[j].zo:oj)-kj0*oj, Wd=bd+oi+oj, Ri=(ZT-zei)/ki, Rj=Wd-Ri;
+  if(!(Ri>0)||!(Rj>50)||!(ZT-zej>0)) return 'при этом уклоне и этой высоте конька встречный скат не помещается — уменьшите уклон или снимите «Фикс. конёк»';
+  const aj=Math.atan((ZT-zej)/Rj)*180/Math.PI; if(aj<1||aj>80) return 'встречный скат получился бы '+(Math.round(aj*10)/10)+'° — вне 1…80°';
+  ej.a=Math.abs(aj-Math.round(aj*10)/10)<0.01?Math.round(aj*10)/10:Math.round(aj*1000)/1000; const kj=K(ej.a); ej.zo=r3((zej+kj*oj-zb)/kj); if(Math.abs(ej.zo-oj)<0.05) delete ej.zo; ej.s=true; r.type='custom'; return null; }
 // скат совпал с плоскостью ската другой крыши (тот же уклон и та же высота) — ставим точно в ту же плоскость: одна поверхность без шва
 function roofSnapPlanes(r,li,idx,zb){ let g; try{ g=onLvG(li,()=>roofGeom(r,li)); }catch(e){ return; } const K=a=>Math.tan(Math.min(80,Math.max(1,a||30))*Math.PI/180);
   const others=[]; doc.levels.forEach((L,lj)=>{ if(L.gp) return; for(const B of L.items){ if(B.t!=='roof'||B===r||isExt(B)) continue; try{ const gB=onLvG(lj,()=>roofGeom(B,lj)); for(const f of gB.faces) if(f.pl) others.push({pl:f.pl,P:f.P}); }catch(e){} } });
@@ -4748,7 +4762,7 @@ function roofSnapPlanes(r,li,idx,zb){ let g; try{ g=onLvG(li,()=>roofGeom(r,li))
       if(Math.abs(Math.atan(k)-Math.atan(kq))*180/Math.PI>0.3) continue; const dz=o.pl.nx*c.x+o.pl.ny*c.y+o.pl.c-z; if(Math.abs(dz)>40) continue; if(!best||Math.abs(dz)<Math.abs(best.dz)) best={o,dz,kq}; }
     if(!best) continue; const a=Math.atan(best.kq)*180/Math.PI, k1=K(a), A=r.pts[i]; // плоскость другой крыши в точке A на линии стены и наш скат через неё
     const zA=best.o.pl.nx*A.x+best.o.pl.ny*A.y+best.o.pl.c; e.a=Math.round(a*1e6)/1e6; e.zo=(zA-zb)/k1; if(Math.abs(e.zo-roofOv(r,i))<1e-4) delete e.zo; } }
-function roofChange(r,fn){ const snap=JSON.stringify(r); pushUndo(); const pv=roofPivot0(r); fn(r); roofPivot1(r,pv); if(pv&&r.fixT!=null&&pv.fixT!=null&&Math.abs(r.fixT-pv.fixT)<0.5){ const t=roofTop(r); if(t!=null) r.fixT=r1(t); } /* смена уклона: выкл фикс — низ ската на месте; вкл — скат поворачивается вокруг своего конька, остальные скаты не двигаются */ let err=roofCheck(r); if(!err){ const c=roofConstrain(r); if(c&&c!=='clamp') err=c; else if(c==='clamp') err=roofCheck(r); }
+function roofChange(r,fn){ const snap=JSON.stringify(r); pushUndo(); const pv=roofPivot0(r); fn(r); const pErr=roofPivot1(r,pv); if(pv&&pv.newTop&&r.fixT!=null){ const t=roofTop(r); if(t!=null) r.fixT=r1(t); } /* смена уклона: выкл фикс — низ ската на месте; вкл — скат поворачивается вокруг своего конька, остальные скаты не двигаются */ let err=pErr||roofCheck(r); if(!err){ const c=roofConstrain(r); if(c&&c!=='clamp') err=c; else if(c==='clamp') err=roofCheck(r); }
   if(err){ const o=JSON.parse(snap); for(const k of Object.keys(r)) delete r[k]; Object.assign(r,o); undoS.pop(); toast('Не соответствует: '+err); panelKey=''; syncPanel(); redraw(); return false; }
   persist(); panelKey=''; syncPanel(); redraw(); return true; }
 function editBegin(){ if(!barEdit){ barEdit={snap:JSON.stringify(doc.items),und:undoS.length}; syncModeBtns(); } }
@@ -5522,7 +5536,7 @@ function elevSet(kind,val){ const s=EV.sel; if(!s) return;
         const d0=drop(E); E.forEach(e=>{ if(e.s) e.a=Math.atan(Math.tan(e.a*Math.PI/180)*lam)*180/Math.PI; }); x.ang=Math.atan(Math.tan((x.ang||30)*Math.PI/180)*lam)*180/Math.PI; x.type='custom';
         x.bo=r3((x.bo||0)+drop(E)-d0); }); } }
   if(kind==='lvl'){ return true; } }
-function roofChangeQuiet(r,fn){ const snap=JSON.stringify(r); fn(r); let err=roofCheck(r); if(!err){ const c=roofConstrain(r); if(c&&c!=='clamp') err=c; else if(c==='clamp') err=roofCheck(r); } if(err){ const o=JSON.parse(snap); for(const k of Object.keys(r)) delete r[k]; Object.assign(r,o); toast('Не соответствует: '+err); return false; } return true; }
+function roofChangeQuiet(r,fn){ const snap=JSON.stringify(r); fn(r); let err=pErr||roofCheck(r); if(!err){ const c=roofConstrain(r); if(c&&c!=='clamp') err=c; else if(c==='clamp') err=roofCheck(r); } if(err){ const o=JSON.parse(snap); for(const k of Object.keys(r)) delete r[k]; Object.assign(r,o); toast('Не соответствует: '+err); return false; } return true; }
 function elevInput(h){ const inp=EV.el.querySelector('.evin'); EV.inlineI=h.i; EV.inK=h.kind; inp.hidden=false; inp.style.left=h.x+'px'; inp.style.top=h.y+'px';
   inp.value=h.kind==='rT'||h.kind==='rE'?String(Math.round(h.val)):String(Math.round(h.val*10)/10); EV.inOpenT=Date.now(); inp.focus(); inp.select(); try{ elevDraw(); }catch(e){} }
 function elevInputDone(apply){ const inp=EV.el.querySelector('.evin'); if(inp.hidden) return; inp.hidden=true; if(!apply) return; const v=parseNum(inp.value); if(isNaN(v)) return;
