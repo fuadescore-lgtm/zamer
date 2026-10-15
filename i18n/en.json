@@ -1079,5 +1079,13 @@
 "Файл проекта": "Project file",
 "Вершина": "Vertex",
 "хорда": "chord",
-"дуги": "arc"
+"дуги": "arc",
+"Фиксировать высоту конька: при смене уклона конёк остаётся на месте, двигается низ крыши. Выкл — конёк следует за уклонами": "Lock the ridge height: when a slope angle changes, the ridge stays and the roof bottom moves. Off — the ridge follows the slopes",
+"Смена уклона двигает низ крыши": "Changing a slope moves the roof bottom",
+"во фронтоне больше нет места": "no more room in the gable",
+"Высота конька зафиксирована": "Ridge height locked",
+"Высота конька — по уклонам": "Ridge height follows the slopes",
+"проёма опущены": "openings lowered",
+"Проём опущен": "Opening lowered",
+"Фикс. конёк": "Lock ridge"
 }
