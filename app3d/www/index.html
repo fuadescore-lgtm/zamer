@@ -3675,7 +3675,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.51':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.52':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -5768,9 +5768,10 @@ function ifcFaces(M){ if(!M||!M.tri||!M.tri.length) return null;
   const all=new Set(); for(const t of T) for(let k=0;k<3;k++) all.add(t.i[k]+'>'+t.i[(k+1)%3]);
   let closed=true; for(const e of all){ const [a,b]=e.split('>'); if(!all.has(b+'>'+a)){ closed=false; break; } }
   const G=[]; for(const t of T){ let g=G.find(g=>g.n[0]*t.n[0]+g.n[1]*t.n[1]+g.n[2]*t.n[2]>0.99995&&Math.abs(g.d-t.d)<1.5); if(!g){ g={n:t.n,d:t.d,t:[]}; G.push(g); } g.t.push(t); }
-  const faces=[]; let areaUp=0; const tri=g=>{ for(const t of g.t) faces.push({outer:t.i.map(i=>i+1),holes:[]}); };
-  for(const g of G){ const n=g.n; if(n[2]>0.05) areaUp+=g.t.reduce((s,t)=>s+t.ar,0); if(g.t.length===1){ tri(g); continue; }
+  const faces=[]; let areaUp=0; let PB=null; const tri=g=>{ for(const t of g.t) faces.push({outer:t.i.map(i=>i+1),holes:[],...PB}); };
+  for(const g of G){ const n=g.n; if(n[2]>0.05) areaUp+=g.t.reduce((s,t)=>s+t.ar,0);
     const ax=Math.abs(n[0])<0.9?[1,0,0]:[0,1,0]; let e1=[n[1]*ax[2]-n[2]*ax[1],n[2]*ax[0]-n[0]*ax[2],n[0]*ax[1]-n[1]*ax[0]]; const l1=Math.hypot(e1[0],e1[1],e1[2]); e1=e1.map(x=>x/l1); const e2=[n[1]*e1[2]-n[2]*e1[1],n[2]*e1[0]-n[0]*e1[2],n[0]*e1[1]-n[1]*e1[0]];
+    PB={n,e1,e2}; if(g.t.length===1){ tri(g); continue; }
     const V=[...new Set(g.t.flatMap(t=>t.i))], V2=new Map(V.map(i=>{ const p=pts[i]; return [i,[p[0]*e1[0]+p[1]*e1[1]+p[2]*e1[2],p[0]*e2[0]+p[1]*e2[1]+p[2]*e2[2]]]; }));
     const cnt=new Map(), dir=[]; const addE=(a,b)=>{ dir.push([a,b]); const k=a+'>'+b; cnt.set(k,(cnt.get(k)||0)+1); };
     for(const t of g.t) for(let k=0;k<3;k++){ const a=t.i[k], b=t.i[(k+1)%3], A=V2.get(a), B=V2.get(b), dx=B[0]-A[0], dy=B[1]-A[1], L2=dx*dx+dy*dy, on=[];
@@ -5789,7 +5790,7 @@ function ifcFaces(M){ if(!M||!M.tri||!M.tri.length) return null;
     const F=outs.map(Lp=>({outer:Lp,holes:[],a:sa(Lp)}));
     const inside=(Lp,P)=>{ let c=false; for(let i=0,j=Lp.length-1;i<Lp.length;j=i++){ const a=V2.get(Lp[i]), b=V2.get(Lp[j]); if(((a[1]>P[1])!==(b[1]>P[1]))&&(P[0]<(b[0]-a[0])*(P[1]-a[1])/(b[1]-a[1])+a[0])) c=!c; } return c; };
     for(const h of holes){ const P=V2.get(h[0]), f=F.filter(f=>inside(f.outer,P)).sort((x,y)=>x.a-y.a)[0]; if(f) f.holes.push(h); }
-    for(const f of F) faces.push({outer:simp(f.outer).map(i=>i+1),holes:f.holes.map(h=>simp(h).map(i=>i+1))}); }
+    for(const f of F) faces.push({outer:simp(f.outer).map(i=>i+1),holes:f.holes.map(h=>simp(h).map(i=>i+1)),...PB}); }
   return {pts,faces,closed,areaUp}; }
 function buildIFC(){ geoMemoOn(); try{ return buildIFC0(); } finally{ geoMemoOff(); } }
 function buildIFC0(){ const L=[]; let id=0, OH=null, CS=null; const styled=[];
@@ -5853,6 +5854,19 @@ function buildIFC0(){ const L=[]; let id=0, OH=null, CS=null; const styled=[];
       items.push(E(`IFCPOLYGONALFACESET(${pl},${F.closed?'.T.':'.F.'},(${faces.join(',')}),$)`)); });
     CS=base; if(!items.length) return null; M.area=area||0;
     return E(`IFCPRODUCTDEFINITIONSHAPE($,$,(${E(`IFCSHAPEREPRESENTATION(${body},'Body','Tessellation',(${items.join(',')}))`)}))`); };
+  // крыша — твёрдые тела: каждый скат = профиль ската в его плоскости, выдавленный вниз на толщину кровли.
+  // Грани — настоящие плоскости: в Revit скат берётся как рабочая плоскость, к нему привязываются семейства
+  const roofSolids=(M,it)=>{ const rc=rgbOf(it.fc,'#b5533c'), near=c=>c&&Math.abs(c[0]-rc[0])<0.04&&Math.abs(c[1]-rc[1])<0.04&&Math.abs(c[2]-rc[2])<0.04;
+    const top=M.tri.filter(t=>{ const [A,B,C]=t.v, nz=(B[0]-A[0])*(C[1]-A[1])-(B[1]-A[1])*(C[0]-A[0]), u=[B[0]-A[0],B[1]-A[1],B[2]-A[2]], w=[C[0]-A[0],C[1]-A[1],C[2]-A[2]], l=Math.hypot(u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],nz)||1; return nz/l>0.05&&near(t.col); });
+    const F=ifcFaces({tri:top}); if(!F||!F.faces.length) return null; const th=it.th||250, so=[]; let area=0;
+    for(const f of F.faces){ const {n:nn,e1,e2}=f; if(!nn||nn[2]<0.05) continue; const o=F.pts[f.outer[0]-1], L2=i=>{ const p=F.pts[i-1], d=[p[0]-o[0],p[1]-o[1],p[2]-o[2]]; return [d[0]*e1[0]+d[1]*e1[1]+d[2]*e1[2], d[0]*e2[0]+d[1]*e2[1]+d[2]*e2[2]]; };
+      const crv=Lp=>{ const q=Lp.map(i=>P2(...L2(i))); return E(`IFCPOLYLINE((${q.join(',')},${q[0]}))`); };
+      const prof=f.holes.length?E(`IFCARBITRARYPROFILEDEFWITHVOIDS(.AREA.,$,${crv(f.outer)},(${f.holes.map(crv).join(',')}))`):E(`IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,${crv(f.outer)})`);
+      const pl=E(`IFCAXIS2PLACEMENT3D(${P3(o[0],o[1],o[2])},${D3(nn[0],nn[1],nn[2])},${D3(e1[0],e1[1],e1[2])})`);
+      so.push(E(`IFCEXTRUDEDAREASOLID(${prof},${pl},${D3(0,0,-1)},${n(th*nn[2])})`)); /* перпендикулярно скату на толщину по нормали (обычное выдавливание — его понимают все программы) */
+      { const P=f.outer.map(L2); let a=0; for(let i=0;i<P.length;i++){ const p=P[i],q=P[(i+1)%P.length]; a+=p[0]*q[1]-q[0]*p[1]; } area+=Math.abs(a)/2; } }
+    if(!so.length) return null; M.area=area;
+    return E(`IFCPRODUCTDEFINITIONSHAPE($,$,(${E(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',(${so.join(',')}))`)}))`); };
   const RU=(()=>{ const M=Mesh(), sv=doc.curLv; try{ doc.levels.forEach((L,li)=>{ if(L.gp) return; doc.curLv=li; for(const it of L.items){ if(it.t==='roof') roofMeshTagged(M,it,li); else if(it.t==='dorm') dormRoofMesh(M,it,li); } }); } finally{ doc.curLv=sv; } try{ roofUnion(M); }catch(e){} return M; })();
   try{ doc.levels.forEach((Lv,li)=>{ if(Lv.gp) return; doc.curLv=li; const sp=plc(bldP,Lv.elev), st=E(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${str(Lv.name)},$,$,${sp},$,$,.ELEMENT.,${n(Lv.elev)})`); storeys.push(st); const inS=[];
     for(const it of Lv.items){
@@ -5883,7 +5897,7 @@ function buildIFC0(){ const L=[]; let id=0, OH=null, CS=null; const styled=[];
       else if(it.t==='skyl'){ const M=Mesh(); skylMesh(M,it,li); M.tri=M.tri.map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]-Lv.elev])})); /* вершины бывают общими у треугольников — копия, иначе сдвиг дважды */ const m0=CS=mat('Стекло',[0.55,0.75,0.9],0.55); const r=tess(M); CS=null; if(r) inS.push(use(m0,E(`IFCWINDOW('${ifcGuid()}',$,${str('Мансардное окно '+fmt(it.w)+'×'+fmt(it.h))},$,$,${plc(sp,0)},${r},$,${n(it.h||1180)},${n(it.w||780)},.SKYLIGHT.,$,$)`))); }
       else if(it.t==='dorm'){ const M=Mesh(); dormMesh(M,it,li,true); M.tri=M.tri.concat(RU.tri.filter(t=>t.rid===it.id).map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]])}))); M.tri=M.tri.map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]-Lv.elev])})); /* вершины бывают общими у треугольников — копия, иначе сдвиг дважды */ const m0=CS=mat('Слуховое окно',rgbOf(it.fc,'#d9d6cf')); const r=tess(M); CS=null; if(r) inS.push(use(m0,E(`IFCBUILDINGELEMENTPROXY('${ifcGuid()}',$,${str('Слуховое окно: '+(DORMT[it.sh||'gable']||''))},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`))); }
       else if(it.t==='stair'){ const M=Mesh(); stairMesh(M,it,0,lvHeight(li)); const m0=CS=mat('Лестница',rgbOf(it.fc,'#c9b89a')); const r=tess(M); CS=null; if(r) inS.push(use(m0,E(`IFCSTAIR('${ifcGuid()}',$,${str('Лестница '+stairGeom(it).n+' ступ.')},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`))); }
-      else if(it.t==='roof'){ const M=Mesh(); M.tri=(RU.tri.filter(t=>t.rid===it.id)).map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]])})); M.tri=M.tri.map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]-Lv.elev])})); /* вершины бывают общими у треугольников — копия, иначе сдвиг дважды */ const m0=CS=mat('Кровля',rgbOf(it.fc,'#b5533c')); const r=tess(M); CS=null; if(r){ const rf=use(m0,E(`IFCROOF('${ifcGuid()}',$,${str('Крыша: '+(ROOFT[it.type]||''))},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`)); inS.push(rf);
+      else if(it.t==='roof'){ const M=Mesh(); M.tri=(RU.tri.filter(t=>t.rid===it.id)).map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]])})); M.tri=M.tri.map(t=>({...t,v:t.v.map(p=>[p[0],p[1],p[2]-Lv.elev])})); /* вершины бывают общими у треугольников — копия, иначе сдвиг дважды */ const m0=CS=mat('Кровля',rgbOf(it.fc,'#b5533c')); const r=roofSolids(M,it)||tess(M); CS=null; if(r){ const rf=use(m0,E(`IFCROOF('${ifcGuid()}',$,${str('Крыша: '+(ROOFT[it.type]||''))},$,$,${plc(sp,0)},${r},$,.NOTDEFINED.)`)); inS.push(rf);
         pset(rf,'Pset_RoofCommon',{Reference:'Крыша: '+(ROOFT[it.type]||'')}); qto(rf,'Qto_RoofBaseQuantities',{GrossArea:['A',(M.area||0)/1e6]}); } } }
     if(inS.length) E(`IFCRELCONTAINEDINSPATIALSTRUCTURE('${ifcGuid()}',$,$,$,(${inS.join(',')}),${st})`); }); } finally { doc.curLv=save; }
   if(storeys.length) E(`IFCRELAGGREGATES('${ifcGuid()}',$,$,$,${bld},(${storeys.join(',')}))`);
