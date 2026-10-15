@@ -1191,5 +1191,20 @@
 "Отсоединить": "Detach",
 "Объединены": "Merged",
 "Объединить": "Merge",
-"Край": "Edge"
+"Край": "Edge",
+"этот край смотрит не на выбранный скат — выделите край, обращённый к соседней крыше": "this edge does not face the chosen slope — select the edge facing the neighbouring roof",
+"торец выходит за соседнюю крышу — выберите её скат, обращённый к этому краю": "the end goes beyond the neighbouring roof — choose its slope facing this edge",
+"Соединить край с плоскостью ската соседней крыши (как в": "Join the edge to the neighbouring roof’s slope plane (as in",
+"опустите конёк или выберите край короче": "lower the ridge or choose a shorter edge",
+"Соединить» — сомкнуть край с ним": "Join” — close the edge onto it",
+"крыша у торца выше ската соседа": "the roof at the end is higher than the neighbour’s slope",
+"коснитесь ската соседней крыши": "tap a slope of the neighbouring roof",
+"Скат соседа выбран (зелёный": "Neighbour’s slope chosen (green",
+"скат соседа не строится": "the neighbour’s slope cannot be built",
+"скат соседа скрыт": "the neighbour’s slope is hidden",
+"крыша не строится": "the roof cannot be built",
+"нет такого ската": "no such slope",
+"Соединение края": "Edge join",
+"Соединить": "Join",
+"снято": "removed"
 }
