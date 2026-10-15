@@ -1206,5 +1206,6 @@
 "нет такого ската": "no such slope",
 "Соединение края": "Edge join",
 "Соединить": "Join",
-"снято": "removed"
+"снято": "removed",
+"торец не попадает на выбранный скат — выделите край, обращённый к нему, или другой скат": "the end does not land on the chosen slope — select the edge facing it or another slope"
 }
