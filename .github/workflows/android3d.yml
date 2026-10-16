@@ -87,8 +87,9 @@ jobs:
           ls -la ..
       - name: Исходники Android-проекта (ZIP для Android Studio / Cursor, без ключа подписи)
         run: |
+          trap 'echo "::error::строка $LINENO: $BASH_COMMAND"' ERR
           V=${{ env.APP_VER }}; T=$RUNNER_TEMP/src; D=$T/BIMsketcher-android; rm -rf $T; mkdir -p $D
-          set -x
+          ls -la; ls node_modules/@capacitor || true
           tar --exclude=./node_modules --exclude=./android/app/build --exclude=./android/build --exclude=./android/.gradle --exclude=./android/capacitor-cordova-android-plugins/build --exclude=./android/local.properties --exclude='*.apk' --exclude='*.aab' --exclude='*.zip' -cf - . | tar -xf - -C $D
           mkdir -p $D/node_modules/@capacitor
           for p in android filesystem share; do (cd node_modules/@capacitor && tar --exclude=build --exclude=.gradle -cf - $p) | tar -xf - -C $D/node_modules/@capacitor; done
