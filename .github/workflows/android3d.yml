@@ -88,11 +88,12 @@ jobs:
       - name: Исходники Android-проекта (ZIP для Android Studio / Cursor, без ключа подписи)
         run: |
           V=${{ env.APP_VER }}; T=$RUNNER_TEMP/src; D=$T/BIMsketcher-android; rm -rf $T; mkdir -p $D
-          rsync -a --exclude node_modules --exclude 'android/app/build' --exclude 'android/build' --exclude 'android/.gradle' --exclude 'android/capacitor-cordova-android-plugins/build' --exclude 'android/local.properties' --exclude '*.apk' --exclude '*.aab' --exclude '*.zip' ./ $D/
+          set -x
+          tar --exclude=./node_modules --exclude=./android/app/build --exclude=./android/build --exclude=./android/.gradle --exclude=./android/capacitor-cordova-android-plugins/build --exclude=./android/local.properties --exclude='*.apk' --exclude='*.aab' --exclude='*.zip' -cf - . | tar -xf - -C $D
           mkdir -p $D/node_modules/@capacitor
-          for p in android filesystem share; do rsync -a --exclude build --exclude .gradle node_modules/@capacitor/$p $D/node_modules/@capacitor/; done
+          for p in android filesystem share; do (cd node_modules/@capacitor && tar --exclude=build --exclude=.gradle -cf - $p) | tar -xf - -C $D/node_modules/@capacitor; done
           cp -r ../web-src ../i18n $D/; mkdir -p $D/native; cp ../native/*.java ../native3d/*.java $D/native/; cp ../android-src/README.md $D/README.md
-          ! find $D -name '*.jks' -o -name '*.jks.enc' | grep . || { echo "::error::ключ в архиве"; exit 1; }
+          if [ -n "$(find $D -name '*.jks*')" ]; then echo "::error::ключ подписи попал в архив"; exit 1; fi
           (cd $T && zip -qr $GITHUB_WORKSPACE/app3d/BIMsketcher-android-src-$V.zip BIMsketcher-android); ls -la $GITHUB_WORKSPACE/app3d/*.zip
       - uses: actions/upload-artifact@v4
         if: ${{ !inputs.src_only }}
