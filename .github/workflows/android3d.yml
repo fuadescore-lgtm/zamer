@@ -93,7 +93,7 @@ jobs:
           tar --exclude=./node_modules --exclude=./android/app/build --exclude=./android/build --exclude=./android/.gradle --exclude=./android/capacitor-cordova-android-plugins/build --exclude=./android/local.properties --exclude='*.apk' --exclude='*.aab' --exclude='*.zip' -cf - . | tar -xf - -C $D
           mkdir -p $D/node_modules/@capacitor
           for p in android filesystem share; do (cd node_modules/@capacitor && tar --exclude=build --exclude=.gradle -cf - $p) | tar -xf - -C $D/node_modules/@capacitor; done
-          cp -r ../web-src ../i18n $D/; mkdir -p $D/native; cp ../native/*.java ../native3d/*.java $D/native/; cp ../android-src/README.md $D/README.md
+          cp -r ../web-src ../i18n $D/; mkdir -p $D/native; cp ../native/CompassPlugin.java ../native3d/MainActivity.java $D/native/; cp ../android-src/README.md $D/README.md
           if [ -n "$(find $D -name '*.jks*')" ]; then echo "::error::ключ подписи попал в архив"; exit 1; fi
           (cd $T && zip -qr $GITHUB_WORKSPACE/app3d/BIMsketcher-android-src-$V.zip BIMsketcher-android); ls -la $GITHUB_WORKSPACE/app3d/*.zip
       - uses: actions/upload-artifact@v4
