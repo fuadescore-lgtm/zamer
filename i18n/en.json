@@ -1468,5 +1468,7 @@
 "На стенах нет места для копий": "No room on the walls for copies",
 "Скопировано — вставьте в чат": "Copied — paste into the chat",
 "Копии поставлены рядом": "Copies placed alongside",
-"Нет места": "No room"
+"Нет места": "No room",
+"на этом этаже нет стены на том же месте (отметьте «Стены": "there is no wall at the same place on this level (tick «Walls»",
+"Не скопировано окон/дверей": "Windows/doors not copied"
 }
