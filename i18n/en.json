@@ -1462,5 +1462,11 @@
 "Нажмите «Копировать» и вставьте в чат (Ctrl+V). Размер:": "Press «Copy» and paste into the chat (Ctrl+V). Size:",
 "КБ, картинки-подложки не входят": "KB, underlay images are not included",
 "Скопировано — вставьте в чат (Ctrl+V)": "Copied — paste into the chat (Ctrl+V)",
-"Не удалось скопировать автоматически: текст выделен — нажмите Ctrl+C": "Could not copy automatically: the text is selected — press Ctrl+C"
+"Не удалось скопировать автоматически: текст выделен — нажмите Ctrl+C": "Could not copy automatically: the text is selected — press Ctrl+C",
+"Не удалось скопировать автоматически: текст выделен — нажмите": "Could not copy automatically: the text is selected — press",
+"Нажмите «Копировать» и вставьте в чат": "Press «Copy» and paste into the chat",
+"На стенах нет места для копий": "No room on the walls for copies",
+"Скопировано — вставьте в чат": "Copied — paste into the chat",
+"Копии поставлены рядом": "Copies placed alongside",
+"Нет места": "No room"
 }
