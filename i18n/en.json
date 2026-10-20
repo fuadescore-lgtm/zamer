@@ -1323,5 +1323,19 @@
 "нет крыши": "no roof",
 "Несколько": "Several",
 "на уровне": "on level",
-"на": "on"
+"на": "on",
+"Отметка конька, мм — от выбранного нуля": "Ridge elevation, mm — from the chosen zero",
+"верхний край должен быть выше карниза": "the upper edge must be above the eave",
+"низ кровли у края (дальномер снизу": "underside of the roof at the edge (laser from below",
+"От какого нуля считается отметка": "Zero the elevation is measured from",
+"не удалось построить крышу": "could not build the roof",
+"по низу или верху кровли": "by the underside or the top of the roof",
+"у этого края нет ската": "this edge has no slope",
+"верх кровли у края": "top of the roof at the edge",
+"уклон получится": "the pitch would be",
+"Верхний край": "Upper edge",
+"Высота края": "Edge height",
+"Карниз": "Eave",
+"можно": "allowed",
+"от": "from"
 }
