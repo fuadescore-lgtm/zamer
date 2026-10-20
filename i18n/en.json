@@ -1417,5 +1417,13 @@
 "наклон": "tilt",
 "широта": "latitude",
 "Широта": "Latitude",
-"Ряды": "Rows"
+"Ряды": "Rows",
+"Коньки ровно: после правки уклоны пересчитываются, коньки на одной высоте. Касание — уклоны постоянные": "Ridges level: after edits the pitches are recalculated, ridges stay at one height. Tap — fixed pitches",
+"Уклоны постоянные: коньки разной высоты (низкое крыло врезается в высокое). Касание — коньки ровно": "Fixed pitches: ridges at different heights (the lower wing runs into the higher one). Tap — level ridges",
+"Не соответствует: «Откуда» и «Куда» — один и тот же уровень. Выберите в «Куда» другой этаж или": "Not valid: «From» and «To» are the same level. Choose another level in «To» or",
+"Уклоны постоянные: при правке коньки могут быть разной высоты": "Fixed pitches: after edits ridges may be at different heights",
+"Коньки ровно: уклоны пересчитаны, коньки на одной высоте": "Ridges level: pitches recalculated, ridges at one height",
+"Новый уровень выше": "New level above",
+"Уклоны постоянные": "Fixed pitches",
+"Коньки ровно": "Ridges level"
 }
