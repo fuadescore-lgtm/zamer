@@ -4013,7 +4013,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.71':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.72':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -4996,7 +4996,7 @@ function wallTopProfile(it,li){ let cov=wallRoofs(it,li); if(!cov) return null; 
       for(const f of o.g.faces) for(let i=0;i<f.P.length;i++) for(const [A,B] of [[w.aL,w.bL],[w.aR,w.bR]]){ const q=cut(A,B,f.P[i],f.P[(i+1)%f.P.length]); if(q) S.push(sOf(q)); } } // конёк/ребро — точная вершина
     const SS=[...new Set(S.filter(s=>s>=Smin-1e-6&&s<=Smax+1e-6).map(s=>Math.round(s*1e4)/1e4))].sort((a,b)=>a-b);
     const Lp=[], Rp=[]; let any=false;
-    for(const s of SS){ const l=onF(w.aL,w.bL,sL0,sL1,s), r=onF(w.aR,w.bR,sR0,sR1,s), c={x:it.a.x+u.x*s+nv.x*oc,y:it.a.y+u.y*s+nv.y*oc};
+    for(const s of SS){ const l=onF(w.aL,w.bL,sL0,sL1,s), r=onF(w.aR,w.bR,sR0,sR1,s), sc=Math.max(0,Math.min(L,s)), c={x:it.a.x+u.x*sc+nv.x*oc,y:it.a.y+u.y*sc+nv.y*oc}; /* угол стыка стен (за концом оси) — как у конца стены: без столбиков над крышей */
       const on=cov.filter(o=>covers(o,c)); let zl=null, zr=null; for(const o of on){ try{ const hl=o.g.H(l), hr=o.g.H(r); if(zl==null||hl+hr<zl+zr){ zl=hl; zr=hr; } }catch(e){} } // нижняя крыша
       l.z=zl==null?z1:zl; r.z=zr==null?z1:zr; if(Math.abs(l.z-z1)>1||Math.abs(r.z-z1)>1) any=true; Lp.push(l); Rp.push(r); }
     if(!any) return null; const {z0}=wallZ(it,li); let zc=z1; for(const q of Lp.concat(Rp)) zc=Math.min(zc,q.z); zc=Math.max(z0+100,zc); for(const q of Lp.concat(Rp)) q.z=Math.max(q.z,zc);
