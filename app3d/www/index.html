@@ -3963,7 +3963,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.65':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.66':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -4898,7 +4898,7 @@ function wallRoofs(it,li){ if(!isWall(it)||isArc(it)||it.ra===false) return null
   const m={x:(it.a.x+it.b.x)/2,y:(it.a.y+it.b.y)/2}, smp=[0.02,0.25,0.5,0.75,0.98].map(t=>({x:it.a.x+(it.b.x-it.a.x)*t,y:it.a.y+(it.b.y-it.a.y)*t})), cov=R.filter(o=>it.ra===true?smp.some(q=>inPoly(o.g.O,q)):inPoly(o.g.O,m)); if(!cov.length) return null;
   if(it.ra===true) return cov;
   // авто: стена лежит вдоль края крыши (наружная)
-  const tol=(it.w||0)/2+80;
+  const tol=(it.w||0)/2+80; { const wp=wallPoly(it), bc={x:(wp.aL.x+wp.aR.x+wp.bL.x+wp.bR.x)/4,y:(wp.aL.y+wp.aR.y+wp.bL.y+wp.bR.y)/4}, inF=o=>inPoly(o.r.pts,bc)?0:1; cov.sort((a,b)=>inF(a)-inF(b)); } /* сначала крыша, под чьим контуром стоит стена, а не та, чей свес над ней */
   for(const o of cov){ const P=o.r.pts; for(let i=0;i<P.length;i++){ const A=P[i],B=P[(i+1)%P.length], L=Math.hypot(B.x-A.x,B.y-A.y); if(L<1) continue; const u={x:(B.x-A.x)/L,y:(B.y-A.y)/L};
       const d=q=>Math.abs((q.x-A.x)*u.y-(q.y-A.y)*u.x), t=q=>(q.x-A.x)*u.x+(q.y-A.y)*u.y; if(d(it.a)<tol+(it.w||0)/2&&d(it.b)<tol+(it.w||0)/2&&t(m)>-1&&t(m)<L+1) return [o]; } }
   return null; }
@@ -4916,7 +4916,8 @@ function wallTopProfile(it,li){ let cov=wallRoofs(it,li); if(!cov) return null; 
   try{ const all=roofsOver(doc.levels[li]), ids=new Set(cov.map(o=>o.r.id)); const extra=all.filter(o=>!ids.has(o.r.id)&&cov.some(c=>roofJoined(c.r,o.r))); if(extra.length) cov=[...cov,...extra.map(o=>({...o,xtra:true}))]; }catch(e){}
   const L=Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y), n=Math.max(2,Math.ceil(L/150)), Lp=[], Rp=[]; let any=false;
   for(let k=0;k<=n;k++){ const t=k/n, l={x:w.aL.x+(w.bL.x-w.aL.x)*t,y:w.aL.y+(w.bL.y-w.aL.y)*t}, r={x:w.aR.x+(w.bR.x-w.aR.x)*t,y:w.aR.y+(w.bR.y-w.aR.y)*t};
-    l.z=roofUnder(cov,l,z1); r.z=roofUnder(cov,r,z1); if(Math.abs(l.z-z1)>1||Math.abs(r.z-z1)>1) any=true; Lp.push(l); Rp.push(r); }
+    const c={x:(l.x+r.x)/2,y:(l.y+r.y)/2}, own=cov.filter(o=>inPoly(o.r.pts,c)); let cv=cov; if(own.length&&own.length<cov.length) cv=own.some(o=>!o.xtra)?own:own.map(o=>({...o,xtra:false})); /* стена под контуром своей крыши: свес соседней (выше) её не тянет */
+    l.z=roofUnder(cv,l,z1); r.z=roofUnder(cv,r,z1); if(Math.abs(l.z-z1)>1||Math.abs(r.z-z1)>1) any=true; Lp.push(l); Rp.push(r); }
   if(!any) return null; const {z0}=wallZ(it,li); let zc=z1; for(const q of Lp.concat(Rp)) zc=Math.min(zc,q.z); zc=Math.max(z0+100,zc); for(const q of Lp.concat(Rp)) q.z=Math.max(q.z,zc);
   return {Lp,Rp,z1:zc,zt:z1}; }
 wallTopProfile=memoG('wallTopProfile',wallTopProfile);
@@ -4944,7 +4945,9 @@ function wallRoofLines(M,T){ const {Lp,Rp,z1}=T, n=Lp.length, pl=(P)=>{ for(let 
 // щёчки: где свес одной крыши висит над скатом другой — закрыть щель от карниза до ската (как у слухового окна)
 function roofCheeks(M,r,li){ const L=doc.levels[li]; if(!L) return; const others=L.items.filter(i=>i.t==='roof'&&i!==r&&roofJoined(r,i)&&!(()=>{ try{ return roofIsWingOf(i,r,li); }catch(e){ return false; } })()); if(!others.length) return; // под свесом над пристройкой (её кровля доходит до стены) щёчки не нужны
   let gA; try{ gA=roofGeom(roofExtended(r,li),li); }catch(e){ return; } const col=r.gc?rgbOf(r.gc,'#8f3f2c'):rgbOf(r.fc,'#b5533c').map(v=>v*.78), O=gA.O; // щёчка — как торец кровли, не серая
-  const GB=[]; for(const B of others){ try{ GB.push(roofGeom(roofExtended(B,li),li)); }catch(e){} }
+  const GB=[]; let zEv=Infinity; for(const q of O){ try{ zEv=Math.min(zEv,gA.H(q)); }catch(e){} }
+  for(const B of others){ try{ const g=roofGeom(roofExtended(B,li),li); let top=-Infinity; for(const f of g.faces) for(const q of f.P){ try{ top=Math.max(top,g.H(q)+g.th); }catch(e){} } if(top<zEv-5) continue; /* соседняя крыша целиком ниже нашего карниза (навес под свесом) — щёчка не нужна, стык закрывает стена */ GB.push(g); }catch(e){} }
+  if(!GB.length) return;
   const topB=q=>{ let z=null; for(const g of GB) if(inPoly(g.O,q)){ try{ const h=g.H(q)+g.th; if(z==null||h>z) z=h; }catch(e){} } return z; };
   const so=polyArea2(O)>0?1:-1;
   for(let i=0;i<O.length;i++){ const A0=O[i],B0=O[(i+1)%O.length], Ln=Math.hypot(B0.x-A0.x,B0.y-A0.y), n=Math.max(1,Math.ceil(Ln/120)), u=unit(A0,B0), inw={x:-u.y*so*3,y:u.x*so*3};
@@ -6384,7 +6387,7 @@ function buildIFC0(){ const L=[]; let id=0, OH=null, CS=null; const styled=[];
       { const P=f.outer.map(L2); let a=0; for(let i=0;i<P.length;i++){ const p=P[i],q=P[(i+1)%P.length]; a+=p[0]*q[1]-q[0]*p[1]; } area+=Math.abs(a)/2; } }
     if(!so.length) return null; M.area=area;
     return E(`IFCPRODUCTDEFINITIONSHAPE($,$,(${E(`IFCSHAPEREPRESENTATION(${body},'Body','SweptSolid',(${so.join(',')}))`)}))`); };
-  const RU=(()=>{ const M=Mesh(), sv=doc.curLv; try{ doc.levels.forEach((L,li)=>{ if(L.gp) return; doc.curLv=li; for(const it of L.items){ if(it.t==='roof') roofMeshTagged(M,it,li); else if(it.t==='dorm') dormRoofMesh(M,it,li); } }); } finally{ doc.curLv=sv; } try{ roofUnion(M); }catch(e){} return M; })();
+  const RU=(()=>{ const M=Mesh(), sv=doc.curLv; try{ doc.levels.forEach((L,li)=>{ if(L.gp) return; doc.curLv=li; for(const it of L.items){ try{ if(it.t==='roof') roofMeshTagged(M,it,li); else if(it.t==='dorm') dormRoofMesh(M,it,li); }catch(e){ console.warn('IFC roof',it.id,e); } } }); } finally{ doc.curLv=sv; } try{ roofUnion(M); }catch(e){} return M; })();
   try{ doc.levels.forEach((Lv,li)=>{ if(Lv.gp) return; doc.curLv=li; const sp=plc(bldP,Lv.elev), st=E(`IFCBUILDINGSTOREY('${ifcGuid()}',$,${str(Lv.name)},$,$,${sp},$,$,.ELEMENT.,${n(Lv.elev)})`); storeys.push(st); const inS=[];
     for(const it of Lv.items){
       if(isWall(it)){ const {z0,z1}=wallZ(it,li), F=wallFootprint(it,-1e6,1e6), wp=plc(sp,0), mW=mat('Стена',rgbOf(it.fc,'#d9d6cf')); CS=mW;
