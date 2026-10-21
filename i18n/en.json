@@ -1500,5 +1500,18 @@
 "Высота стены там, где над ней нет выбранной крыши, мм": "Wall height where no selected roof is above it, mm",
 "H вне крыши": "H outside roof",
 "стена — своя высота": "wall — custom height",
-"вне крыши": "outside roof"
+"вне крыши": "outside roof",
+"Отверстие: ставьте углы внутри перекрытия. Замкнуть — коснитесь первой точки или": "Opening: place corners inside the slab. Close — tap the first point or",
+"Нарисовать отверстие внутри контура: ставьте углы, замкните на первой точке или": "Draw an opening inside the outline: place corners, close on the first point or",
+"Не соответствует: отверстие должно быть целиком внутри перекрытия (не на краю": "Not valid: the opening must be fully inside the slab (not on the edge",
+"Не соответствует: отверстие пересекает другое отверстие": "Not valid: the opening crosses another opening",
+"Не соответствует: контур отверстия пересекает сам себя": "Not valid: the opening outline crosses itself",
+"Ещё — «Эскиз отверстий": "More — «Sketch openings",
+"Удалить отверстие": "Delete opening",
+"Отверстие удалено": "Opening deleted",
+"Эскиз отверстий": "Sketch openings",
+"точки отверстия": "points of the opening",
+"по стене, низ": "along the wall, bottom",
+"Отверстие": "Opening",
+"отв": "op"
 }
