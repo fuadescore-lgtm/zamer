@@ -1496,5 +1496,8 @@
 "Крыши стены": "Wall roofs",
 "Крыши стен": "Roofs of walls",
 "Выберите крышу: коснитесь крыши на плане или в": "Pick a roof: tap a roof on the plan or in",
-"справа — отмена": "on the right — cancel"
+"справа — отмена": "on the right — cancel",
+"Высота стены там, где над ней нет выбранной крыши, мм": "Wall height where no selected roof is above it, mm",
+"H вне крыши": "H outside roof",
+"стена — своя высота": "wall — custom height"
 }
