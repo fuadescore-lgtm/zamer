@@ -1499,5 +1499,6 @@
 "справа — отмена": "on the right — cancel",
 "Высота стены там, где над ней нет выбранной крыши, мм": "Wall height where no selected roof is above it, mm",
 "H вне крыши": "H outside roof",
-"стена — своя высота": "wall — custom height"
+"стена — своя высота": "wall — custom height",
+"вне крыши": "outside roof"
 }
