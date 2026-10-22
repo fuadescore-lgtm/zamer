@@ -1878,5 +1878,15 @@
 "ЮЗ": "SW",
 "СЗ": "NW",
 "кг": "kg",
-"Па": "Pa"
+"Па": "Pa",
+"без крепежа и балласта": "excluding mounting and ballast",
+"Общая масса панелей": "Total panel weight",
+"нагрузка от панелей": "load from panels",
+"Масса панелей всего": "Total panel weight",
+"площадь панелей": "panel area",
+"Вес панели, кг": "Panel weight, kg",
+"Масса, кг": "Weight, kg",
+"кг/шт": "kg/pc",
+"масса": "weight",
+"и др": "etc"
 }
