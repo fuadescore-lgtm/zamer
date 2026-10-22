@@ -50,6 +50,9 @@ jobs:
           # рекламный идентификатор не используется: запретить, даже если его добавит библиотека
           grep -q 'xmlns:tools' $M || sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android"#& xmlns:tools="http://schemas.android.com/tools"#' $M
           grep -q 'permission.AD_ID' $M || sed -i 's#</manifest>#    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />\n</manifest>#' $M
+          # файл проекта .bimsk: фильтры «Открыть в BIMsketcher» после первого </intent-filter> (MAIN/LAUNCHER)
+          grep -q 'x-bimsketcher' $M || python3 -c "import sys;p=sys.argv[1];s=open(p).read();f=open(sys.argv[2]).read();i=s.index('</intent-filter>')+len('</intent-filter>');open(p,'w').write(s[:i]+'\n'+f+s[i:])" $M ../native3d/intent-filters.xml
+          grep -c 'x-bimsketcher' $M
           cat $M
           MA=$(find android/app/src/main/java -name MainActivity.java | head -1)
           PKG=$(sed -n 's/^package \(.*\);/\1/p' "$MA")
