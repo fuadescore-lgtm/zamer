@@ -26,6 +26,7 @@ async function zdLoad(wasmBytes){
     line:(a,b,z)=>X.zd_line(a.x,a.y,z||0,b.x,b.y,z||0),
     face:(a,b,c,d)=>X.zd_face(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],(d||c)[0],(d||c)[1],(d||c)[2]),
     facef:(a,b,c,d,fl)=>X.zd_facef?X.zd_facef(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],(d||c)[0],(d||c)[1],(d||c)[2],fl|0):X.zd_face(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],(d||c)[0],(d||c)[1],(d||c)[2]),
+    pface:(V,F)=>{ if(!X.zd_pface) return -9; const nv=V.length/3, nf=F.length/4; const pv=X.zd_malloc(nv*24), pf=X.zd_malloc(nf*8); new Float64Array(mem.buffer,pv,nv*3).set(V); new Int16Array(mem.buffer,pf,nf*4).set(F); const r=X.zd_pface(nv,nf,pv,pf); X.zd_mfree(pv); X.zd_mfree(pf); return r; },
     arc:(c,r,a1,a2,z)=>X.zd_arc(c.x,c.y,z||0,r,a1,a2),
     circle:(c,r,z)=>X.zd_circle(c.x,c.y,z||0,r),
     text:(s,p,h,rot,z)=>{const q=str(s);const r=X.zd_text(q,p.x,p.y,z||0,h,rot||0);X.zd_mfree(q);return r;},

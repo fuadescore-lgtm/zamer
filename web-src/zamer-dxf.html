@@ -454,7 +454,7 @@ function msCancel(){ const P=msPrev; msPrev=null; selMode='pick'; selId=P&&P.sel
 function popMenu(btn,html,on){ let m=document.getElementById('popMenu'); if(!m){ m=document.createElement('div'); m.id='popMenu'; m.className='tmenu'; m.setAttribute('role','menu'); m.hidden=true; stage.appendChild(m);
     m.addEventListener('pointerdown',e=>e.stopPropagation()); m.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const f=m._on; m.hidden=true; if(f) f(b); });
     document.addEventListener('pointerdown',e=>{ if(!m.hidden&&!e.target.closest('#popMenu')) m.hidden=true; }); }
-  const host=btn.closest('.v3w')||stage; if(m.parentElement!==host) host.appendChild(m); /* в 3D — поверх вида */
+  const host=btn.closest('.v3w')||btn.closest('#elev')||stage; if(m.parentElement!==host) host.appendChild(m); /* в 3D и на фасаде — поверх вида */
   m._on=on; m.innerHTML=html; m.hidden=false; m.style.bottom='auto'; m.style.zIndex=host===stage?'':'40'; const r=btn.getBoundingClientRect(), sr=host.getBoundingClientRect(), w=m.offsetWidth, hh=m.offsetHeight;
   m.style.left=Math.max(8,Math.min(sr.width-w-8,r.left-sr.left))+'px'; let top=r.top-sr.top-hh-6; if(top<8) top=r.bottom-sr.top+6; m.style.top=Math.min(sr.height-hh-8,top)+'px'; }
 function doorMenu(btn){ const d=holeDef('door'), cur=d.dk||'one';
@@ -462,17 +462,18 @@ function doorMenu(btn){ const d=holeDef('door'), cur=d.dk||'one';
     if(k==='gar'){ const bb=document.querySelector('#panel [data-htype="door"]')||btn; popMenu(bb,`<div class="mh">Гаражные ворота</div><div class="mr">${Object.entries(GARK).map(([g,n])=>`<button class="btn" data-gk="${g}" aria-pressed="${(holeDef('door').gk||'sect')===g}">${n}</button>`).join('')}</div>`,b2=>{ if(b2.dataset.gk){ holeDef('door').gk=b2.dataset.gk; persist(); panelKey=''; syncPanel(); toast(GARK[b2.dataset.gk]+' ворота '+fmt(holeDef('door').w)+'×'+fmt(holeDef('door').h)+': коснитесь стены',true); } }); }
     else toast(DOORK[k]+': коснитесь стены',true); }); }
 function cpMenuClose(){ const m=document.getElementById('cpMenu'); if(m) m.hidden=true; }
-function cpMenuOpen(btn){ const lv=doc.levels.map((l,i)=>i===doc.curLv||l.gp?null:i).filter(i=>i!=null); if(!lv.length){ copyObj(); return; }
+function cpMenuOpen(btn){ const lv=doc.levels.map((l,i)=>i===doc.curLv||l.gp?null:i).filter(i=>i!=null); if(!lv.length){ copyObj(); viewRefresh(); return; }
   let m=document.getElementById('cpMenu'); if(!m){ m=document.createElement('div'); m.id='cpMenu'; m.className='tmenu'; m.setAttribute('role','menu'); m.hidden=true; stage.appendChild(m);
     m.addEventListener('pointerdown',e=>e.stopPropagation());
-    m.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.cpx){ m._exp=!m._exp; cpMenuFill(m); return; } cpMenuClose(); if(b.dataset.cp==='here') copyObj(); else if(b.dataset.cpl!=null) copySelToLevel(+b.dataset.cpl); });
+    m.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.cpx){ m._exp=!m._exp; cpMenuFill(m); return; } cpMenuClose(); if(b.dataset.cp==='here') copyObj(); else if(b.dataset.cpl!=null) copySelToLevel(+b.dataset.cpl); viewRefresh(); });
     document.addEventListener('pointerdown',e=>{ if(!m.hidden&&!e.target.closest('#cpMenu')&&!e.target.closest('[data-act="copyMenu"]')) cpMenuClose(); }); }
   if(!m.hidden){ cpMenuClose(); return; }
+  { const host=btn.closest('.v3w')||btn.closest('#elev')||stage; if(m.parentElement!==host) host.appendChild(m); m.style.zIndex=host===stage?'':'40'; } /* в 3D и на фасаде — поверх вида */
   m._exp=false; m._btn=btn; cpMenuFill(m); m.hidden=false; cpMenuPos(m); }
 // «На другой уровень ▾» — раскрывающийся список этажей (меню не растягивается)
 function cpMenuFill(m){ const lv=doc.levels.map((l,i)=>i===doc.curLv||l.gp?null:i).filter(i=>i!=null);
   m.innerHTML=`<div class="mh">Копировать</div><div class="mr"><button class="btn" data-cp="here">На этом уровне</button><button class="btn" data-cpx="1" aria-expanded="${!!m._exp}">На другой уровень ${m._exp?'▴':'▾'}</button></div>${m._exp?`<div class="cpl">${lv.map(i=>`<button class="btn" data-cpl="${i}">${esc(doc.levels[i].name)}</button>`).join('')}</div>`:''}`; if(!m.hidden) cpMenuPos(m); }
-function cpMenuPos(m){ const btn=m._btn; m.style.bottom='auto'; const r=btn.getBoundingClientRect(), sr=stage.getBoundingClientRect(), w=m.offsetWidth, hh=m.offsetHeight;
+function cpMenuPos(m){ const btn=m._btn; m.style.bottom='auto'; const r=btn.getBoundingClientRect(), sr=(m.parentElement||stage).getBoundingClientRect(), w=m.offsetWidth, hh=m.offsetHeight;
   m.style.left=Math.max(8,Math.min(sr.width-w-8,r.left-sr.left))+'px'; let top=r.top-sr.top-hh-6; if(top<8) top=r.bottom-sr.top+6; m.style.top=Math.max(8,Math.min(sr.height-hh-8,top))+'px'; }
 // копия выбранного на другой уровень в том же месте плана; высоты — от нового уровня
 function copySelToLevel(ti){ const T=doc.levels[ti]; if(!T||ti===doc.curLv) return; const S=selIds(); if(!S.size) return; const li0=doc.curLv;
@@ -3975,7 +3976,7 @@ async function saveCurrentFile(){
     download(new Blob([data],{type:exExt==='dwg'?'application/acad':exExt==='ifc'?'application/x-step':'application/dxf'}),name+'.'+exExt); return true;
   }catch(e){ if(!e||e.code!=='declined') toast('Не удалось сохранить: '+(e&&e.message||e)); return false; }
 }
-const APP_VER=IS3D?'3D 1.0.73':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.0.74':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -4207,13 +4208,13 @@ function buildDXF0(d,all,rec){
   return all2.join('\r\n')+'\r\n';
 }
 /* ---------- 3D модель для AutoCAD: грани 3DFACE по слоям (стены, крыша, окна, двери, лестницы, дымоходы) ---------- */
-const M3L={wall:['3D_WALLS',9],gable:['3D_WALLS',9],roof:['3D_ROOF',14],glass:['3D_WINDOWS',5],door:['3D_DOORS',32],stair:['3D_STAIRS',2],chim:['3D_CHIMNEY',16],frame:['3D_WINDOWS',8]};
+const M3L={wall:['3D_WALLS',9],gable:['3D_WALLS',9],roof:['3D_ROOF',14],glass:['3D_WINDOWS',5],door:['3D_DOORS',32],stair:['3D_STAIRS',2],chim:['3D_CHIMNEY',16],frame:['3D_WINDOWS',8],solar:['3D_SOLAR',5],slab:['3D_SLABS',8]};
 // 3D-грани для AutoCAD: рёбра между треугольниками одной плоскости одного объекта — невидимые (как у сетей AutoCAD)
 function model3DFaces(){ const M=buildModel(), out=[], K=p=>Math.round(p[0])+','+Math.round(p[1])+','+Math.round(p[2]);
   const nrm=v=>{ const [a,b,c]=v, ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],wx=c[0]-a[0],wy=c[1]-a[1],wz=c[2]-a[2]; let nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx; const l=Math.hypot(nx,ny,nz); if(l<1e-9) return null; nx/=l;ny/=l;nz/=l; if(nz<-1e-9||(Math.abs(nz)<1e-9&&(ny<-1e-9||(Math.abs(ny)<1e-9&&nx<0)))){ nx=-nx;ny=-ny;nz=-nz; } return [nx,ny,nz,nx*a[0]+ny*a[1]+nz*a[2]]; };
   const T=[], edges=new Map();
   for(const t of M.tri){ const n=nrm(t.v); if(!n) continue; const L=M3L[t.tag]||['3D_MISC',8], g=(t.iid||t.rid||'')+'|'+t.tag+'|'+n.slice(0,3).map(v=>Math.round(v*500)).join(',')+'|'+Math.round(n[3]/2);
-    const ks=t.v.map(K), rec={lay:L[0],col:L[1],v:t.v,g,ks}; T.push(rec);
+    const ks=t.v.map(K), rec={lay:L[0],col:L[1],v:t.v,g,ks,key:String(t.iid||t.rid||'?').split('#')[0]+(t.sub!=null?'#'+t.sub:'')+'|'+L[0]}; T.push(rec);
     for(let e=0;e<3;e++){ const a=ks[e], b=ks[(e+1)%3], k=g+'#'+(a<b?a+'|'+b:b+'|'+a); edges.set(k,(edges.get(k)||0)+1); } }
   const G=new Map(); for(const r of T){ if(!G.has(r.g)) G.set(r.g,[]); G.get(r.g).push(r); }
   const inTri=(q,v)=>{ const [a,b,c]=v, v0=[c[0]-a[0],c[1]-a[1],c[2]-a[2]], v1=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], v2=[q[0]-a[0],q[1]-a[1],q[2]-a[2]], d=(x,y)=>x[0]*y[0]+x[1]*y[1]+x[2]*y[2];
@@ -4223,18 +4224,26 @@ function model3DFaces(){ const M=buildModel(), out=[], K=p=>Math.round(p[0])+','
       // ребро внутри плоской грани (Т-стык после врезки): по обе стороны — тот же объект в той же плоскости
       const A=r.v[e], B=r.v[(e+1)%3], m=[(A[0]+B[0])/2,(A[1]+B[1])/2,(A[2]+B[2])/2], ed=[B[0]-A[0],B[1]-A[1],B[2]-A[2]], p=[n[1]*ed[2]-n[2]*ed[1],n[2]*ed[0]-n[0]*ed[2],n[0]*ed[1]-n[1]*ed[0]], pl=Math.hypot(...p)||1;
       const q1=m.map((v,k)=>v+p[k]/pl*3), q2=m.map((v,k)=>v-p[k]/pl*3), grp=G.get(r.g); if(grp.some(o=>inTri(q1,o.v))&&grp.some(o=>inTri(q2,o.v))) fl|=bit[e]; }
-    out.push({lay:r.lay,col:r.col,v:r.v,fl}); }
+    out.push({lay:r.lay,col:r.col,v:r.v,fl,key:r.key}); }
   out.sort((a,b)=>a.lay<b.lay?-1:a.lay>b.lay?1:0); return out; }
+// элементы для AutoCAD: каждый объект (стена, крыша, окно, панель…) — одна многогранная сеть: общие вершины, грани по индексам (минус — невидимое ребро)
+function model3DElems(F){ const G=new Map(), out0=[]; for(const f of F){ let e=G.get(f.key); if(e&&e.V.length/3>30000){ out0.push(e); e=null; } if(!e){ e={lay:f.lay,col:f.col,V:[],F:[],ix:new Map()}; G.set(f.key,e); }
+    const id=p=>{ const k=Math.round(p[0]*1000)+','+Math.round(p[1]*1000)+','+Math.round(p[2]*1000); let i=e.ix.get(k); if(i==null){ i=e.V.length/3+1; e.ix.set(k,i); e.V.push(p[0],p[1],p[2]); } return i; };
+    const a=id(f.v[0]), b=id(f.v[1]), c=id(f.v[2]); if(a===b||b===c||a===c) continue; e.F.push(f.fl&1?-a:a, f.fl&2?-b:b, f.fl&8?-c:c, 0); }
+  const out=[]; for(const e of [...out0,...G.values()]) if(e.F.length) out.push({lay:e.lay,col:e.col,V:e.V,F:e.F}); out.sort((a,b)=>a.lay<b.lay?-1:a.lay>b.lay?1:0); return out; } // очень большая сеть — частями до 30000 вершин
 function build3DDXF(){ const F=model3DFaces(), o=[]; const h=(c,v)=>{o.push(String(c).padStart(3,' '));o.push(String(v));}; const N=v=>num(Math.round(v*1000)/1000);
   let mn=[1e18,1e18,1e18], mx=[-1e18,-1e18,-1e18]; for(const f of F) for(const p of f.v) for(let k=0;k<3;k++){ mn[k]=Math.min(mn[k],p[k]); mx[k]=Math.max(mx[k],p[k]); }
   if(!F.length){ mn=[0,0,0]; mx=[1000,1000,1000]; }
   h(0,'SECTION');h(2,'HEADER');h(9,'$ACADVER');h(1,'AC1009');h(9,'$INSBASE');h(10,0);h(20,0);h(30,0);
   h(9,'$EXTMIN');h(10,N(mn[0]));h(20,N(mn[1]));h(30,N(mn[2]));h(9,'$EXTMAX');h(10,N(mx[0]));h(20,N(mx[1]));h(30,N(mx[2]));h(0,'ENDSEC');
   h(0,'SECTION');h(2,'ENTITIES');
-  for(const f of F){ const [a,b,c]=f.v, L=encTxt(f.lay); h(0,'3DFACE');h(8,L);h(62,f.col);
-    h(10,N(a[0]));h(20,N(a[1]));h(30,N(a[2]));h(11,N(b[0]));h(21,N(b[1]));h(31,N(b[2]));h(12,N(c[0]));h(22,N(c[1]));h(32,N(c[2]));h(13,N(c[0]));h(23,N(c[1]));h(33,N(c[2])); if(f.fl) h(70,f.fl); }
+  for(const e of model3DElems(F)){ const L=encTxt(e.lay), nv=e.V.length/3, nf=e.F.length/4; h(0,'POLYLINE');h(8,L);h(62,e.col);h(66,1);h(10,0);h(20,0);h(30,0);h(70,64);h(71,nv);h(72,nf);
+    for(let i=0;i<nv;i++){ h(0,'VERTEX');h(8,L);h(10,N(e.V[i*3]));h(20,N(e.V[i*3+1]));h(30,N(e.V[i*3+2]));h(70,192); }
+    for(let j=0;j<nf;j++){ h(0,'VERTEX');h(8,L);h(10,0);h(20,0);h(30,0);h(70,128); for(let k=0;k<3;k++) h(71+k,e.F[j*4+k]); }
+    h(0,'SEQEND');h(8,L); }
   h(0,'ENDSEC');h(0,'EOF'); return o.join('\r\n')+'\r\n'; }
 async function build3DDWG(){ const F=model3DFaces(), z=await getDwgLib(); z.begin(); let cur=null;
+  if(z.pface){ for(const e of model3DElems(F)){ if(e.lay!==cur){ z.layer(e.lay,e.col); cur=e.lay; } const r=z.pface(e.V,e.F); if(r===-9) break; } return z.end(); } // элемент — одна сеть
   for(const f of F){ if(f.lay!==cur){ z.layer(f.lay,f.col); cur=f.lay; } (z.facef||z.face)(f.v[0],f.v[1],f.v[2],null,f.fl); }
   return z.end(); }
 /* ---------- настоящий DWG (AutoCAD 2000) через LibreDWG, собранный в WebAssembly ---------- */
@@ -4309,7 +4318,7 @@ function offsetConvex(P,d){ const rev=polyArea2(P)<0; if(Array.isArray(d)&&rev){
 // ---- сетка треугольников ----
 function Mesh(){ return {tri:[],lines:[]}; } // tri: [x,y,z]*3 + цвет; lines: пары точек для контуров
 function rgbOf(hex,def){ hex=hex||def; const m=/^#?([0-9a-f]{6})$/i.exec(hex); if(!m) return [0.8,0.8,0.8]; const v=parseInt(m[1],16); return [(v>>16&255)/255,(v>>8&255)/255,(v&255)/255]; }
-function addTri(M,a,b,c,col,tag){ M.tri.push({v:[a,b,c],col,tag,iid:M.cur,li:M.curLi}); }
+function addTri(M,a,b,c,col,tag){ const t={v:[a,b,c],col,tag,iid:M.cur,li:M.curLi}; if(M.sub!=null) t.sub=M.sub; M.tri.push(t); }
 function addQuad(M,a,b,c,d,col,tag){ addTri(M,a,b,c,col,tag); addTri(M,a,c,d,col,tag); }
 // призма из многоугольника P (план) между z0 и z1
 function extrude(M,P,z0,z1,col,tag,edges){ P=cleanPoly(P); if(P.length<3||z1-z0<0.5) return; P=ccw(P);
@@ -4639,13 +4648,12 @@ function solarWH(it,F){ const w=it.w||1134, h0=it.h||1722, g=it.gap==null?50:it.
 function solarRects(it,F){ const S=solarWH(it,F), out=[]; for(let j=0;j<S.ny;j++) for(let i=0;i<S.nx;i++){ const x0=-S.W/2+i*(S.w+S.g), t0=-S.H/2+j*(S.h+S.gy); out.push([x0,x0+S.w,t0,t0+S.h]); } return out; }
 function solarOut(it,F){ const S=solarWH(it,F); return [[-S.W/2,-S.H/2],[S.W/2,-S.H/2],[S.W/2,S.H/2],[-S.W/2,S.H/2]].map(([x,t])=>F.P2(x,t*F.ca)); }
 function solarMesh(M,it,li){ const F=insFrame(it,li); if(!F) return; const off=it.off==null?150:it.off, th=it.th||30, S0=(x,t,n)=>F.W(x,t*F.ca-n*F.sa,t*F.sa+n*F.ca), cel=rgbOf(it.fc,'#1d2d4f'), frm=[0.78,0.8,0.83], fr=25, z1=off+th, SW=solarWH(it,F), rel=SW.rel, cr=Math.cos(rel), sr=Math.sin(rel);
-  for(const [x0,x1,t0,t1r] of solarRects(it,F)){ const t1=Math.abs(rel)>1e-4?t0+SW.h0:t1r; // наклонённая панель: поворот вокруг нижнего края (t0) на rel, стойки у верхнего края
+  let pk=0; for(const [x0,x1,t0,t1r] of solarRects(it,F)){ M.sub=pk++; const t1=Math.abs(rel)>1e-4?t0+SW.h0:t1r; // наклонённая панель: поворот вокруг нижнего края (t0) на rel, стойки у верхнего края
     const S=Math.abs(rel)>1e-4?(x,t,n)=>{ const s=t-t0, nn=n-off; return S0(x,t0+s*cr-nn*sr,off+s*sr+nn*cr); }:S0;
-    if(Math.abs(rel)>1e-4) for(const x of [x0+60,x1-60]){ M.lines.push([S0(x,t0+SW.h0*cr,0),S(x,t1,off)]); M.lines.push([S0(x,t0,0),S(x,t0,off)]); } const B=[[x0,t0],[x1,t0],[x1,t1],[x0,t1]], I=[[x0+fr,t0+fr],[x1-fr,t0+fr],[x1-fr,t1-fr],[x0+fr,t1-fr]];
-    for(let i=0;i<4;i++){ const a=B[i], b=B[(i+1)%4], c=I[(i+1)%4], d=I[i]; addQuad(M,S(a[0],a[1],off),S(b[0],b[1],off),S(b[0],b[1],z1),S(a[0],a[1],z1),frm,'frame'); addQuad(M,S(a[0],a[1],z1),S(b[0],b[1],z1),S(c[0],c[1],z1),S(d[0],d[1],z1),frm,'frame'); M.lines.push([S(a[0],a[1],z1),S(b[0],b[1],z1)],[S(a[0],a[1],off),S(b[0],b[1],off)]); }
-    addQuad(M,S(x0,t0,off),S(x0,t1,off),S(x1,t1,off),S(x1,t0,off),frm,'frame'); addQuad(M,S(...I[0],z1),S(...I[1],z1),S(...I[2],z1),S(...I[3],z1),cel,'solar');
-    // сетка ячеек, как у настоящей панели
-    const nc=3, nr=Math.max(2,Math.round((t1-t0)/(x1-x0)*3)); /* сетка ячеек реже — легче для планшета */ for(let k=1;k<nc;k++){ const x=x0+fr+(x1-x0-2*fr)*k/nc; M.lines.push([S(x,t0+fr,z1+1),S(x,t1-fr,z1+1)]); } for(let k=1;k<nr;k++){ const t=t0+fr+(t1-t0-2*fr)*k/nr; M.lines.push([S(x0+fr,t,z1+1),S(x1-fr,t,z1+1)]); } } }
+    if(Math.abs(rel)>1e-4) for(const x of [x0+60,x1-60]){ M.lines.push([S0(x,t0+SW.h0*cr,0),S(x,t1,off)]); M.lines.push([S0(x,t0,0),S(x,t0,off)]); }
+    // панель — тонкая плита (6 граней), без рамки и сетки ячеек: сцена и файлы легче
+    const B=[[x0,t0],[x1,t0],[x1,t1],[x0,t1]]; addQuad(M,S(x0,t0,z1),S(x1,t0,z1),S(x1,t1,z1),S(x0,t1,z1),cel,'solar'); addQuad(M,S(x0,t0,off),S(x0,t1,off),S(x1,t1,off),S(x1,t0,off),cel,'solar');
+    for(let i=0;i<4;i++){ const a=B[i], b=B[(i+1)%4]; addQuad(M,S(a[0],a[1],off),S(b[0],b[1],off),S(b[0],b[1],z1),S(a[0],a[1],z1),cel,'solar'); M.lines.push([S(a[0],a[1],z1),S(b[0],b[1],z1)]); } } delete M.sub; }
 // ручки размножения: тянуть в сторону — добавляются панели (зазор между ними сохраняется), противоположный край стоит на месте
 function solarHandles(it,F){ const S=solarWH(it,F), d=260; return [['xp',S.W/2+d,0],['xm',-S.W/2-d,0],['yp',0,S.H/2+d],['ym',0,-S.H/2-d]].map(([k,x,t])=>({k,x,t,P:F.P2(x,t*F.ca)})); }
 function solarDrag(it,k,w,s0){ if(!it.fq) it.fq={...(s0.fq||s0.p)}; const F=insFrame({...it,p:s0.p,fq:it.fq}); if(!F) return; const S0=solarWH(s0,F), ax=k[0]==='x', sg=k[1]==='p'?1:-1, size=ax?S0.w:S0.h, gp=ax?S0.g:S0.gy, half=(ax?S0.W:S0.H)/2, fixed=-sg*half;

@@ -69,6 +69,31 @@ KEEP int zd_face (double x1, double y1, double z1, double x2, double y2, double 
   return dwg_add_3DFACE (T, &a, &b, &c, &d) ? 0 : -1;
 }
 
+/* 3D-грань с невидимыми рёбрами: fl — биты 1,2,4,8 (рёбра 1-2, 2-3, 3-4, 4-1) */
+KEEP int zd_facef (double x1, double y1, double z1, double x2, double y2, double z2,
+                   double x3, double y3, double z3, double x4, double y4, double z4, int fl)
+{
+  dwg_point_3d a = { x1, y1, z1 }, b = { x2, y2, z2 }, c = { x3, y3, z3 }, d = { x4, y4, z4 };
+  Dwg_Entity__3DFACE *f = dwg_add_3DFACE (T, &a, &b, &c, &d);
+  if (!f) return -1;
+  f->invis_flags = (BITCODE_BS)fl; f->has_no_flags = fl ? 0 : 1;
+  return 0;
+}
+
+/* многогранная сеть (POLYFACE MESH) — один объект на элемент: nv вершин (x,y,z подряд), nf граней по 4 индекса (с 1; минус — невидимое ребро; 0 — треугольник) */
+KEEP int zd_pface (int nv, int nf, const double *xyz, const short *fc)
+{
+  if (!D || nv < 3 || nf < 1) return -1;
+  dwg_point_3d *v = (dwg_point_3d *)malloc (sizeof (dwg_point_3d) * nv);
+  dwg_face *f = (dwg_face *)malloc (sizeof (dwg_face) * nf);
+  if (!v || !f) { free (v); free (f); return -2; }
+  for (int i = 0; i < nv; i++) { v[i].x = xyz[i * 3]; v[i].y = xyz[i * 3 + 1]; v[i].z = xyz[i * 3 + 2]; }
+  for (int j = 0; j < nf; j++) for (int k = 0; k < 4; k++) f[j][k] = fc[j * 4 + k];
+  Dwg_Entity_POLYLINE_PFACE *p = dwg_add_POLYLINE_PFACE (T, (unsigned)nv, (unsigned)nf, v, (const dwg_face *)f);
+  free (v); free (f);
+  return p ? 0 : -3;
+}
+
 KEEP int zd_circle (double cx, double cy, double cz, double r)
 {
   dwg_point_3d c = { cx, cy, cz };
@@ -254,6 +279,25 @@ KEEP int zd_end (void)
           B->last_entity = dwg_add_handleref (D, 4, E[n-1]->handle.value, NULL);
         }
       free (E);
+    }
+  /* вершины сети (POLYFACE): своя цепочка prev/next внутри полилинии, SEQEND — без ссылок */
+  for (BITCODE_BL oi = 0; oi < D->num_objects; oi++)
+    {
+      Dwg_Object *po = &D->object[oi];
+      if (po->fixedtype != DWG_TYPE_POLYLINE_PFACE || !po->tio.entity) continue;
+      Dwg_Entity_POLYLINE_PFACE *P = po->tio.entity->tio.POLYLINE_PFACE;
+      if (!P || !P->vertex) continue;
+      unsigned n = P->num_owned;
+      for (unsigned i = 0; i < n; i++)
+        {
+          Dwg_Object *vo = P->vertex[i] ? dwg_ref_object (D, P->vertex[i]) : NULL;
+          if (!vo || !vo->tio.entity) continue;
+          Dwg_Object *pv = i && P->vertex[i-1] ? dwg_ref_object (D, P->vertex[i-1]) : NULL;
+          Dwg_Object *nx = i + 1 < n && P->vertex[i+1] ? dwg_ref_object (D, P->vertex[i+1]) : NULL;
+          vo->tio.entity->nolinks = 0;
+          vo->tio.entity->prev_entity = dwg_add_handleref (D, 4, pv ? pv->handle.value : 0, NULL);
+          vo->tio.entity->next_entity = dwg_add_handleref (D, 4, nx ? nx->handle.value : 0, NULL);
+        }
     }
   /* AutoCAD требует, чтобы счётчик в доп. заголовке был больше всех номеров объектов */
   if (D->header_vars.HANDSEED)
