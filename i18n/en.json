@@ -2095,5 +2095,11 @@
 "АКБ": "Battery",
 "стр": "str",
 "Тип": "Type",
-"ф": "ph"
+"ф": "ph",
+"ниже диапазона полной мощности": "below the full-power range",
+"вне диапазона АКБ инвертора": "outside the inverter's battery range",
+"в жару инвертор недодаст": "the inverter will underperform in the heat",
+"нижняя граница": "lower limit",
+"верх окна": "top of the window",
+"а": "while"
 }
