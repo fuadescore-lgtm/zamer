@@ -2101,5 +2101,12 @@
 "в жару инвертор недодаст": "the inverter will underperform in the heat",
 "нижняя граница": "lower limit",
 "верх окна": "top of the window",
-"а": "while"
+"а": "while",
+"Азимут ската: по компасу от севера и по": "Slope azimuth: by compass from north and by",
+"Азимут скатов с панелями": "Azimuth of slopes with panels",
+"компас от севера": "compass from north",
+"запад +, восток": "west +, east",
+"юг, запад": "south, west",
+"запад": "west",
+"юг": "south"
 }
