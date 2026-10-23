@@ -2252,5 +2252,18 @@
 "Спуск вертикально": "Drop vertically",
 "В обход свеса": "Around overhang",
 "Высоты — авто": "Heights — auto",
-"снова авто": "auto again"
+"снова авто": "auto again",
+"Зафиксировать текущие высоты всех вершин: трасса больше не подстраивается под кровлю, форма — вручную (в": "Fix the current heights of all vertices: the route no longer follows the roof, shape is manual (in",
+"Кабель подходит к точке подключения с выносом: снизу — ниже корпуса, сверху — выше, сбоку — в сторону": "The cable approaches the connection point with an offset: from below — under the housing, from above — over it, from the side — sideways",
+"Касайтесь кабеля на плане — добавится вершина (потом тяните её": "Tap the cable on the plan — a vertex is added (then drag it",
+"Касание по кабелю на плане — новая вершина": "Tap the cable on the plan — new vertex",
+"Высоты вершин зафиксированы — тяните их в": "Vertex heights fixed — drag them in",
+"Касайтесь вершины кабеля — она удалится": "Tap a cable vertex — it will be deleted",
+"Касание по вершине на плане — удалить": "Tap a vertex on the plan — delete",
+"У кабеля должно остаться две вершины": "A cable must keep two vertices",
+"Коснитесь вершины кабеля": "Tap a cable vertex",
+"Коснитесь линии кабеля": "Tap the cable line",
+"тянуть вершины": "drag vertices",
+"Высоты вручную": "Manual heights",
+"Вынос, мм": "Offset, mm"
 }
