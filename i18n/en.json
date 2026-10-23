@@ -2244,5 +2244,13 @@
 "Шир": "W",
 "Выс": "H",
 "Глуб": "D",
-"Г": "L"
+"Г": "L",
+"У края кровли: вниз по торцу свеса, под свесом к стене, по стене вниз": "At the roof edge: down the overhang fascia, under the overhang to the wall, down the wall",
+"Спуск или подъём строго по вертикали в последней точке трассы": "Drop or rise strictly vertically at the last route point",
+"Высоты вершин, поднятые/опущенные в": "Vertex heights raised/lowered in",
+"Спуск к устройству": "Descent to device",
+"Спуск вертикально": "Drop vertically",
+"В обход свеса": "Around overhang",
+"Высоты — авто": "Heights — auto",
+"снова авто": "auto again"
 }
