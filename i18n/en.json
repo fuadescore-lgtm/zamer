@@ -2475,5 +2475,21 @@
 "трасса проходит по": "the route crosses the",
 "мансардное окно": "roof window",
 "слуховое окно": "dormer",
-"дымоход": "chimney"
+"дымоход": "chimney",
+"Правка кабеля: тяните вершины и рёбра; пунктир — автоучасток: касание — выделить, тянуть — закрепить. Кнопки — у выделенного сегмента": "Cable editing: drag vertices and edges; dashed — auto part: tap to select, drag to pin. Buttons appear at the selected segment",
+"Все узлы трассы (и автоучастки) — в свои вершины с ручной высотой: правка любой точки; трасса больше не подстраивается": "All route nodes (including auto parts) become own vertices with manual height: edit any point; the route no longer adapts",
+"Кнопки «обход / снаружи…» на трассе: только у выделенного сегмента или все сразу": "“Around / outside…” buttons on the route: only at the selected segment or all at once",
+"Убрать закрепление: спуск, обходы и подход снова строятся автоматически": "Remove pinning: drop, detours and approach are built automatically again",
+"Орто: при правке вершины отрезки встают ровно по": "Ortho: when editing a vertex, segments snap exactly to",
+"Трасса закреплена: все узлы — свои вершины": "Route pinned: all nodes are own vertices",
+"Орто включено: отрезки ровно по осям": "Ortho on: segments along axes",
+"Выключить — для косого участка": "Turn off for a slanted segment",
+"Трасса снова автоматическая": "The route is automatic again",
+"Орто выключено: можно косо": "Ortho off: slanted allowed",
+"Закрепить трассу": "Pin route",
+"отклонение до": "deviation up to",
+"у выделенного": "at selected",
+"Вернуть авто": "Back to auto",
+"Кнопки": "Buttons",
+"все": "all"
 }
