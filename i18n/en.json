@@ -2537,5 +2537,18 @@
 "Свой узел": "Own node",
 "Трасса": "Route",
 "Расчёт": "Calculation",
-"Узел": "Node"
+"Узел": "Node",
+"Вид как на экране фасада: кабели и устройства — ярко, дом — полупрозрачно. Номера кабелей (КБ-…) — как в таблице «Кабели": "View as on the facade screen: cables and devices bright, the house semi-transparent. Cable numbers (КБ-…) match the “Cables",
+"Сохранить этот вид фасада для отчёта: кабели и устройства — ярко, дом — полупрозрачно": "Save this facade view for the report: cables and devices bright, the house semi-transparent",
+"фасад сохранён для отчёта — «Фасад электрики» в разделе электрики": "facade saved for the report — “Electrical facade” in the electrical section",
+"Фасад убран из отчёта": "Facade removed from the report",
+"Убрать из отчёта": "Remove from report",
+"Фасад электрики": "Electrical facade",
+"Сохранить вид": "Save view",
+"Обновить вид": "Update view",
+"В отчёте": "In report",
+"западный": "west",
+"южный": "south",
+"северный": "north",
+"восточный": "east"
 }
