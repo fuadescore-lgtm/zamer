@@ -2304,5 +2304,20 @@
  "снаружи": "outside",
  "внутри": "inside",
  "обход": "around",
- "Узлы": "Nodes"
+ "Узлы": "Nodes",
+ "Вид сверху. Номер «строка-панель»; цвет — строка, серые — не подключены. Напряжения и токи строк — в таблице «Схема подключения": "Top view. Number «string-panel»; colour — string, grey — not connected. String voltages and currents — in the «Wiring diagram» table",
+ "Ракурс «Аксонометрия электрики» сохранён для отчёта": "View «Electrical axonometry» saved for the report",
+ "Захватить текущий вид для аксонометрии в отчёте": "Capture the current view for the report axonometry",
+ "Ракурс «Узел подключения» сохранён для отчёта": "View «Connection area» saved for the report",
+ "Все узлы — по умолчанию: обход, снаружи": "All nodes — default: around, outside",
+ "Ракурсы для отчёта — авто": "Report views — auto",
+ "Раскладка строк (стрингов": "String layout (strings",
+ "Подход к устройству": "Approach to device",
+ "Узел подключения": "Connection area",
+ "Ракурс — авто": "View — auto",
+ "не подключены": "not connected",
+ "напрямую": "straight",
+ "В отчёт": "To report",
+ "Спуск": "Drop",
+ "пан": "pan"
 }
