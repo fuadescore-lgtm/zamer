@@ -2319,5 +2319,7 @@
  "напрямую": "straight",
  "В отчёт": "To report",
  "Спуск": "Drop",
- "пан": "pan"
+ "пан": "pan",
+ "Обход (свои вершины)": "Detour (own vertices)",
+ "Обход (свои вершины": "Detour (own vertices"
 }
