@@ -2524,5 +2524,18 @@
 "Обход": "Around",
 "выбр": "sel",
 "Нач": "Start",
-"Кон": "End"
+"Кон": "End",
+"кабеля с устройством (ближние — сверху; все этажи). Кабель опустится/поднимется по оси": "of the cable to a device (nearest on top; all floors). The cable drops/rises along the",
+"Сделать узел своим: участок закрепится, узел можно тянуть и задать высоту": "Make the node your own: the part gets pinned, you can drag the node and set its height",
+"Правка кабеля: вид, сечение, прокладка, высоты, орто": "Cable edit: type, cross-section, laying, heights, ortho",
+"Снять выделение — назад к меню кабеля": "Clear selection — back to the cable menu",
+"Добавить узел в середине отрезка": "Add a node in the middle of the segment",
+"касание: переключить": "tap: toggle",
+"Правка кабеля": "Cable edit",
+"у выбранного": "selected only",
+"Удалить узел": "Delete node",
+"Свой узел": "Own node",
+"Трасса": "Route",
+"Расчёт": "Calculation",
+"Узел": "Node"
 }
