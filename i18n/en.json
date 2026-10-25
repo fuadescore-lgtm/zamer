@@ -2466,5 +2466,14 @@
 "Байпас": "Bypass",
 "у АКБ": "at the battery",
 "сеть": "grid",
-"Токи": "Currents"
+"Токи": "Currents",
+"трасса «На высоте» проходит сквозь кровлю или перекрытие — измените высоту": "the “At height” route passes through a roof or slab — change height",
+"Подход к устройству через проём: за устройством": "Approach to the device goes through an opening: behind the device there is a",
+"сдвиньте трассу или устройство": "move the route or the device",
+"или выберите «По кровле": "or choose “Along roof",
+"перенесите устройство": "move the device",
+"трасса проходит по": "the route crosses the",
+"мансардное окно": "roof window",
+"слуховое окно": "dormer",
+"дымоход": "chimney"
 }
