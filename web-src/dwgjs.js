@@ -27,6 +27,7 @@ async function zdLoad(wasmBytes){
     face:(a,b,c,d)=>X.zd_face(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],(d||c)[0],(d||c)[1],(d||c)[2]),
     facef:(a,b,c,d,fl)=>X.zd_facef?X.zd_facef(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],(d||c)[0],(d||c)[1],(d||c)[2],fl|0):X.zd_face(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],(d||c)[0],(d||c)[1],(d||c)[2]),
     pface:(V,F)=>{ if(!X.zd_pface) return -9; const nv=V.length/3, nf=F.length/4; const pv=X.zd_malloc(nv*24), pf=X.zd_malloc(nf*8); new Float64Array(mem.buffer,pv,nv*3).set(V); new Int16Array(mem.buffer,pf,nf*4).set(F); const r=X.zd_pface(nv,nf,pv,pf); X.zd_mfree(pv); X.zd_mfree(pf); return r; },
+    pline3d:(P)=>{ if(!X.zd_pline3d) return -9; const n=P.length; if(n<2) return -1; const p=X.zd_malloc(n*24); const f=new Float64Array(mem.buffer,p,n*3); P.forEach((q,i)=>{ f[i*3]=q[0]; f[i*3+1]=q[1]; f[i*3+2]=q[2]; }); const r=X.zd_pline3d(n,p); X.zd_mfree(p); return r; },
     arc:(c,r,a1,a2,z)=>X.zd_arc(c.x,c.y,z||0,r,a1,a2),
     circle:(c,r,z)=>X.zd_circle(c.x,c.y,z||0,r),
     text:(s,p,h,rot,z)=>{const q=str(s);const r=X.zd_text(q,p.x,p.y,z||0,h,rot||0);X.zd_mfree(q);return r;},

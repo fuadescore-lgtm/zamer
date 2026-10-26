@@ -94,6 +94,18 @@ KEEP int zd_pface (int nv, int nf, const double *xyz, const short *fc)
   return p ? 0 : -3;
 }
 
+/* 3D-полилиния (кабель): n вершин x,y,z подряд — в AutoCAD «Свойства → Длина» показывает настоящую длину */
+KEEP int zd_pline3d (int n, const double *xyz)
+{
+  if (!D || n < 2) return -1;
+  dwg_point_3d *v = (dwg_point_3d *)malloc (sizeof (dwg_point_3d) * n);
+  if (!v) return -2;
+  for (int i = 0; i < n; i++) { v[i].x = xyz[i * 3]; v[i].y = xyz[i * 3 + 1]; v[i].z = xyz[i * 3 + 2]; }
+  Dwg_Entity_POLYLINE_3D *p = dwg_add_POLYLINE_3D (T, n, v);
+  free (v);
+  return p ? 0 : -3;
+}
+
 KEEP int zd_circle (double cx, double cy, double cz, double r)
 {
   dwg_point_3d c = { cx, cy, cz };
