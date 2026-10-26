@@ -4158,7 +4158,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.2.1':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.2.2':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6029,7 +6029,7 @@ function mechLayout(it,li){ if(li==null) li=doc.curLv; const F=insFrame(it,li); 
     const qa=rlP(RF,g.s,g.y0), qb=rlP(RF,g.s,g.y1), za=RF.pl.nx*qa.x+RF.pl.ny*qa.y, zb=RF.pl.nx*qb.x+RF.pl.ny*qb.y, yl=za<=zb?g.y0:g.y1; return {ed:Math.round(g.s-RF.s0),ee:Math.round(Math.abs(y-yl)/RF.ca)}; };
   const rails=[], minis=[], clamps=[];
   for(const [j,Q] of [...rows.entries()].sort((a,b)=>a[0]-b[0])){ Q.sort((a,b)=>a[0]-b[0]); const t0=Math.min(...Q.map(q=>q[2])), t1=Math.max(...Q.map(q=>q[3])), xa=Q[0][0]-30, xb=Q[Q.length-1][1]+30, TT=[t0+(t1-t0)*0.25,t0+(t1-t0)*0.75];
-    const bx=[]; Q.forEach((q,k)=>{ const nx=Q[k+1]; if(!k) bx.push({x:q[0]-12,end:true}); if(nx&&nx[0]-q[1]<=120) bx.push({x:(q[1]+nx[0])/2,end:false}); else { bx.push({x:q[1]+12,end:true}); if(nx) bx.push({x:nx[0]-12,end:true}); } });
+    const bx=[]; Q.forEach((q,k)=>{ const nx=Q[k+1]; if(!k) bx.push({x:q[0]-12,end:true,dir:-1}); if(nx&&nx[0]-q[1]<=120) bx.push({x:(q[1]+nx[0])/2,end:false}); else { bx.push({x:q[1]+12,end:true,dir:1}); if(nx) bx.push({x:nx[0]-12,end:true,dir:-1}); } });
     for(const t of TT){ for(const c of bx) clamps.push({...c,t,j});
       if(!MT.rail){ for(const c of bx) minis.push({x:c.x,t,j}); continue; }
       const R={j,t,xa,xb,studs:[]};
@@ -6061,7 +6061,7 @@ function mechMesh(M,it,li){ const L=mechLayout(it,li); if(!L) return; const F=L.
       else { stud(x,t,rb+30); nut(x,t,rb+5,rb+17); } } }
   for(const m of L.minis){ const x=m.x, t=m.t, h=Math.min(40,off); bx(x-25,x+25,t-150,t+150,0,3,AL); bx(x-25,x-21,t-150,t+150,0,h,AL); bx(x+21,x+25,t-150,t+150,0,h,AL); bx(x-12,x+12,t-150,t+150,h-3,h,AL); for(const tt of [t-110,t+110]) for(const xx of [x-15,x+15]) cyl(xx,tt,3,9,6,6,ZN); }
   // зажимы: концевой — Z-профиль у края панели, средний — между панелями; болт с Т-головкой
-  for(const c of L.clamps){ const t=c.t; if(c.end){ const sg=c.x<0?1:1; bx(c.x-12,c.x+12,t-20,t+20,off+th,off+th+4,CL); bx(c.x-12,c.x-8,t-20,t+20,off,off+th+4,CL); } else { bx(c.x-14,c.x+14,t-20,t+20,off+th,off+th+4,CL); bx(c.x-3,c.x+3,t-20,t+20,off,off+th,CL); } cyl(c.x,t,off+th+4,off+th+10,6,6,ZN); } }
+  for(const c of L.clamps){ const t=c.t; if(c.end){ const d=c.dir||-1, o=c.x+d*12, e=c.x-d*22; bx(Math.min(o,e),Math.max(o,e),t-20,t+20,off+th,off+th+4,CL); bx(Math.min(o,o-d*4),Math.max(o,o-d*4),t-20,t+20,off,off+th+4,CL); } else { bx(c.x-14,c.x+14,t-20,t+20,off+th,off+th+4,CL); bx(c.x-3,c.x+3,t-20,t+20,off,off+th,CL); } cyl(c.x,t,off+th+4,off+th+10,6,6,ZN); } }
 // механика на плане: стропила (коричневые), профили (серые), шпильки (оранжевые) и размеры от торца крыши до стропила со шпилькой
 function drawMechPlan(){ const li=doc.curLv, sc=view.scale; ctx.save(); ctx.lineCap='butt';
   for(const r of doc.items){ if(r.t!=='roof') continue; let RL=[]; try{ RL=raftLines(r,li); }catch(_){} ctx.strokeStyle='rgba(176,112,48,.6)';
