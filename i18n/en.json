@@ -2990,5 +2990,16 @@
 "сверху": "top",
 "снизу": "bottom",
 "правок": "edits",
-"Домой": "Home"
+"Домой": "Home",
+"Выбрать несколько: касание вершины или отрезка — добавить / убрать (то же — двойным касанием). Тяните любую выбранную — двигаются вместе": "Select several: tap a vertex or segment to add / remove it (same as double-tap). Drag any selected one — they move together",
+"Выбор нескольких: касайтесь вершин и отрезков — добавить / убрать. Тяните любую выбранную — двигаются вместе": "Multi-select: tap vertices and segments to add / remove. Drag any selected one — they move together",
+"Правка трассы: тяните вершины (кружки) и рёбра (квадратики); двойное касание — выбрать несколько": "Route editing: drag vertices (circles) and edges (squares); double-tap — select several",
+"Все выбранные вершины — одинаковая координата": "All selected vertices — same coordinate",
+"Все выбранные вершины — на одну линию по": "All selected vertices — onto one line along",
+"Все выбранные вершины — на одну высоту": "All selected vertices — to one height",
+"Выбранные вершины двигаются вместе": "Selected vertices move together",
+"выбранные вершины — по оси": "selected vertices — along axis",
+"одинаковая координата": "same coordinate",
+"По оси": "Along axis",
+"Трасса ещё раз — выйти": "Route again — exit"
 }
