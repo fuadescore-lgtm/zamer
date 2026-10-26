@@ -2583,5 +2583,15 @@
 "панелей — «Подобрать автоматически» предложит модель и число инверторов": "panels — “Fit automatically” will suggest the model and number of inverters",
 "Подобрать автоматически": "Fit automatically",
 "Инвертор — авто: модель и количество по всем правилам": "Inverter — auto: model and quantity by all rules",
-"Инвертор — авто": "Inverter — auto"
+"Инвертор — авто": "Inverter — auto",
+"Крыша по профилю: тяните передний край (отступ), задний (глубина), боковые — свесы; липнет к колоннам и стенам; цифры — ввести": "Profile roof: drag the front edge (offset), the back edge (depth), the side edges (overhangs); snaps to columns and walls; numbers — type in",
+"Свес слева: продолжение профиля за левый край (по той же кривой), мм по горизонтали": "Left overhang: the profile continues past the left end (along the same curve), mm horizontally",
+"Свес слева: профиль продолжится за левый край по той же кривой, мм по горизонтали": "Left overhang: the profile continues past the left end along the same curve, mm horizontally",
+"Свес справа: продолжение профиля за правый край, мм по горизонтали": "Right overhang: the profile continues past the right end, mm horizontally",
+"Нет стен и колонн — сначала нарисуйте стены или поставьте колонны": "No walls or columns — draw walls or place columns first",
+"Свес слева (по той же кривой), мм": "Left overhang (along the same curve), mm",
+"Свес справа, мм по горизонтали": "Right overhang, mm horizontally",
+"Не соответствует: свес": "Not valid: overhang",
+"Свес справа, мм": "Right overhang, mm",
+"свес": "overhang"
 }
