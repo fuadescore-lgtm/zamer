@@ -2799,5 +2799,7 @@
 "Только это": "Only this",
 "Не соответствует: 200…3000 мм": "Out of range: 200…3000 mm",
 "Торцевое стропило стоит у края — его сдвигает «Первое от края» в «Сечение": "The gable rafter sits at the edge — move it with \"First from edge\" in \"Section",
-"Вернуть ровную расстановку по шагу (удалённые вернутся": "Back to even spacing (deleted ones return"
+"Вернуть ровную расстановку по шагу (удалённые вернутся": "Back to even spacing (deleted ones return",
+"Вид сверху (план) — без вращения; одним пальцем — сдвиг": "Top view (plan) — no rotation; one finger pans",
+"Вид сверху": "Top view"
 }
