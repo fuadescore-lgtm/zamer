@@ -2822,5 +2822,10 @@
 "Генерация по месяцам (таблица и график": "Monthly generation (table and chart",
 "Схема подключения (таблицы строк": "Connection scheme (string tables",
 "Ригель проёма (окно в кровле": "Opening header (roof window",
-"Крепление панелей (таблица": "Panel mounting (table"
+"Крепление панелей (таблица": "Panel mounting (table",
+"Система по умолчанию": "Default system",
+"Для всех массивов, если в «🔩 Крепление» у массива не выбрана своя": "For all arrays unless an array has its own in \"🔩 Mounting\"",
+"Контурные линии рёбер": "Edge outlines",
+"Рёбра: вкл": "Edges: on",
+"Рёбра: выкл": "Edges: off"
 }
