@@ -4164,7 +4164,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.2.6':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.2.7':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6198,18 +6198,18 @@ function rfMoveTo(i,rel){ const r=rfRoof(); if(!r||!rfSel) return; const R=rfLin
   const R2=rfLines()[0]; if(R2) rfSel.sel=rfSel.sel.map(v=>R2.rel.reduce((m,x)=>Math.abs(x-v)<Math.abs(m-v)?x:m,R2.rel[0])); }
 function rfPanel(){ const R=rfLines()[0], r=rfRoof(); if(!R||!r) return '<div class="title">Стропила</div>'; const v=rfSel.sel[rfSel.sel.length-1], k=R.rel.findIndex(x=>Math.abs(x-v)<1), end=k===0||k===R.rel.length-1, e=r.raft&&r.raft.ax&&r.raft.ax[rfSel.key];
   const fi=(id,l,val,t)=>`<div class="fld inl"><label for="${id}" title="${t}">${l}</label><input class="inp xs" id="${id}" inputmode="decimal" value="${val}"></div>`, prev=k>0?Math.round(R.rel[k]-R.rel[k-1]):'';
-  return `<div class="title">Стропило ${k+1} из ${R.rel.length}</div><div class="seg" role="group"><button data-act="rfMd" data-m="grid" aria-pressed="${rfMode==='grid'}" title="Остальные стропила выстраиваются по расстоянию до соседнего">Все по шагу</button><button data-act="rfMd" data-m="one" aria-pressed="${rfMode==='one'}" title="Двигается только это стропило">Только это</button></div>
+  return `<div class="title">Стропило ${k+1} из ${R.rel.length}</div><div class="seg" role="group"><button data-act="rftMd" data-m="grid" aria-pressed="${rfMode==='grid'}" title="Остальные стропила выстраиваются по расстоянию до соседнего">Все по шагу</button><button data-act="rftMd" data-m="one" aria-pressed="${rfMode==='one'}" title="Двигается только это стропило">Только это</button></div>
     ${end?'<span class="lbl">торцевое — у края крыши</span>':fi('rfPos','От торца',Math.round(v),'От торца крыши до оси стропила, мм')+fi('rfSt',rfMode==='grid'?'Шаг':'До соседнего',prev,rfMode==='grid'?'Расстояние до предыдущего стропила — его повторят все остальные, мм':'Расстояние до предыдущего стропила, мм')}<span class="lbl">тяните стропило</span>
-    <button class="btn" data-act="rfDel" title="Удалить это стропило" style="color:#d33b2c">🗑 Удалить</button>${e?'<button class="btn" data-act="rfRs" title="Вернуть ровную расстановку по шагу (удалённые вернутся)">По шагу</button>':''}<button class="btn" data-act="rfMech" title="Шаг, первое от края, сечение, шпильки">Сечение…</button><button class="btn" data-act="rfX" title="Снять выбор">✕</button>`; }
+    <button class="btn" data-act="rftDel" title="Удалить это стропило" style="color:#d33b2c">🗑 Удалить</button>${e?'<button class="btn" data-act="rftRs" title="Вернуть ровную расстановку по шагу (удалённые вернутся)">По шагу</button>':''}<button class="btn" data-act="rftMech" title="Шаг, первое от края, сечение, шпильки">Сечение…</button><button class="btn" data-act="rftX" title="Снять выбор">✕</button>`; }
 function rfAfter(){ persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); }
-panel.addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b||!/^rf(Ed|Mech|X|Md|Rs|Ok|Del)$/.test(b.dataset.act)) return; e.stopPropagation(); const k=b.dataset.act, r=rfRoof();
-  if(k==='rfX'){ rfOff(); rfAfter(); return; } if(!r) return;
-  if(k==='rfEd'){ rfEdit=true; const R=rfLines()[0]; if(R&&rfSel.sel.every(v=>{ const i=R.rel.findIndex(x=>Math.abs(x-v)<1); return i===0||i===R.rel.length-1; })) rfSel.sel=[R.rel[Math.min(1,R.rel.length-1)]]; toast(rfMode==='grid'?'Стропила настраиваются: выберите одно-два стропила и поставьте их по краям окна — остальные повторят шаг':'Тяните ⇔ — двигается одно стропило',true); rfAfter(); return; }
-  if(k==='rfMech'){ mechSheet(r); return; }
-  if(k==='rfMd'){ rfMode=b.dataset.m; if(rfMode==='one'&&rfSel.sel.length>1) rfSel.sel=[rfSel.sel[rfSel.sel.length-1]]; rfAfter(); return; }
-  if(k==='rfRs'){ pushUndo(); if(r.raft&&r.raft.ax){ delete r.raft.ax[rfSel.key]; if(!Object.keys(r.raft.ax).length) delete r.raft.ax; } const R=rfLines()[0]; if(R) rfSel.sel=[R.rel[Math.min(1,R.rel.length-1)]]; rfAfter(); return; }
-  if(k==='rfOk'){ rfEdit=false; rfAfter(); return; }
-  if(k==='rfDel'){ const R=rfLines()[0]; if(!R) return; const v=rfSel.sel[0], kk=R.rel.findIndex(x=>Math.abs(x-v)<1); if(kk<0) return; if(R.rel.length<=2){ toast('Нельзя удалить: на скате останется меньше двух стропил',true); return; } pushUndo(); if(!r.raft) r.raft={}; if(!r.raft.ax) r.raft.ax={}; const cur=R.rel.slice(); cur.splice(kk,1); r.raft.ax[rfSel.key]={S:cur.map(x=>Math.round(x))}; rfSel.sel=[cur[Math.min(kk,cur.length-1)]]; toast('Стропило удалено. «По шагу» вернёт ровную расстановку',true); rfAfter(); return; } },true);
+panel.addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b||!/^rft(Ed|Mech|X|Md|Rs|Ok|Del)$/.test(b.dataset.act)) return; e.stopPropagation(); const k=b.dataset.act, r=rfRoof();
+  if(k==='rftX'){ rfOff(); rfAfter(); return; } if(!r) return;
+  if(k==='rftEd'){ rfEdit=true; const R=rfLines()[0]; if(R&&rfSel.sel.every(v=>{ const i=R.rel.findIndex(x=>Math.abs(x-v)<1); return i===0||i===R.rel.length-1; })) rfSel.sel=[R.rel[Math.min(1,R.rel.length-1)]]; toast(rfMode==='grid'?'Стропила настраиваются: выберите одно-два стропила и поставьте их по краям окна — остальные повторят шаг':'Тяните ⇔ — двигается одно стропило',true); rfAfter(); return; }
+  if(k==='rftMech'){ mechSheet(r); return; }
+  if(k==='rftMd'){ rfMode=b.dataset.m; if(rfMode==='one'&&rfSel.sel.length>1) rfSel.sel=[rfSel.sel[rfSel.sel.length-1]]; rfAfter(); return; }
+  if(k==='rftRs'){ pushUndo(); if(r.raft&&r.raft.ax){ delete r.raft.ax[rfSel.key]; if(!Object.keys(r.raft.ax).length) delete r.raft.ax; } const R=rfLines()[0]; if(R) rfSel.sel=[R.rel[Math.min(1,R.rel.length-1)]]; rfAfter(); return; }
+  if(k==='rftOk'){ rfEdit=false; rfAfter(); return; }
+  if(k==='rftDel'){ const R=rfLines()[0]; if(!R) return; const v=rfSel.sel[0], kk=R.rel.findIndex(x=>Math.abs(x-v)<1); if(kk<0) return; if(R.rel.length<=2){ toast('Нельзя удалить: на скате останется меньше двух стропил',true); return; } pushUndo(); if(!r.raft) r.raft={}; if(!r.raft.ax) r.raft.ax={}; const cur=R.rel.slice(); cur.splice(kk,1); r.raft.ax[rfSel.key]={S:cur.map(x=>Math.round(x))}; rfSel.sel=[cur[Math.min(kk,cur.length-1)]]; toast('Стропило удалено. «По шагу» вернёт ровную расстановку',true); rfAfter(); return; } },true);
 panel.addEventListener('change',e=>{ const t=e.target; if(t.id!=='rfPos'&&t.id!=='rfSt') return; e.stopPropagation(); const r=rfRoof(); if(!r) return; const v=parseNum(t.value); if(!(v>0)){ panelKey=''; syncPanel(); return; } pushUndo();
   if(t.id==='rfPos') rfMoveTo(rfSel.sel.length-1,v);
   else { const R=rfLines()[0]; if(!R) return; const k=R.rel.findIndex(x=>Math.abs(x-rfSel.sel[0])<1); if(k<1){ panelKey=''; syncPanel(); return; } if(!(v>=Math.max(R.cfg.b*2,rfMode==='grid'?200:R.cfg.b)&&v<=3000)){ toast('Не соответствует: 200…3000 мм',true); panelKey=''; syncPanel(); return; } rfMoveTo(0,R.rel[k-1]+v); }
