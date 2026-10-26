@@ -2963,5 +2963,9 @@
 "Профили и крепление (в «Механике": "Rails and mounting (in \"Mechanics",
 "Добавить стропило рядом — посередине до следующего": "Add a rafter next to it — halfway to the next one",
 "Стропило добавлено — тяните его на место": "Rafter added — drag it into place",
-"Некуда добавить: между стропилами меньше": "No room to add: the gap between rafters is less than"
+"Некуда добавить: между стропилами меньше": "No room to add: the gap between rafters is less than",
+"и на фасадах (как слои). Окна и двери скрываются, а проёмы в стенах остаются. В отчёт и в файлы": "and on elevations (like layers). Windows and doors hide while the wall openings stay. Reports and files",
+"Отображать: скрыть или показать категории (стены, окна, панели…) — на плане, в": "Display: hide or show categories (walls, windows, panels…) — on the plan, in",
+"Снимите галочку — категория скрывается на плане, в": "Untick to hide a category on the plan, in",
+"3D: вернуться к объёмному виду с вращением": "3D: back to the rotatable 3D view"
 }
