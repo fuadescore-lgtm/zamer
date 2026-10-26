@@ -2950,5 +2950,18 @@
 "ДТ": "HD",
 "ТВ": "TV",
 "КД": "HC",
-"Слаботочка": "Low-voltage"
+"Слаботочка": "Low-voltage",
+"Отображать": "Display",
+"Снимите галочку — категория скрывается на плане, в 3D и на фасадах (как слои). Окна и двери скрываются, а проёмы в стенах остаются. В отчёт и в файлы (DWG, DXF, IFC) попадает всё": "Untick to hide a category on the plan, in 3D and on elevations (like layers). Windows and doors hide while the wall openings stay. Reports and files (DWG, DXF, IFC) always include everything",
+"Показать всё": "Show all",
+"Отображать: скрыть или показать категории (стены, окна, панели…) — на плане, в 3D и на фасадах": "Display: hide or show categories (walls, windows, panels…) — on the plan, in 3D and on elevations",
+"Отображать: скрыть или показать категории": "Display: hide or show categories",
+"Электроприборы": "Electrical devices",
+"Стропила (в «Механике»)": "Rafters (in \"Mechanics\")",
+"Профили и крепление (в «Механике»)": "Rails and mounting (in \"Mechanics\")",
+"Стропила (в «Механике": "Rafters (in \"Mechanics",
+"Профили и крепление (в «Механике": "Rails and mounting (in \"Mechanics",
+"Добавить стропило рядом — посередине до следующего": "Add a rafter next to it — halfway to the next one",
+"Стропило добавлено — тяните его на место": "Rafter added — drag it into place",
+"Некуда добавить: между стропилами меньше": "No room to add: the gap between rafters is less than"
 }
