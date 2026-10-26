@@ -103,7 +103,10 @@ KEEP int zd_pline3d (int n, const double *xyz)
   for (int i = 0; i < n; i++) { v[i].x = xyz[i * 3]; v[i].y = xyz[i * 3 + 1]; v[i].z = xyz[i * 3 + 2]; }
   Dwg_Entity_POLYLINE_3D *p = dwg_add_POLYLINE_3D (T, n, v);
   free (v);
-  return p ? 0 : -3;
+  if (!p) return -3;
+  /* в DWG 2000 флаг 3D-полилинии без бита 8 (он подразумевается типом): иначе AutoCAD замыкает её */
+  p->flag = 0; p->curve_type = 0;
+  return 0;
 }
 
 KEEP int zd_circle (double cx, double cy, double cz, double r)
