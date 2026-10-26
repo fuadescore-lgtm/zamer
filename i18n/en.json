@@ -2641,5 +2641,22 @@
 "Длина (Y)": "Length (Y)",
 "Низ от ±0": "Bottom from ±0",
 "прямая": "straight",
-"без крыши/перекрытия над ними — оставлены": "no roof/slab above — left as is"
+"без крыши/перекрытия над ними — оставлены": "no roof/slab above — left as is",
+"сохранится файлом проекта BIMsketcher (.bimsk) — его можно открыть снова и продолжить. В списке «Чертежи» он останется в любом случае": "will be saved as a BIMsketcher project file (.bimsk) — you can open it again and continue. It stays in the “Drawings” list in any case",
+"Создать без сохранения": "Create without saving",
+"Сохранить как": "Save as",
+"Проект целиком — открыть в приложении и продолжить работу": "The whole project — open in the app and continue working",
+"Все уровни; кабели — 3D-полилинии": "All levels; cables as 3D polylines",
+"Все уровни, AutoCAD R12": "All levels, AutoCAD R12",
+"3D-модель для BIM-программ": "3D model for BIM software",
+"Чертёж сохранён": "Drawing saved",
+"создан новый": "new one created",
+"его можно открыть снова и продолжить. В списке «Чертежи» он останется в любом случае": "you can open it again and continue. It stays in the “Drawings” list in any case",
+"Выпуклость в другую сторону": "Flip the bulge",
+"сохранится файлом проекта": "will be saved as a project file",
+"Все уровни; кабели": "All levels; cables",
+"концы на месте": "the ends stay in place",
+"ввести число": "enter a number",
+"полилинии": "polylines",
+"программ": "software"
 }
