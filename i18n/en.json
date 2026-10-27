@@ -3019,5 +3019,14 @@
 "коснитесь линии — в этом месте появится точка, линия разделится на две; точку можно тянуть": "tap a line — a point appears there and the line splits in two; the point can be dragged",
 "касание — выбрать точку или линию, тяните — двигать; «Удалить» / «Разделить» — в меню": "tap — select a point or line, drag — move; «Delete» / «Split» — in the menu",
 "точку (две линии сольются в одну": "point (two lines merge into one",
-"Удалить выбранную": "Delete selected"
+"Удалить выбранную": "Delete selected",
+"Снимите галочку — категория скрывается (как слои): отдельно на плане и в": "Untick to hide a category (like layers): separately on the plan and in",
+"на фасадах. Окна и двери скрываются, а проёмы в стенах остаются. В отчёт и в файлы (": "on elevations. Windows and doors are hidden, wall openings remain. Reports and files (",
+"фасады": "elevations",
+"отдельно на плане и в": "separately on the plan and in",
+"на фасадах": "on elevations",
+"Отображать: скрыть или показать категории (стены, окна, панели…) — отдельно на плане и в": "Display: hide or show categories (walls, windows, panels…) — separately on the plan and in",
+"на фасадах. Окна и двери скрываются, а проёмы в стенах остаются. В отчёт и в файлы": "on elevations. Windows and doors are hidden, wall openings remain. Reports and files",
+"и на фасадах": "and on elevations",
+"и фасады": "and elevations"
 }
