@@ -3001,5 +3001,12 @@
 "выбранные вершины — по оси": "selected vertices — along axis",
 "одинаковая координата": "same coordinate",
 "По оси": "Along axis",
-"Трасса ещё раз — выйти": "Route again — exit"
+"Трасса ещё раз — выйти": "Route again — exit",
+"Трасса: перерисовать эскизом или править вершины": "Route: redraw as a sketch or edit vertices",
+"Нарисовать трассу заново эскизом на плане": "Redraw the route as a sketch on the plan",
+"Перерисовать эскизом": "Redraw as sketch",
+"Править трассу: тянуть вершины и отрезки": "Edit route: drag vertices and segments",
+"Закончить правку трассы": "Finish route editing",
+"Править трассу": "Edit route",
+"весь кабель: вертикали — строго вертикально и на одну ось, горизонтали — ровно по": "the whole cable: verticals — strictly vertical and onto one axis, horizontals — straight along"
 }
