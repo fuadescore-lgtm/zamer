@@ -3037,5 +3037,17 @@
 "плоскости": "plane",
 "оси": "axis",
 "тяните вершину или квадратик отрезка": "drag a vertex or a segment square",
-"Другие этажи (пунктир на плане)": "Other floors (dashed on plan)"
+"Другие этажи (пунктир на плане)": "Other floors (dashed on plan)",
+"Единицы показа выбираются вверху справа (мм / см / м / км); проект хранится и экспортируется в": "Display units are chosen at the top right (mm / cm / m / km); the project is stored and exported to",
+"Наружу» значит: нарисованная линия — внутренняя грань комнаты, по ней вы и меряете рулеткой": "Outward” means the drawn line is the inner face of the room — the one you measure with a tape",
+"Вертикали — строго вертикально и на одну ось, горизонтали — ровно и на одну высоту": "Verticals — strictly vertical on one axis, horizontals — level at one height",
+"Единицы измерения: размеры, поля, подсказки, ведомость. Экспорт": "Units: dimensions, fields, hints, schedule. Export",
+"Удалить узел (участок закрепится своими вершинами": "Delete node (the segment is pinned by its own vertices",
+"Другие этажи (пунктир на плане": "Other floors (dashed on plan",
+"Единицы измерения": "Units",
+"Выбрать / двигать": "Select / move",
+"в миллиметрах": "in millimetres",
+"всегда в мм": "always in mm",
+"до стен": "to walls",
+"попадает всё": "everything is included"
 }
