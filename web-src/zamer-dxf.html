@@ -4185,7 +4185,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.5.6':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.5.7':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -8587,7 +8587,7 @@ function cabRoofTop(q,li,cache,near){ let best=null; doc.levels.forEach((L,lj)=>
     for(const f of g.faces){ if(!inPoly(f.P,q)) continue; const z=f.pl?f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c+g.th:g.zb+g.th; if(best==null||(near!=null?Math.abs(z-near)<Math.abs(best.z-near):z>best.z)) best={z,r,g,li:lj}; } } }); return best; } /* near — ближайшая по высоте к предыдущей точке: трасса под свесом верхней крыши остаётся на нижней */
 // режим трассы: «По кровле» (по поверхностям кровли и перекрытий), «На высоте», «Между устройствами» (оба конца — устройства: авто по умолчанию)
 const CABZN={roof:'По кровле',lv:'На высоте',dev:'Между устр.',free:'Свободный'}, CABZT={roof:'По скатам кровли и по перекрытиям; у края — ровный спуск',lv:'На высоте h от уровня',dev:'Между устройствами: от верхнего вниз на вынос, горизонтально, к нижнему — сверху',free:'Ровно по вашим вершинам — без обходов и автоматики, как пластилин'};
-function cabZSet(sel,m){ if(!sel||cabMode(sel)===m&&sel.zm===m) return; pushUndo(); const li=doc.levels.findIndex(L=>L.items.includes(sel)); if(m==='free'&&cabMode(sel)!=='free'&&li>=0){ try{ onLv(li,()=>cabFixAll(sel,li)); }catch(e){ console.warn(e); } /* текущая трасса — стартовые вершины */ } sel.zm=m; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); try{ const V=cabEdView(); if(V) cabRedrawV(V); }catch(_){} if(m==='free') toast('Свободный: вершины встают куда поставите — без обходов и автоматики',true); }
+function cabZSet(sel,m){ if(!sel||cabMode(sel)===m&&sel.zm===m) return; pushUndo(); const li=doc.levels.findIndex(L=>L.items.includes(sel)); if(m==='free'&&cabMode(sel)!=='free'&&li>=0){ try{ onLv(li,()=>{ const P3=cabColDrop(cabPath(sel,li).slice()), L=doc.levels[li], s0=cabEnd(sel,'a')?1:0, s1=cabEnd(sel,'b')?1:0, Q=P3.slice(s0,P3.length-s1); if(Q.length>=2){ if(!sel.fx) sel.fx=cabSnap(sel); sel.pts=Q.map(q=>({x:r3(q[0]),y:r3(q[1])})); cabSetPZ(sel,Q.map(q=>Math.round(q[2]-L.elev))); delete sel.byp; delete sel.nd; } }); }catch(e){ console.warn(e); } sel.fv=1; /* текущая трасса — стартовые вершины (кроме самой точки подключения) */ } sel.zm=m; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); try{ const V=cabEdView(); if(V) cabRedrawV(V); }catch(_){} if(m==='free') toast('Свободный: вершины встают куда поставите — без обходов и автоматики',true); }
 function cabMode(it){ const m=it.zm||'auto'; if(m==='lv'||m==='dev'||m==='roof'||m==='free') return m; const A=cabEnd(it,'a'), B=cabEnd(it,'b'); return A&&B&&A.it.t==='dev'&&B.it.t==='dev'?'dev':'roof'; }
 // поверхности под точкой: скаты кровель (любой этаж) +60 мм, верх перекрытий +40 мм; ключ поверхности — чтобы найти её границу
 function cabSurfs(q,cache,nd){ const out=[]; let inO=false; doc.levels.forEach((L,lj)=>{ for(const r of L.items){ if(r.t==='roof'){ let g=cache.get(r.id); if(!g){ try{ g=roofGeom(roofExtended(r,lj),lj); }catch(e){ g=null; } cache.set(r.id,g); } if(!g) continue;
@@ -8818,9 +8818,10 @@ function cabEave(R,cache,li){ const T=cabRoofTop({x:R[0],y:R[1]},li,cache,R[2]-6
   const u=Math.hypot(E.x-W.x,E.y-W.y)||1, Wo={x:W.x+(E.x-W.x)/u*40,y:W.y+(E.y-W.y)/u*40}, Eo={x:E.x+(E.x-W.x)/u*40,y:E.y+(E.y-W.y)/u*40};
   return [[E.x,E.y,zt+60],[Eo.x,Eo.y,zt+60],[Eo.x,Eo.y,zb],[Wo.x,Wo.y,zb]]; }
 // 3D-путь кабеля: трасса + спуск/подъём по оси Z к точке подключения
-function cabPathFree(it,li,role){ const RT=cabRoute(it,li), out=RT.Q.map(p=>{ const q=[...p]; q.uv=1; q.ov=1; return q; });
+function cabPathFree(it,li,role){ if(!it.fv){ it.fv=1; /* было: отвод у прибора считался автоучастком — делаем его своей вершиной */ try{ const L=doc.levels[li], pz=cabPZ(it); for(const key of ['a','b']){ const E=cabEnd(it,key); if(!E||E.it.t!=='dev') continue; const c=devCP(E.it,E.li,role,it), A=devCPapp(E.it,role,c,it), q={x:r3(A[0]),y:r3(A[1])}, z=Math.round(A[2]-L.elev), k=key==='a'?0:it.pts.length-1, P0=it.pts[k]; if(P0&&Math.hypot(P0.x-q.x,P0.y-q.y)<1&&(pz[k]==null||Math.abs(pz[k]-z)<1)) continue; if(key==='a'){ it.pts.unshift(q); pz.unshift(z); } else { it.pts.push(q); pz.push(z); } } cabSetPZ(it,pz); }catch(_){} }
+  const RT=cabRoute(it,li), out=RT.Q.map(p=>{ const q=[...p]; q.uv=1; q.ov=1; return q; });
   const endF=(key,atStart)=>{ const E=cabEnd(it,key); if(!E||!out.length) return; const R=atStart?out[0]:out[out.length-1]; let add=[];
-    if(E.it.t==='dev'){ const c=devCP(E.it,E.li,role,it), A=devCPapp(E.it,role,c,it); add=[A,c]; }
+    if(E.it.t==='dev'){ add=[devCP(E.it,E.li,role,it)]; }
     else if(E.it.t==='solar'){ try{ const F=onLv(E.li,()=>insFrame(E.it,E.li)); if(F){ const O=onLv(E.li,()=>solarOut(E.it,F)); let bq=null,bd=1e18; for(let k=0;k<O.length;k++){ const a=O[k], b=O[(k+1)%O.length], t=Math.max(0,Math.min(1,((R[0]-a.x)*(b.x-a.x)+(R[1]-a.y)*(b.y-a.y))/(((b.x-a.x)**2+(b.y-a.y)**2)||1))), q={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}, d=Math.hypot(q.x-R[0],q.y-R[1]); if(d<bd){ bd=d; bq=q; } } if(bq) add=[[bq.x,bq.y,R[2]]]; } }catch(_){} }
     if(atStart) out.unshift(...add.slice().reverse()); else out.push(...add); };
   endF('a',true); endF('b',false);
@@ -9349,7 +9350,7 @@ function cabFixInfo(it,li){ const P3=onLv(li,()=>cabPath(it,li)).slice(), RT=onL
     if(k<0){ /* вершина на прямом продолжении — слилась с соседним отрезком: вставить её в путь */ for(let q=Math.max(0,from);q<P3.length-1;q++){ const a=P3[q], b=P3[q+1], u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], l2=u[0]**2+u[1]**2+u[2]**2; if(l2<1) continue; const t=((v[0]-a[0])*u[0]+(v[1]-a[1])*u[1]+(v[2]-a[2])*u[2])/l2; if(t<=0||t>=1) continue; if(Math.hypot(a[0]+u[0]*t-v[0],a[1]+u[1]*t-v[1],a[2]+u[2]*t-v[2])<5){ P3.splice(q+1,0,v); k=q+1; break; } } }
     if(k<0){ /* авто-высота поднята обходом проёма: та же точка в плане */ for(let q=Math.max(0,from);q<P3.length;q++){ const p=P3[q]; if(Math.hypot(p[0]-v[0],p[1]-v[1])<1){ k=q; break; } } }
     vk.push(k); if(k>=0) from=k; }
-  const sk=key=>{ const E=cabEnd(it,key); return E?(E.it.t==='dev'?2:1):0; }; return {P3,vk,k0:vk.length?vk[0]:-1,k1:vk.length?vk[vk.length-1]:-1,sa:sk('a'),sb:sk('b')}; }
+  const sk=key=>{ const E=cabEnd(it,key); return E?(E.it.t==='dev'&&cabMode(it)!=='free'?2:1):0; }; return {P3,vk,k0:vk.length?vk[0]:-1,k1:vk.length?vk[vk.length-1]:-1,sa:sk('a'),sb:sk('b')}; }
 function cabSnap(it){ return {pts:it.pts.map(q=>({...q})),pz:it.pz?it.pz.slice():null,nd:it.nd?JSON.parse(JSON.stringify(it.nd)):null,byp:it.byp?JSON.parse(JSON.stringify(it.byp)):null}; }
 function cabUnsnap(it,S){ it.pts=S.pts.map(q=>({...q})); if(S.pz) it.pz=S.pz.slice(); else delete it.pz; if(S.nd) it.nd=JSON.parse(JSON.stringify(S.nd)); else delete it.nd; if(S.byp) it.byp=JSON.parse(JSON.stringify(S.byp)); else delete it.byp; }
 // закрепить автоучасток у конца end; вернуть индекс своей вершины для точки пути j (или ребра j→j+1)
@@ -9382,7 +9383,7 @@ function cabPickAuto(it,li,h){ const snap=cabSnap(it), hadFx=!!it.fx; const i=ca
 function cabUnpickAuto(it,F){ cabUnsnap(it,F.snap); if(!F.hadFx) delete it.fx; }
 // «Орто»: отрезки к соседним вершинам — ровно по X / Y / Z, если отклонение от оси меньше 15°
 /* «Свободный» + Орто: магнит вершина→вершина и направляющие по осям (как в 3ds Max) */
-function cabFreeSnap(it,i,pz,Lv,hd,proj,mx,my,axC){ if(cabMode(it)!=='free'||elecDef().ortho===false) return null;
+function cabFreeSnap(it,i,pz,Lv,hd,proj,mx,my,axC){ if(elecDef().ortho===false) return null;
   if(!hd.tg){ const T=[]; hd.pts0.forEach((p,j)=>{ if(j!==i&&hd.V0[j]!=null) T.push([p.x,p.y,hd.V0[j]]); }); try{ const Pp=onLv(hd.li,()=>cabPath(it,hd.li)); for(const k of ['a','b']){ if(!cabEnd(it,k)||!Pp.length) continue; const q=k==='a'?Pp[0]:Pp[Pp.length-1]; T.push([q[0],q[1],q[2]]); } }catch(_){} hd.tg=T; }
   const S=[hd.pts0[i].x,hd.pts0[i].y,hd.V0[i]], Pc=[it.pts[i].x,it.pts[i].y,pz[i]!=null?Lv.elev+pz[i]:hd.V0[i]], mov=[0,1,2].filter(c=>Math.abs(Pc[c]-S[c])>0.5||(axC&&axC.includes('xyz'[c])));
   if(!mov.length) return null; const a=proj(Pc); if(!a) return null;
@@ -9394,7 +9395,7 @@ function cabFreeSnap(it,i,pz,Lv,hd,proj,mx,my,axC){ if(cabMode(it)!=='free'||ele
 function cabSnDraw(x,proj,G){ if(!G) return; x.save(); x.setLineDash([4,4]); x.lineWidth=1.6; for(const s of (G.sn||[])){ const a=proj(s.T), b=proj(G.sp||G.p); if(!a||!b) continue; x.strokeStyle=CABAXC[s.c]; x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); } x.setLineDash([]);
   if(G.vt){ const q=proj(G.vt); if(q){ x.strokeStyle='#2fbf62'; x.lineWidth=2.2; x.strokeRect(q.x-8,q.y-8,16,16); } } x.restore(); }
 // слияние близкой соседней вершины после перетаскивания (только «Свободный» + Орто)
-function cabFreeMerge(it,i,li){ if(cabMode(it)!=='free'||elecDef().ortho===false) return false; const L=doc.levels[li], RT=onLv(li,()=>cabRoute(it,li)), V=RT.V; if(!it.pts[i]||V[i]==null) return false; for(const n of [i-1,i+1]){ const q=it.pts[n]; if(!q||V[n]==null) continue; if(Math.hypot(q.x-it.pts[i].x,q.y-it.pts[i].y,V[n]-V[i])<30&&it.pts.length>2){ cabDelV(it,i); toast('Вершины слились в одну',true); return true; } } return false; }
+function cabFreeMerge(it,i,li){ if(elecDef().ortho===false) return false; const L=doc.levels[li], RT=onLv(li,()=>cabRoute(it,li)), V=RT.V; if(!it.pts[i]||V[i]==null) return false; for(const n of [i-1,i+1]){ const q=it.pts[n]; if(!q||V[n]==null) continue; if(Math.hypot(q.x-it.pts[i].x,q.y-it.pts[i].y,V[n]-V[i])<30&&it.pts.length>2){ cabDelV(it,i); toast('Вершины слились в одну',true); return true; } } return false; }
 function cabOrtho(it,i,V0,pz,elev){ if(elecDef().ortho===false) return; const p=it.pts[i]; let z=pz[i]!=null?pz[i]+elev:V0[i]; const T=0.268; let x=p.x, y=p.y;
   for(const n of [i-1,i+1]){ if(n<0||n>=it.pts.length) continue; const q=it.pts[n], zn=pz[n]!=null?pz[n]+elev:V0[n]; if(zn==null) continue; const d=[x-q.x,y-q.y,z-zn], ad=d.map(Math.abs), m=Math.max(...ad); if(m<1) continue; const k=ad.indexOf(m);
     if(k!==0&&ad[0]<T*m) x=q.x; if(k!==1&&ad[1]<T*m) y=q.y; if(k!==2&&ad[2]<T*m&&pz[i]!=null) z=zn; }
