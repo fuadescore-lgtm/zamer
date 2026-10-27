@@ -3029,5 +3029,12 @@
 "на фасадах. Окна и двери скрываются, а проёмы в стенах остаются. В отчёт и в файлы": "on elevations. Windows and doors are hidden, wall openings remain. Reports and files",
 "и на фасадах": "and on elevations",
 "и фасады": "and elevations",
-"Удалить узел (участок закрепится своими вершинами)": "Delete node (the section is pinned with own vertices)"
+"Удалить узел (участок закрепится своими вершинами)": "Delete node (the section is pinned with own vertices)",
+"Тянуть только по оси": "Drag only along axis",
+"ещё раз — снять": "again — clear",
+"Тянуть в плоскости": "Drag in plane",
+"Тянуть по": "Drag along",
+"плоскости": "plane",
+"оси": "axis",
+"тяните вершину или квадратик отрезка": "drag a vertex or a segment square"
 }
