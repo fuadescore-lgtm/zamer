@@ -3068,5 +3068,11 @@
 "прямоугольное": "rectangular",
 "прямоугольная": "rectangular",
 "арочная": "arched",
-"прямоугольный": "rectangular"
+"прямоугольный": "rectangular",
+"Размеры сцеплены": "Dimensions linked",
+"тянутся вместе. Касание замка": "move together. Tap the lock",
+"расцепить": "unlink",
+"Замок открыт: размеры тянутся по отдельности": "Lock open: dimensions move separately",
+"Замок закрыт: цепочка тянется вместе": "Lock closed: the chain moves together",
+"тянутся вместе. Касание замка — расцепить": "move together. Tap the lock to unlink"
 }
