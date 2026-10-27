@@ -3049,5 +3049,7 @@
 "в миллиметрах": "in millimetres",
 "всегда в мм": "always in mm",
 "до стен": "to walls",
-"попадает всё": "everything is included"
+"попадает всё": "everything is included",
+"Единицы показа (мм / см / м / км) выбираются в строке «Единицы измерения» выше; проект хранится и экспортируется в": "Display units (mm / cm / m / km) are chosen in the “Units” row above; the project is stored and exported to",
+"Размеры, поля, подсказки, ведомость. Экспорт": "Dimensions, fields, hints, schedule. Export"
 }
