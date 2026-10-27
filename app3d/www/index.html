@@ -4171,7 +4171,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.4.6':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.4.7':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6773,7 +6773,9 @@ function open3D(){ linkPick=null; ridgePick=null; let M=buildModel(); if(!M.tri.
 
   v3.sel=null; v3Panel();
   v3.multiSet=L=>{ xSel=L.length?L:null; v3.sel=null; v3.vpOn=false; v3.act=null; selId=null; moveSel.clear(); detailSel=null; if(tool!=='select'){ try{ setTool('select'); }catch(e){} } panelKey=''; syncPanel(); dockPanel(el.querySelector('.v3w')); upload(); draw(); v3Panel(); };
-  cvs.onwheel=e=>{ e.preventDefault(); v3.dist=Math.max(R*0.15,Math.min(R*12,v3.dist*(e.deltaY>0?1.2:0.83))); draw(); };
+  cvs.onwheel=e=>{ e.preventDefault(); const nd=Math.max(R*0.15,Math.min(R*12,v3.dist*(e.deltaY>0?1.2:0.83))), kk=nd/v3.dist, c=v3.cam; /* к точке под курсором: она остаётся на месте */
+    try{ if(c){ const r=cvs.getBoundingClientRect(), R0=rayAt(e.clientX-r.left,e.clientY-r.top), tg=[0,1,2].map(i=>c.eye[i]+c.f[i]*v3.dist); if(R0){ const den=R0.d[0]*c.f[0]+R0.d[1]*c.f[1]+R0.d[2]*c.f[2]; if(Math.abs(den)>1e-6){ const t=((tg[0]-R0.o[0])*c.f[0]+(tg[1]-R0.o[1])*c.f[1]+(tg[2]-R0.o[2])*c.f[2])/den, P=[0,1,2].map(i=>R0.o[i]+R0.d[i]*t); v3.pan=v3.pan.map((v,i)=>v+(P[i]-tg[i])*(1-kk)); } } } }catch(_){}
+    v3.dist=nd; draw(); };
   el.querySelector('.v3bar').onclick=e=>{ const b=e.target.closest('[data-v3]'); if(!b) return; const k=b.dataset.v3;
     if(k==='flt'){ fltOpen(true); return; }
     if(k==='vis'){ visOpen(); return; }
@@ -7229,7 +7231,7 @@ function elevInit(){ const el=elevEl(); if(el.dataset.init) return; el.dataset.i
       EV.sel=s; elevHint(); viewSelect(s?s.it:null,s?s.li:null,face,el.querySelector('.evwrap')); elevDraw(); return; }
     if(q.hit&&q.hit.handle){ toast(q.hit.kind==='lvl'?'Высота этажа изменена':'Изменено — ✓ сохранить, ✕ отменить'); } elevDraw(); };
   co.addEventListener('pointerup',up); co.addEventListener('pointercancel',up);
-  co.addEventListener('wheel',e=>{ e.preventDefault(); const v=EV.view, k=e.deltaY>0?0.8:1.25; EV.view={...v,s:Math.max(0.005,Math.min(5,v.s*k))}; elevDraw(); },{passive:false});
+  co.addEventListener('wheel',e=>{ e.preventDefault(); const v=EV.view, k=e.deltaY>0?0.8:1.25, s2=Math.max(0.005,Math.min(5,v.s*k)), r=co.getBoundingClientRect(), mx=e.clientX-r.left-co.clientWidth/2, my=e.clientY-r.top-co.clientHeight/2, wu=v.cu+mx/v.s, wz=v.cz-my/v.s; /* к точке под курсором */ EV.view={...v,s:s2,cu:wu-mx/s2,cz:wz+my/s2}; elevDraw(); },{passive:false});
   el.querySelector('.v3bar').addEventListener('click',e=>{ const b=e.target.closest('[data-ev]'); if(!b) return; const k=b.dataset.ev;
     if(k==='cap'){ let mn=EV.el.querySelector('.v3capm'); if(mn){ mn.remove(); return; } const ed=mechOn?mechDef():elecDef(), F=ed.facs||{}, nm=ELEVD[EV.dk].n; mn=document.createElement('div'); mn.className='v3capm'; const r=b.getBoundingClientRect(); mn.style.cssText='position:fixed;z-index:60;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:12px;background:var(--panel,#fff);box-shadow:0 6px 24px rgba(0,0,0,.25);left:'+Math.max(6,Math.min(innerWidth-280,r.left))+'px;bottom:'+(innerHeight-r.top+6)+'px';
       mn.innerHTML=`<button class="btn" data-ev="capF">${tr(F[EV.dk]?'Обновить вид':'Сохранить вид')} · ${tr(nm)} ${tr('фасад')}${F[EV.dk]?' ✓':''}</button>${F[EV.dk]?`<button class="btn" data-ev="capD">${tr('Убрать из отчёта')}</button>`:''}${Object.keys(F).length?`<span class="lbl">${tr('В отчёте')}: ${Object.keys(F).map(k2=>tr(ELEVD[k2].n)).join(', ')}</span>`:''}`; EV.el.querySelector('.v3bar').appendChild(mn); return; }
