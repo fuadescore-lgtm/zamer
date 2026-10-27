@@ -4123,7 +4123,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.4.4':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.4.5':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -8635,7 +8635,10 @@ function cabDescent(it,li,R,E,role,c,A,cache){ const nd=it.nd||{}, F=devFrame(E.
   const runMode=(zTo)=>{ const key='v'+run, NW=cabNearWalls(Q,Q[2]-150,cache), opts=[...new Set(NW.map(w=>'in'+w.ax))]; let m='out'; /* снаружи/внутри — общими кнопками у сегментов вдоль стены */ const t={key,kind:'sd',mode:m,opts:opts.length>1?opts:(opts.length?['in']:[])}; if(!t.opts.length&&!insideAt(Q)) m='out';
     if(m!=='out'&&!insideAt(Q)){ const w=m==='inX'?NW.find(o=>o.ax==='X'):m==='inY'?NW.find(o=>o.ax==='Y'):NW[0]; if(w){ const Wi={x:Q[0]+w.d.x*(w.h[1]+60),y:Q[1]+w.d.y*(w.h[1]+60)}; push(Wi.x,Wi.y,Q[2]); Q=[Wi.x,Wi.y,Q[2]]; } }
     t.p=[Q[0],Q[1],(Q[2]+zTo)/2]; run++; };
+  /* ось спуска у стены: точка в толще стены или ближе 200 мм к ней — на грань стены (отступ 40 мм, с той стороны, где точка; из толщи — наружу) */
+  const axisSnap=q=>{ let best=null; const zlo=Math.min(A[2],R[2]), zhi=Math.max(A[2],R[2]); for(const W of cabWalls(cache)){ if(W.z1<zlo||W.z0>zhi) continue; const P=W.P, ins=inPoly(P,q); for(let k=0;k<P.length;k++){ const a=P[k], b=P[(k+1)%P.length], ex=b.x-a.x, ey=b.y-a.y, l2=ex*ex+ey*ey; if(l2<1) continue; const t=Math.max(0,Math.min(1,((q.x-a.x)*ex+(q.y-a.y)*ey)/l2)), f={x:a.x+ex*t,y:a.y+ey*t}, d=Math.hypot(q.x-f.x,q.y-f.y); if(!ins&&d>200) continue; const l=Math.sqrt(l2); let n={x:ey/l,y:-ex/l}; const cx=P.reduce((s2,p)=>s2+p.x,0)/P.length, cy=P.reduce((s2,p)=>s2+p.y,0)/P.length; if((f.x-cx)*n.x+(f.y-cy)*n.y<0) n={x:-n.x,y:-n.y}; /* наружу из толщи стены */ const pp={x:r3(f.x+n.x*40),y:r3(f.y+n.y*40)}, pp2={x:r3(f.x-n.x*(40+(W.th||0))),y:r3(f.y-n.y*(40+(W.th||0)))}; let sc=ins?d:d+1e5; if(ins){ const inA=cabInside({x:A[0],y:A[1]},E.li); if(cabInside(pp,E.li)!==inA) sc+=5e4; } if(!best||sc<best.sc) best={sc,p:pp,ins}; } } if(!best) return q; if(!best.ins&&cabInside(best.p,E.li)!==cabInside(q,E.li)) return q; return best.p; };
   const S0=cabSurfNear({x:R[0],y:R[1]},cache,R[2]); let cur=S0&&Math.abs(S0.zf({x:R[0],y:R[1]})-R[2])<30?S0:null;
+  if(!cur){ const qs=axisSnap({x:Q[0],y:Q[1]}); if(Math.hypot(qs.x-Q[0],qs.y-Q[1])>1){ push(qs.x,qs.y,Q[2]); Q=[qs.x,qs.y,Q[2]]; } }
   for(let guard=0;guard<10;guard++){
     if(!cur){ const q={x:Q[0],y:Q[1]}; let S=null, zs=-1e18; for(const s of cabSurfs(q,cache)){ const z=s.zf(q); if(z<Q[2]-5&&z>A[2]+50&&z>zs){ zs=z; S=s; } } if(!S) break; if(!insideAt(Q)) Q=cabHoleCol(Q,zs,null,null,cache,nd,'o:'+role+run,tg,push,mk); runMode(zs); cur=S; push(Q[0],Q[1],zs); nw1=false; Q=[Q[0],Q[1],zs]; }
     const k=cabSK(cur), key='d:'+k, zc=Q[2], ex=cabExit({x:Q[0],y:Q[1]},k,cache,(d,t,E)=>{ /* обход только наружу: за краем не дом, по пути к краю нет стен */ const zw=zc-300, Eo=cabOutOf({x:E.x+d.x*60,y:E.y+d.y*60},d,zw,cache); if(insideAt([Eo.x,Eo.y,zw])) return false; const h=cabWallHit({x:Q[0],y:Q[1]},d,zw,cache,t+60); return !h||h[0]>t+60||h[1]>=t-20; },(d,t,E)=>t+0.5*Math.hypot(E.x-A[0],E.y-A[1])); /* край — короткий и ближе к устройству */
@@ -8643,12 +8646,12 @@ function cabDescent(it,li,R,E,role,c,A,cache){ const nd=it.nd||{}, F=devFrame(E.
     const qd={x:Q[0],y:Q[1]}, zU=Q[2]-(cur.kind==='roof'?60:40)-(cur.th||200)-150, inB=cabInsideZ(qd,zU,cache)&&!cabInWall(qd,zU,cache), forced=inB&&nd[key]==='out', kk=forced?'do:'+k:key;
     let mode=inB&&!forced?'thru':(nd[kk]==='thru'||nd[kk]==='around'?nd[kk]:(ex?'around':'thru'));
     if(forced&&mode==='thru'&&ex){ /* наружу и насквозь свеса: по скату за лицо стены, вниз через свес */ const hw=cabWallHit(qd,ex.d,zU,cache,ex.t+100,true); if(hw&&hw[1]+40<ex.t){ walk({x:Q[0]+ex.d.x*(hw[1]+40),y:Q[1]+ex.d.y*(hw[1]+40)},k); } }
-    if(mode==='thru'||!ex){ const zb=Q[2]-(cur.kind==='roof'?60:40)-(cur.th||200)-120, pz=Math.max(zb-250,(zb+A[2])/2);
+    if(mode==='thru'||!ex){ { const qs=axisSnap({x:Q[0],y:Q[1]}); if(Math.hypot(qs.x-Q[0],qs.y-Q[1])>1){ const sf=cabOnSurf(qs,cache,cabSK(cur)), zq=sf?sf.zf(qs):Q[2]; push(qs.x,qs.y,zq); Q=[qs.x,qs.y,zq]; } } /* проходка — не в толще стены */ const zb=Q[2]-(cur.kind==='roof'?60:40)-(cur.th||200)-120, pz=Math.max(zb-250,(zb+A[2])/2);
       const ttop=[Q[0],Q[1],Q[2]-Math.min(200,(Q[2]-zb)/2)]; Q=[Q[0],Q[1],zb]; const pp=push(Q[0],Q[1],zb);
       if(inB&&!forced){ if(!nwOn) tg.push({key,kind:'nd',mode:'in',opts:['io'],lab:'снаружи',p:[Q[0],Q[1],pz],anc:pp}); /* уже внутри (перекрытие между этажами) — без кнопки */ pp.nw=1; nwOn=true; }
       else { tg.push({key:kk,kind:'nd',mode:'thru',p:ttop}); if(forced){ tg.push({key,kind:'nd',mode:'out',opts:['io'],lab:'внутри',p:[Q[0],Q[1],pz],anc:pp}); pp.nw=1; nw1=true; } }
       cur=null; continue; }
-    const qa={x:Q[0],y:Q[1]}; /* ось спуска до нижней кровли */ walk(ex.E,k); const zt=Q[2], d=ex.d, Eo=cabOutOf({x:ex.E.x+d.x*40,y:ex.E.y+d.y*40},d,zt-300,cache), qi={x:ex.E.x-d.x*2,y:ex.E.y-d.y*2}, Se=cabOnSurf(qi,cache,k)||cur, zb=under(Se,qi);
+    const qa=axisSnap({x:Q[0],y:Q[1]}); /* ось спуска (у стены — на её грани) */ walk(ex.E,k); const zt=Q[2], d=ex.d, Eo=cabOutOf({x:ex.E.x+d.x*40,y:ex.E.y+d.y*40},d,zt-300,cache), qi={x:ex.E.x-d.x*2,y:ex.E.y-d.y*2}, Se=cabOnSurf(qi,cache,k)||cur, zb=under(Se,qi);
     const dt=()=>{ const l=pts[pts.length-1]; if(l) l.dt=1; }; push(Eo.x,Eo.y,zt); dt(); push(Eo.x,Eo.y,zb); dt(); tg.push({key:kk,kind:'nd',mode:'around',p:[Eo.x,Eo.y,(zt+zb)/2]}); 
     { /* под нижней кровлей — обратно на ось спуска (если там не дом и по пути нет стены) */ const dd=Math.hypot(qa.x-Eo.x,qa.y-Eo.y); if(!forced&&dd>1&&!insideAt([qa.x,qa.y,zb-60])){ /* нарисованная точка спуска — главная: после каждого обхода — обратно на неё (X/Y) */ const u2={x:(qa.x-Eo.x)/dd,y:(qa.y-Eo.y)/dd}, hw=cabWallHit(Eo,u2,zb,cache,dd+5,true); if(!hw||hw[0]>dd-5){ push(qa.x,qa.y,zb); dt(); Q=[qa.x,qa.y,zb]; cur=null; continue; } } }
     
