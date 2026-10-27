@@ -4123,7 +4123,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.3.8':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.3.9':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6507,7 +6507,7 @@ function open3D(){ linkPick=null; ridgePick=null; let M=buildModel(); if(!M.tri.
   // касание видового куба: угол — изометрия с этой стороны, грань — вид на неё
   const cubeTap=(px,py)=>{ const K=v3.cube; if(!K||Math.hypot(px-K.C.x,py-K.C.y)>K.S*2.3) return false; let dir=null;
     const cr=K.corners.find(o=>Math.hypot(o.x-px,o.y-py)<9); if(cr) dir=cr.p;
-    if(!dir){ const inQ=(Q)=>{ let ins=false; for(let i=0,j=Q.length-1;i<Q.length;j=i++){ if(((Q[i].y>py)!==(Q[j].y>py))&&(px<(Q[j].x-Q[i].x)*(py-Q[i].y)/(Q[j].y-Q[i].y)+Q[i].x)) ins=!ins; } return ins; }; for(let i=K.faces.length-1;i>=0;i--) if(inQ(K.faces[i].Q)){ dir=K.faces[i].n; break; } }
+    if(!dir){ const inQ=(Q)=>{ let ins=false; for(let i=0,j=Q.length-1;i<Q.length;j=i++){ if(((Q[i].y>py)!==(Q[j].y>py))&&(px<(Q[j].x-Q[i].x)*(py-Q[i].y)/(Q[j].y-Q[i].y)+Q[i].x)) ins=!ins; } return ins; }; for(let i=K.faces.length-1;i>=0;i--) if(inQ(K.faces[i].Q)){ const F=K.faces[i]; if(F.n[2]===0&&F.lab){ /* грань стороны света — тот же фасад, что кнопки Ю / С / В / З */ const L={'С':'N','В':'E','Ю':'S','З':'W'}[F.lab]; if(L){ el.hidden=true; undockPanel(); if(EV) EV.view=null; openElev(elevByCard(L)); return true; } } dir=F.n; break; } }
     if(!dir) return false; const h=Math.hypot(dir[0],dir[1]); if(h<1e-6) v3.pitch=dir[2]>0?1.5703:-0.35; else { v3.yaw=Math.atan2(dir[1],dir[0]); v3.pitch=dir[2]===0?0:Math.max(-0.35,Math.min(1.53,Math.atan2(dir[2],h))); } v3.pan=[0,0,0]; v3.ortho=true; v3OrthoBtn(); v3.topLock=false; v3TopBtn(); draw(); return true; };
   function v3TopBtn(){ const b=el.querySelector('[data-v3="top"]'); if(b) b.classList.toggle('go',!!v3.topLock); const o=el.querySelector('[data-v3="orb"]'); if(o) o.classList.toggle('go',!v3.topLock); }
   function v3OrthoBtn(){ const b=el.querySelector('[data-v3="ortho"]'); if(b){ b.textContent=tr(v3.ortho?'Орто':'Перспектива'); b.classList.toggle('go',!!v3.ortho); } }
@@ -6595,7 +6595,7 @@ function open3D(){ linkPick=null; ridgePick=null; let M=buildModel(); if(!M.tri.
         for(const [n,P] of FC.filter(([n])=>dep(n)>0.02).sort((a,b)=>dep(a[0])-dep(b[0]))){ const Q=P.map(pr); x.beginPath(); Q.forEach((q,i)=>i?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y)); x.closePath();
           x.globalAlpha=.92; x.fillStyle=dk?'#2a2f35':'#f8fafc'; x.fill(); x.globalAlpha=1; const m=pr(n.map(v=>v*1.0)), lab=n[2]>0?'Верх':n[2]<0?'Низ':card(n), vis=dep(n);
           if(vis>0.25){ x.save(); x.globalAlpha=Math.min(1,vis*1.4); x.fillStyle=dk?'#e2e8f0':'#334155'; x.font='700 '+(lab.length>1?9:12)+'px '+FNUM; x.fillText(lab,m.x,m.y); x.restore(); }
-          v3.cube.faces.push({Q,n}); }
+          v3.cube.faces.push({Q,n,lab}); }
         // рёбра: параллельные X — красные, Y — зелёные, Z — синие (видимые сплошные)
         for(const ax of [0,1,2]){ const col=AX[ax][1]; for(const a of [-1,1]) for(const b of [-1,1]){ const p0=[0,0,0],p1=[0,0,0], o=[0,1,2].filter(k=>k!==ax); p0[ax]=-1; p1[ax]=1; p0[o[0]]=p1[o[0]]=a; p0[o[1]]=p1[o[1]]=b;
             const nm=[0,0,0]; nm[o[0]]=a; nm[o[1]]=b; const vis=dep(nm)>-0.05; if(!vis) continue; const A=pr(p0),B=pr(p1); x.strokeStyle=col; x.lineWidth=2.2; x.beginPath(); x.moveTo(A.x,A.y); x.lineTo(B.x,B.y); x.stroke(); } }
