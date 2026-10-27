@@ -4171,7 +4171,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.4.7':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.4.8':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -8702,7 +8702,7 @@ function cabDescent(it,li,R,E,role,c,A,cache){ const nd=it.nd||{}, F=devFrame(E.
       else { tg.push({key:kk,kind:'nd',mode:'thru',p:ttop}); if(forced){ tg.push({key,kind:'nd',mode:'out',opts:['io'],lab:'внутри',p:[Q[0],Q[1],pz],anc:pp}); pp.nw=1; nw1=true; } }
       cur=null; continue; }
     const qa=axisSnap({x:Q[0],y:Q[1]}); /* ось спуска (у стены — на её грани) */ walk(ex.E,k); const zt=Q[2], d=ex.d, Eo=cabOutOf({x:ex.E.x+d.x*40,y:ex.E.y+d.y*40},d,zt-300,cache), qi={x:ex.E.x-d.x*2,y:ex.E.y-d.y*2}, Se=cabOnSurf(qi,cache,k)||cur, zb=under(Se,qi);
-    const dt=()=>{ const l=pts[pts.length-1]; if(l) l.dt=1; }; push(Eo.x,Eo.y,zt); dt(); push(Eo.x,Eo.y,zb); dt(); tg.push({key:kk,kind:'nd',mode:'around',p:[Eo.x,Eo.y,(zt+zb)/2]}); 
+    const dt=()=>{ const l=pts[pts.length-1]; if(l) l.dt=1; }; let zE=zt; { const l=pts[pts.length-1], pv=pts[pts.length-2]; if(l&&pv&&Math.hypot(l[0]-ex.E.x,l[1]-ex.E.y)<2&&Math.hypot(Eo.x-ex.E.x,Eo.y-ex.E.y)<120){ const lp=Math.hypot(l[0]-pv[0],l[1]-pv[1]); if(lp>1) zE=l[2]+(l[2]-pv[2])/lp*Math.hypot(Eo.x-l[0],Eo.y-l[1]); pts.pop(); } /* край ската и вынос за него — одна точка по продолжению ската, без короткого лишнего сегмента */ } push(Eo.x,Eo.y,zE); dt(); push(Eo.x,Eo.y,zb); dt(); tg.push({key:kk,kind:'nd',mode:'around',p:[Eo.x,Eo.y,(zt+zb)/2]}); 
     { /* под нижней кровлей — обратно на ось спуска (если там не дом и по пути нет стены) */ const dd=Math.hypot(qa.x-Eo.x,qa.y-Eo.y); if(!forced&&dd>1&&!insideAt([qa.x,qa.y,zb-60])){ /* нарисованная точка спуска — главная: после каждого обхода — обратно на неё (X/Y) */ const u2={x:(qa.x-Eo.x)/dd,y:(qa.y-Eo.y)/dd}, hw=cabWallHit(Eo,u2,zb,cache,dd+5,true); if(!hw||hw[0]>dd-5){ push(qa.x,qa.y,zb); dt(); Q=[qa.x,qa.y,zb]; cur=null; continue; } } }
     
     const wh=cabWallHit(Eo,{x:-d.x,y:-d.y},zb,cache,2500,true)||cabWallBelow(Eo,{x:-d.x,y:-d.y},zb,cache,2500); const W=wh?{x:Eo.x-d.x*(wh[0]-40),y:Eo.y-d.y*(wh[0]-40)}:Eo; const pW=push(W.x,W.y,zb); dt(); Q=[W.x,W.y,zb]; colOn=true; if(forced){ tg.push({key,kind:'nd',mode:'out',opts:['io'],lab:'внутри',p:[W.x,W.y,zb-250],anc:pW}); pW.nw=1; nw1=true; } cur=null; }
@@ -8823,7 +8823,7 @@ function cabPath(it,li){ const P=it.pts||[], role=cabKind(it); if(P.length<2) re
       if(tgAll.some(t=>t.p&&Math.hypot(t.p[0]-a[0],t.p[1]-a[1])<400&&Math.abs(t.p[2]-hit.zt)<1500)) continue;
       if(cabInsideZ(q,hit.zbo-60,cache)&&!cabInWall(q,hit.zbo-60,cache)) continue; /* под кровлей — дом: обходить нечего */ const k=cabSK(hit.s2), key='x:'+k+':'+Math.round(a[0]/100)+':'+Math.round(a[1]/100), m=nd[key]||'around';
       if(m==='around'){ const ex=cabExit(q,k,cache,(d,t,E)=>{ const Eo=cabOutOf({x:E.x+d.x*60,y:E.y+d.y*60},d,hit.zt-300,cache); return !cabInside(Eo,Math.max(0,doc.levels.findIndex(L=>L.elev>hit.zt-400)-1)); }); if(ex&&ex.t<=1800){ const D=[[a[0],a[1],hit.zt]]; const n=Math.max(1,Math.ceil(ex.t/150)); for(let j=1;j<=n;j++){ const p2={x:a[0]+ex.d.x*ex.t*j/n,y:a[1]+ex.d.y*ex.t*j/n}, sx=cabOnSurf(p2,cache,k); D.push([p2.x,p2.y,sx?sx.zf(p2):hit.zt]); } const zt2=D[D.length-1][2], Eo=cabOutOf({x:ex.E.x+ex.d.x*40,y:ex.E.y+ex.d.y*40},ex.d,hit.zt-300,cache), zb=Math.min(hit.zbo,zt2-(hit.s2.kind==='roof'?60:40)-(hit.s2.th||200))-40; /* под свесом — ниже его низа у края */
-          { const e1=[Eo.x,Eo.y,zt2], e2=[Eo.x,Eo.y,zb], e3=[a[0],a[1],zb]; e1.dt=e2.dt=e3.dt=1; D.push(e1,e2,e3); } /* под свесом — обратно на линию спуска */
+          { const e1=[Eo.x,Eo.y,zt2], e2=[Eo.x,Eo.y,zb], e3=[a[0],a[1],zb]; e1.dt=e2.dt=e3.dt=1; if(D.length>2&&Math.hypot(Eo.x-ex.E.x,Eo.y-ex.E.y)<120){ const l=D[D.length-1], pv=D[D.length-2], lp=Math.hypot(l[0]-pv[0],l[1]-pv[1]); if(lp>1) e1[2]=l[2]+(l[2]-pv[2])/lp*Math.hypot(Eo.x-l[0],Eo.y-l[1]); D.pop(); } /* без короткого сегмента на краю — по продолжению ската */ D.push(e1,e2,e3); } /* под свесом — обратно на линию спуска */
           out.splice(i+1,0,...D); tgAll.push({key,kind:'nd',mode:'around',p:[Eo.x,Eo.y,(zt2+zb)/2]}); i+=D.length; continue; } }
       tgAll.push({key,kind:'nd',mode:'thru',p:[a[0],a[1],hit.zt]}); } }
   for(let i=1;i<out.length-1;i++){ const p0=out[i-1], p1=out[i], p2=out[i+1], u=[p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]], v=[p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]], lu=Math.hypot(...u), lv=Math.hypot(...v); if(lu>0.5&&lv>0.5&&!p1.ov&&(u[0]*v[0]+u[1]*v[1]+u[2]*v[2])/(lu*lv)<-0.999){ out.splice(i,1); i=Math.max(0,i-2); } } /* туда-обратно по одной линии (сдвиг у проёма после обхода угла) */
