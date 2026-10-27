@@ -3051,5 +3051,7 @@
 "до стен": "to walls",
 "попадает всё": "everything is included",
 "Единицы показа (мм / см / м / км) выбираются в строке «Единицы измерения» выше; проект хранится и экспортируется в": "Display units (mm / cm / m / km) are chosen in the “Units” row above; the project is stored and exported to",
-"Размеры, поля, подсказки, ведомость. Экспорт": "Dimensions, fields, hints, schedule. Export"
+"Размеры, поля, подсказки, ведомость. Экспорт": "Dimensions, fields, hints, schedule. Export",
+"Нижний": "Below",
+"Нижний — этаж ниже пунктиром; Все — стены и колонны всех этажей": "Below — the floor below dashed; All — walls and columns of all floors"
 }
