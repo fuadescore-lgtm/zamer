@@ -3028,5 +3028,6 @@
 "Отображать: скрыть или показать категории (стены, окна, панели…) — отдельно на плане и в": "Display: hide or show categories (walls, windows, panels…) — separately on the plan and in",
 "на фасадах. Окна и двери скрываются, а проёмы в стенах остаются. В отчёт и в файлы": "on elevations. Windows and doors are hidden, wall openings remain. Reports and files",
 "и на фасадах": "and on elevations",
-"и фасады": "and elevations"
+"и фасады": "and elevations",
+"Удалить узел (участок закрепится своими вершинами)": "Delete node (the section is pinned with own vertices)"
 }
