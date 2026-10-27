@@ -3060,5 +3060,13 @@
 "Выбирать» без галочки — элементы видны, но не выделяются; набор свой для плана": "Select” unchecked — items are visible but cannot be selected; each has its own set: plan",
 "Электрики» и «Механики": "Electrical” and “Mechanics",
 "на фасадах. Окна и двери скрываются, а проёмы в стенах остаются. «Выбирать» без галочки — элементы видны, но не выделяются; набор свой для плана": "elevations. Windows and doors are hidden, while the openings in walls remain. “Select” unchecked — items are visible but cannot be selected; each has its own set: plan",
-"Электрики» и «Механики». В отчёт и в файлы": "Electrical” and “Mechanics”. The report and files"
+"Электрики» и «Механики». В отчёт и в файлы": "Electrical” and “Mechanics”. The report and files",
+"Арочная": "Arched",
+"Прямоугольный": "Rectangular",
+"Арочный": "Arched",
+"форма": "shape",
+"прямоугольное": "rectangular",
+"прямоугольная": "rectangular",
+"арочная": "arched",
+"прямоугольный": "rectangular"
 }
