@@ -3074,5 +3074,11 @@
 "расцепить": "unlink",
 "Замок открыт: размеры тянутся по отдельности": "Lock open: dimensions move separately",
 "Замок закрыт: цепочка тянется вместе": "Lock closed: the chain moves together",
-"тянутся вместе. Касание замка — расцепить": "move together. Tap the lock to unlink"
+"тянутся вместе. Касание замка — расцепить": "move together. Tap the lock to unlink",
+"Свободный": "Free",
+"Между устр.": "Between dev.",
+"Трасса кабеля: по кровле, на высоте, между устройствами или свободно": "Cable route: over the roof, at height, between devices or free",
+"Ровно по вашим вершинам — без обходов и автоматики, как пластилин": "Exactly through your vertices — no bypasses or automation, like clay",
+"Свободный: вершины встают куда поставите — без обходов и автоматики": "Free: vertices stay where you put them — no bypasses or automation",
+"Между устройствами: от верхнего вниз на вынос, горизонтально, к нижнему — сверху": "Between devices: down from the upper one by the offset, horizontally, into the lower one from above"
 }
