@@ -3008,5 +3008,16 @@
 "Править трассу: тянуть вершины и отрезки": "Edit route: drag vertices and segments",
 "Закончить правку трассы": "Finish route editing",
 "Править трассу": "Edit route",
-"весь кабель: вертикали — строго вертикально и на одну ось, горизонтали — ровно по": "the whole cable: verticals — strictly vertical and onto one axis, horizontals — straight along"
+"весь кабель: вертикали — строго вертикально и на одну ось, горизонтали — ровно по": "the whole cable: verticals — strictly vertical and onto one axis, horizontals — straight along",
+"Точка посередине выбранной линии — линия разделится на две": "A point in the middle of the selected line — the line splits in two",
+"Это уже точка эскиза": "This is already a sketch point",
+"линию": "line",
+"точку": "point",
+"Выбрать": "Select",
+"двигать": "move",
+"Разделить: точка на линии": "Split: point on a line",
+"коснитесь линии — в этом месте появится точка, линия разделится на две; точку можно тянуть": "tap a line — a point appears there and the line splits in two; the point can be dragged",
+"касание — выбрать точку или линию, тяните — двигать; «Удалить» / «Разделить» — в меню": "tap — select a point or line, drag — move; «Delete» / «Split» — in the menu",
+"точку (две линии сольются в одну": "point (two lines merge into one",
+"Удалить выбранную": "Delete selected"
 }
