@@ -3261,5 +3261,11 @@
 "бокс, розетки, свет": "box, sockets, lights",
 "условное перекрытие": "nominal floor slab",
 "Подушка в": "Pad at",
-"Бетон, м": "Concrete, m"
+"Бетон, м": "Concrete, m",
+"Здесь несколько элементов — выбрать из списка": "Several items here — pick from the list",
+"Вспом. линия": "Aux line",
+"Под пальцем": "Under your finger",
+"ближе": "nearer",
+"дальше": "farther",
+"Прибор": "Device"
 }
