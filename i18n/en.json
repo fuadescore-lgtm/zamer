@@ -3277,5 +3277,10 @@
 "Орто — только по": "Ortho — only along",
 "Отсоединено: колонну можно двигать — балка останется на месте": "Disconnected: you can move the column — the beam stays in place",
 "Соединено: балка тянется за колонной": "Connected: the beam follows the column",
-"Конец балки соединён с колонной": "Beam end connected to the column"
+"Конец балки соединён с колонной": "Beam end connected to the column",
+"Конец кабеля у прибора — идёт вместе с прибором; точку подключения выберите в панели": "Cable end at the device — it moves with the device; choose the connection point in the panel",
+"В этом направлении узел держит режим трассы (у стены / у прибора). Тяните по другой стрелке или выберите «Трасса ▾ → Свободный»": "The route mode holds this node in this direction (at the wall / at the device). Drag another arrow or choose “Route ▾ → Free”",
+"Здесь узел не сдвигается": "This node cannot move here",
+" · у прибора": " · at the device",
+"у прибора": "at the device"
 }
