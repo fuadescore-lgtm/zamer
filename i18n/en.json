@@ -3081,5 +3081,14 @@
 "Ровно по вашим вершинам — без обходов и автоматики, как пластилин": "Exactly through your vertices — no bypasses or automation, like clay",
 "Свободный: вершины встают куда поставите — без обходов и автоматики": "Free: vertices stay where you put them — no bypasses or automation",
 "Между устройствами: от верхнего вниз на вынос, горизонтально, к нижнему — сверху": "Between devices: down from the upper one by the offset, horizontally, into the lower one from above",
-"Вершины слились в одну": "Vertices merged into one"
+"Вершины слились в одну": "Vertices merged into one",
+"Прямой": "Direct",
+"Выберите — потом рисуйте трассу на плане": "Choose, then draw the route on the plan",
+"обходы, стены": "bypasses, walls",
+"как пластилин": "like clay",
+"Горизонталь на +50 мм от уровня этажа; к приборам — вертикально": "Horizontal run at +50 mm above the floor level; vertical to devices",
+"Горизонталь на 200 мм выше (или ниже) верхнего прибора; ко второму — вертикально до ввода": "Horizontal run 200 mm above (or below) the upper device; vertical down to the second device inlet",
+"Горизонталь на 250 мм ниже следующего уровня (150 — условное перекрытие + 100)": "Horizontal run 250 mm below the next level (150 nominal slab + 100)",
+"Трасса кабеля: по кровле, между устройствами (по полу / прямой / по потолку) или свободно": "Cable route: over the roof, between devices (floor / direct / ceiling) or free",
+"Горизонталь на": "Horizontal run at"
 }
