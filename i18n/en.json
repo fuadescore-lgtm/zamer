@@ -3284,5 +3284,8 @@
 " · у прибора": " · at the device",
 "у прибора": "at the device",
 "В этом направлении узел держит режим трассы (у стены / у прибора). Тяните по другой стрелке или выберите «Трасса": "The route mode holds this node in this direction (at the wall / at the device). Drag another arrow or choose “Route",
-"Раскладка строк": "String layout"
+"Раскладка строк": "String layout",
+"Правка кабеля закончена": "Cable editing finished",
+"Правка кабеля: касайтесь узлов и отрезков; выйти — «✓ Готово»": "Cable editing: tap nodes and segments; to exit — “✓ Done”",
+"✓ Готово": "✓ Done"
 }
