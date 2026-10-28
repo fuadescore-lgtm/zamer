@@ -3159,5 +3159,11 @@
 "Проём оконный (без окна, низ — подоконник": "Window opening (no window, bottom at sill",
 "Проём дверной (без полотна, от пола": "Door opening (no leaf, from floor",
 "Все соседние колонны по осям": "All neighbouring columns along the axes",
-"Соединить» включено": "Join” is on"
+"Соединить» включено": "Join” is on",
+"В окне Claude файл скачать нельзя": "A file cannot be downloaded in the Claude window",
+"сохранён в списке": "is saved in the list",
+"Чертежи": "Drawings",
+"меню → Открыть": "menu → Open",
+"Создан новый чертёж": "A new drawing is created",
+"файл скачать нельзя": "a file cannot be downloaded"
 }
