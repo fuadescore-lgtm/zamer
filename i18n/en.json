@@ -3282,5 +3282,7 @@
 "В этом направлении узел держит режим трассы (у стены / у прибора). Тяните по другой стрелке или выберите «Трасса ▾ → Свободный»": "The route mode holds this node in this direction (at the wall / at the device). Drag another arrow or choose “Route ▾ → Free”",
 "Здесь узел не сдвигается": "This node cannot move here",
 " · у прибора": " · at the device",
-"у прибора": "at the device"
+"у прибора": "at the device",
+"В этом направлении узел держит режим трассы (у стены / у прибора). Тяните по другой стрелке или выберите «Трасса": "The route mode holds this node in this direction (at the wall / at the device). Drag another arrow or choose “Route",
+"Раскладка строк": "String layout"
 }
