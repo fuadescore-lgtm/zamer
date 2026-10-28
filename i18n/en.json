@@ -3235,5 +3235,11 @@
 "Под выбранные колонны": "Under selected columns",
 "Касайтесь колонн — выбор": "Tap columns to select",
 "Выбор колонн": "Pick columns",
-"Штучный выбор колонн: касайтесь колонн, потом «Под выбранные": "Pick columns one by one: tap columns, then “Under selected"
+"Штучный выбор колонн: касайтесь колонн, потом «Под выбранные": "Pick columns one by one: tap columns, then “Under selected",
+"Переместить": "Move",
+"Выбрано колонн": "Columns selected",
+"Скрыть / показать панель инструментов": "Hide / show the toolbar",
+"Балка: коснитесь следующей колонны; та же колонна ещё раз — готово": "Beam: tap the next column; the same column again — done",
+"Переместить: возьмите за центр или угол — магнит к точкам соседей, пунктир выравнивания; Орто — по осям": "Move: grab the centre or a corner — snaps to neighbours’ points, dashed alignment; Ortho — along axes",
+"Переместить: возьмите за точку (центр или угол) и тяните — магнит к точкам соседей, пунктир выравнивания": "Move: grab a point (centre or corner) and drag — snaps to neighbours’ points, dashed alignment"
 }
