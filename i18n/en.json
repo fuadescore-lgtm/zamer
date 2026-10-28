@@ -3271,5 +3271,11 @@
 "Прицеплено к колонне": "Attached to the column",
 "Орто: двигать только по X или Y (та же кнопка, что сверху)": "Ortho: move only along X or Y (same as the top button)",
 "Орто выключено — свободно": "Ortho off — free movement",
-"Орто — только по X или Y": "Ortho — only along X or Y"
+"Орто — только по X или Y": "Ortho — only along X or Y",
+"та же кнопка, что сверху": "same as the top button",
+"Орто: двигать только по": "Ortho: move only along",
+"Орто — только по": "Ortho — only along",
+"Отсоединено: колонну можно двигать — балка останется на месте": "Disconnected: you can move the column — the beam stays in place",
+"Соединено: балка тянется за колонной": "Connected: the beam follows the column",
+"Конец балки соединён с колонной": "Beam end connected to the column"
 }
