@@ -3267,5 +3267,9 @@
 "Под пальцем": "Under your finger",
 "ближе": "nearer",
 "дальше": "farther",
-"Прибор": "Device"
+"Прибор": "Device",
+"Прицеплено к колонне": "Attached to the column",
+"Орто: двигать только по X или Y (та же кнопка, что сверху)": "Ortho: move only along X or Y (same as the top button)",
+"Орто выключено — свободно": "Ortho off — free movement",
+"Орто — только по X или Y": "Ortho — only along X or Y"
 }
