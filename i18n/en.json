@@ -3230,5 +3230,10 @@
 "Ведомость фундаментов (бетон": "Foundation schedule (concrete",
 "ступени + подколонник": "steps + pedestal",
 "Ленточный фундамент": "Strip foundation",
-"сваи": "pile"
+"сваи": "pile",
+"Под выбранные": "Under selected",
+"Под выбранные колонны": "Under selected columns",
+"Касайтесь колонн — выбор": "Tap columns to select",
+"Выбор колонн": "Pick columns",
+"Штучный выбор колонн: касайтесь колонн, потом «Под выбранные": "Pick columns one by one: tap columns, then “Under selected"
 }
