@@ -3302,5 +3302,7 @@
 "Механика: коснитесь крыши — стропила, массива — крепление": "Mechanics: tap the roof for rafters, the array for mounting",
 "Стрелки осей X, Y, Z в начале координат": "X, Y, Z axis arrows at the origin",
 "Оси: вкл": "Axes: on",
-"Оси: выкл": "Axes: off"
+"Оси: выкл": "Axes: off",
+" (над остальной частью стены)": " (over the rest of the wall)",
+"Кабель проходит по окну": "The cable runs across the window"
 }
