@@ -3289,5 +3289,6 @@
 "Правка кабеля: касайтесь узлов и отрезков; выйти — «✓ Готово»": "Cable editing: tap nodes and segments; to exit — “✓ Done”",
 "✓ Готово": "✓ Done",
 "Правка кабеля: касайтесь узлов и отрезков; выйти": "Cable editing: tap nodes and segments; to exit",
-"Правка кабеля отменена": "Cable editing cancelled"
+"Правка кабеля отменена": "Cable editing cancelled",
+"Трасса переведена в «Свободный» — двигаются только ваши узлы («назад» — вернуть)": "Route switched to “Free” — only your nodes move (“Undo” to revert)"
 }
