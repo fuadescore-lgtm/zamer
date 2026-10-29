@@ -969,7 +969,7 @@ function colRoofUnder(it,li){ const z0=chimBot(it,li), top=z0+lvHeight(li), O=ch
   doc.levels.forEach((Lv,k)=>{ if(Lv.gp) return; for(const r of Lv.items){ if(r.t!=='roof') continue; try{ const g=onLvG(k,()=>roofGeom(r,k)); if(!inPoly(g.O,it.p)) continue; const hs=O.map(q=>g.H(q)), lo=Math.min(...hs), hi=Math.max(...hs); if(lo<z0+300) continue;
       if(!best||lo<best.lo) best={lo,hi,th:g.th,base:onLvG(k,()=>roofBase(r,k))}; }catch(e){} } }); return best; }
 // перекрытие над колонной: низ ближайшей плиты выше низа колонны (любой уровень)
-function colSlabUnder(it,li){ const z0=chimBot(it,li); let best=null; doc.levels.forEach((Lv,k)=>{ if(Lv.gp) return; for(const s of Lv.items){ if(s.t!=='slab'||!inPoly(s.pts,it.p)) continue; const Z=slabZ(s,k); if(Z.z0<z0+300) continue; if(!best||Z.z0<best.z) best={z:Z.z0,s}; } }); return best; }
+function colSlabUnder(it,li){ const z0=chimBot(it,li); let best=null; doc.levels.forEach((Lv,k)=>{ if(Lv.gp) return; for(const s of Lv.items){ if(s.t!=='slab'||!inPoly(s.pts,it.p)) continue; const Z=slabZ(s,k); if(Z.z0<z0+300||Z.z1<=z0+1200) continue; /* настил крыльца / ступени под колонной (верх ниже 1,2 м) — не перекрытие над ней */ if(!best||Z.z0<best.z) best={z:Z.z0,s}; } }); return best; }
 // верх колонны: tm = 'lv' (высота этажа) | 'own' (своя) | 'roof' (до крыши) | 'slab' (до перекрытия); нет — авто (под крышей этажа — до крыши, иначе этаж)
 function colMode(it,li){ if(it.tm) return it.tm; if(it.ra===false) return it.hgt>0?'own':'lv'; if(it.ra===true) return 'roof'; const R=colRoofUnder(it,li); if(R&&R.base<=chimBot(it,li)+lvHeight(li)+50) return 'roof'; return it.hgt>0?'own':'lv'; }
 function colAttached(it,li){ if(colMode(it,li)!=='roof') return null; return colRoofUnder(it,li); }
@@ -4429,7 +4429,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.8.1':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.8.2':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
