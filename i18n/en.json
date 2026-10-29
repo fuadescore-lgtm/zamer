@@ -3304,5 +3304,15 @@
 "Оси: вкл": "Axes: on",
 "Оси: выкл": "Axes: off",
 " (над остальной частью стены)": " (over the rest of the wall)",
-"Кабель проходит по окну": "The cable runs across the window"
+"Кабель проходит по окну": "The cable runs across the window",
+"Прибор под ": "Device under the ",
+"Прибор над ": "Device above the ",
+"окном": "window",
+"дверью": "door",
+": кабель к нему пройдёт поперёк ": ": its cable will run across the ",
+": кабель снизу пройдёт поперёк ": ": the cable from below will run across the ",
+". Лучше сдвиньте в простенок": ". Better move it to a solid wall section",
+"Прибор на ": "Device on the ",
+"окне": "window",
+" — сдвиньте в простенок": " — move it to a solid wall section"
 }
