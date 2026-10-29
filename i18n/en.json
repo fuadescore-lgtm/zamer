@@ -3440,5 +3440,8 @@
 "сдвиньте в простенок": "move it to a wall pier",
 "над остальной частью стены": "above the rest of the wall",
 "Назад к окнам и дверям": "Back to windows and doors",
-"R вн": "R in"
+"R вн": "R in",
+"Изломы, м": "Breaks, m",
+"Планка излома (мансарда, купол)": "Break flashing (mansard, dome)",
+"Прогон по излому (мансарда, купол)": "Purlin at the break (mansard, dome)"
 }
