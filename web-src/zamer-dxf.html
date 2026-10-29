@@ -4428,7 +4428,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.7.8':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.7.9':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -5507,6 +5507,7 @@ function wallTopProfile(it,li){ let cov=wallRoofs(it,li); if(!cov) return null; 
   if(cov[0].pick){ // выбранные крыши: стена «берёт» крышу только в пределах её контура (линия стен), свес не тянет; под несколькими — НИЖНЯЯ; вне — своя высота («Своя» или до уровня); невыбранные не влияют
     // какие крыши над точкой — по ОСИ стены (одно решение на всю толщину: уступ — чистая вертикаль, без клиньев)
     const L=Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y), u={x:(it.b.x-it.a.x)/(L||1),y:(it.b.y-it.a.y)/(L||1)}, hw=Math.abs((w.aL.x-w.aR.x)*u.y-(w.aL.y-w.aR.y)*u.x)/2;
+    const alongE=(o,c)=>{ const P=o.r.pts||o.g.P; if(!P) return false; for(let i=0;i<P.length;i++){ const A=P[i],B=P[(i+1)%P.length], lb=Math.hypot(B.x-A.x,B.y-A.y)||1, cr=Math.abs(((B.x-A.x)*u.y-(B.y-A.y)*u.x)/lb); if(cr>=0.02) continue; const d=segDistW(c,A,B); if(d>hw+1) continue; const tt=((c.x-A.x)*(B.x-A.x)+(c.y-A.y)*(B.y-A.y))/(lb*lb); if(tt>=-1e-3&&tt<=1+1e-3) return true; } return false; }; /* ось стены — по краю контура крыши */
     const inHole=(o,q)=>!!(o.g.holes&&o.g.holes.some(H=>inPoly(H,q))), covers=(o,c)=>{ if(inHole(o,c)) return false; const P=o.g.P||o.r.pts; if(inPoly(P,c)) return true; for(let i=0;i<P.length;i++){ const A=P[i],B=P[(i+1)%P.length], d=segDistW(c,A,B); if(d<=0.5) return true; const lb=Math.hypot(B.x-A.x,B.y-A.y)||1, cr=Math.abs(((B.x-A.x)*u.y-(B.y-A.y)*u.x)/lb); if(cr<0.02&&d<=hw+1){ const tt=((c.x-A.x)*(B.x-A.x)+(c.y-A.y)*(B.y-A.y))/(lb*lb); if(tt>=0&&tt<=1) return true; } } return false; }; // стена вдоль края контура — под крышей целиком
     // сечения ПОПЕРЁК стены: точки левой и правой грани на одном расстоянии s по оси (иначе на скошенных торцах уступ идёт наискось — клин)
     const sOf=q=>(q.x-it.a.x)*u.x+(q.y-it.a.y)*u.y, sL0=sOf(w.aL), sL1=sOf(w.bL), sR0=sOf(w.aR), sR1=sOf(w.bR);
@@ -5521,11 +5522,14 @@ function wallTopProfile(it,li){ let cov=wallRoofs(it,li); if(!cov) return null; 
     const SS=[...new Set(S.filter(s=>s>=Smin-1e-6&&s<=Smax+1e-6).map(s=>Math.round(s*1e4)/1e4))].sort((a,b)=>a-b);
     const Lp=[], Rp=[]; let any=false;
     for(const s of SS){ const l=onF(w.aL,w.bL,sL0,sL1,s), r=onF(w.aR,w.bR,sR0,sR1,s), sc=Math.max(0,Math.min(L,s)), c={x:it.a.x+u.x*sc+nv.x*oc,y:it.a.y+u.y*sc+nv.y*oc}; /* угол стыка стен (за концом оси) — как у конца стены: без столбиков над крышей */
-      const on=cov.filter(o=>covers(o,c)); let zl=null, zr=null; for(const o of on){ try{ const hl=o.g.H(l), hr=o.g.H(r); if(zl==null||hl+hr<zl+zr){ zl=hl; zr=hr; } }catch(e){} } // нижняя крыша
+      const on=cov.filter(o=>covers(o,c)); let zl=null, zr=null;
+      /* стена по общей границе двух НЕсоединённых крыш (низкий и высокий объём рядом) — это стенка уступа: до ВЕРХНЕЙ; иначе (ендова, конёк между соединёнными) — под нижней */
+      const hiB=on.length>=2&&on.every(o=>!o.r||o.r.t!=='roof'?false:alongE(o,c))&&on.every((o,i)=>on.every((q,j)=>i===j||!roofJoined(o.r,q.r)))&&(()=>{ const sd=o=>{ const P=o.r.pts; const cx=P.reduce((m,q)=>m+q.x,0)/P.length, cy=P.reduce((m,q)=>m+q.y,0)/P.length; return Math.sign((cx-it.a.x)*u.y-(cy-it.a.y)*u.x); }; const S=on.map(sd); return S.some(v=>v>0)&&S.some(v=>v<0); })(); /* крыши по разные стороны стены — стена их разделяет */
+      for(const o of on){ try{ const hl=o.g.H(l), hr=o.g.H(r); if(zl==null||(hiB?hl+hr>zl+zr:hl+hr<zl+zr)){ zl=hl; zr=hr; } }catch(e){} } // нижняя крыша (или верхняя — у стенки уступа)
       if(zl==null){ // под свесом выбранной крыши (за контуром): своя высота, но не выше низа крыши — стена кровлю не протыкает
         for(const o of cov){ if(!(inPoly(o.g.O,c)||segDistPoly(o.g.O,c)<=0.5)||inHole(o,c)) continue; try{ const hl=Math.min(z1,o.g.H(l)), hr=Math.min(z1,o.g.H(r)); if(zl==null||hl+hr<zl+zr){ zl=hl; zr=hr; } }catch(e){} } }
       l.z=zl==null?z1:zl; r.z=zr==null?z1:zr;
-      for(const o of cov){ try{ if((inPoly(o.g.O,l)&&!inHole(o,l))||(inPoly(o.g.O,r)&&!inHole(o,r))){ l.z=Math.min(l.z,o.g.H(l)); r.z=Math.min(r.z,o.g.H(r)); } }catch(e){} } /* жёстко: ни одна точка стены не выше низа выбранной крыши над ней */ if(Math.abs(l.z-z1)>1||Math.abs(r.z-z1)>1) any=true; Lp.push(l); Rp.push(r); }
+      for(const o of cov){ if(hiB&&on.includes(o)) continue; try{ if((inPoly(o.g.O,l)&&!inHole(o,l))||(inPoly(o.g.O,r)&&!inHole(o,r))){ l.z=Math.min(l.z,o.g.H(l)); r.z=Math.min(r.z,o.g.H(r)); } }catch(e){} } /* жёстко: ни одна точка стены не выше низа выбранной крыши над ней */ if(Math.abs(l.z-z1)>1||Math.abs(r.z-z1)>1) any=true; Lp.push(l); Rp.push(r); }
     if(!any) return null; const {z0}=wallZ(it,li); let zc=z1; for(const q of Lp.concat(Rp)) zc=Math.min(zc,q.z); zc=Math.max(z0+100,zc); for(const q of Lp.concat(Rp)) q.z=Math.max(q.z,zc);
     return {Lp,Rp,z1:zc,zt:z1}; }
   // соединённые крыши над стеной тоже учитываются: под встречными скатами стена идёт под нижней (см. roofUnder)
@@ -6784,6 +6788,7 @@ function open3D(){ linkPick=null; ridgePick=null; let M=buildModel(); if(!M.tri.
   function v3Side(){ const sd=el.querySelector('.v3side'); if(!sd) return; const map={u:'btnUndo',r:'btnRedo',d:'btnDel',c:'btnCancel',o:'btnOk'}; for(const b of sd.querySelectorAll('[data-v3s]')){ const src=$('#'+map[b.dataset.v3s]); b.hidden=!!src.hidden; b.disabled=!!src.disabled; } }
   v3.side=v3Side; if(!el._sideT) el._sideT=setInterval(()=>{ if(!el.hidden&&v3&&v3.side) v3.side(); },400);
   v3.refresh=()=>{ if(v3.sel){ const L=doc.levels[v3.sel.li]; if(!L||!L.items.some(i=>i.id===v3.sel.id)) v3.sel=null; } if(selId&&v3.sel&&v3.sel.id!==selId) v3.sel=null; upload(); draw(); v3Panel(); };
+  try{ M._u=doc.updated; upload(true); draw(); requestAnimationFrame(()=>{ try{ if(v3&&!el.hidden) draw(); }catch(_){} }); }catch(e){ console.warn(e); } /* первый показ — так же, как после правки: кроны деревьев полупрозрачные */
   // жесты: один палец — вращать, два — масштаб и сдвиг; колесо — масштаб
   const P=new Map(); let last=null;
   let tap=null, hd=null;
@@ -9064,13 +9069,13 @@ function cabDescent(it,li,R,E,role,c,A,cache){ const nd={...(it.nd||{})}, F=devF
       if(inB&&!forced){ if(!nwOn) tg.push({key,kind:'nd',mode:'in',opts:['io'],lab:'снаружи',p:[Q[0],Q[1],pz],anc:pp}); /* уже внутри (перекрытие между этажами) — без кнопки */ pp.nw=1; nwOn=true; }
       else { tg.push({key:kk,kind:'nd',mode:'thru',p:ttop}); if(forced){ tg.push({key,kind:'nd',mode:'out',opts:['io'],lab:'внутри',p:[Q[0],Q[1],pz],anc:pp}); pp.nw=1; nw1=true; } }
       cur=null; continue; }
-    let preSh=null; if(!forced){ try{ /* окно под карнизом на линии спуска: край спуска сдвигаем вдоль стены к простенку — спуск ровно вертикальный, без «ступеньки» под свесом */
+    let preSh=null, preE0=null; if(!forced){ try{ /* окно под карнизом на линии спуска: край спуска сдвигаем вдоль стены к простенку — спуск ровно вертикальный, без «ступеньки» под свесом */
       const ok2='oe:'+role+run, pred=E0=>{ const Eo=cabOutOf({x:E0.x+ex.d.x*40,y:E0.y+ex.d.y*40},ex.d,Q[2]-300,cache), qi={x:E0.x-ex.d.x*2,y:E0.y-ex.d.y*2}, Se=cabOnSurf(qi,cache,k)||cur, zb=under(Se,qi), md={x:-ex.d.x,y:-ex.d.y}, wh=cabWallHit(Eo,md,zb,cache,2500,true)||cabWallBelow(Eo,md,zb,cache,2500); return wh?{W:{x:Eo.x-ex.d.x*(wh[0]-40),y:Eo.y-ex.d.y*(wh[0]-40)},zb}:null; };
       const p0=pred(ex.E), oc=p0&&!insideAt([p0.W.x,p0.W.y,p0.zb-60])?cabHoleClear([p0.W.x,p0.W.y,p0.zb],A[2],p0.zb,null,null,cache):null;
       if(oc&&oc.hit&&!oc.kin&&oc.d>1&&oc.d<4000){ const nm=oc.hit.t==='door'?'двери':'окна';
-        if((nd[ok2]||'around')==='around'){ const sh={x:oc.P.x-p0.W.x,y:oc.P.y-p0.W.y}, E2={x:ex.E.x+sh.x,y:ex.E.y+sh.y}; if(cabOnSurf({x:E2.x-ex.d.x*2,y:E2.y-ex.d.y*2},cache,k)){ const p1=pred(E2); if(p1&&Math.hypot(p1.W.x-oc.P.x,p1.W.y-oc.P.y)<5&&!cabHoleClear([p1.W.x,p1.W.y,p1.zb],A[2],p1.zb,null,null,cache).hit){ ex.E=E2; preSh=sh; tg.push({key:ok2,kind:'nd',mode:'around',p:[p1.W.x,p1.W.y,p1.zb-200],lab:'обход проёма',warn:[1,'Спуск сдвинут на '+Math.round(oc.d)+' мм от '+nm]}); } } }
+        if((nd[ok2]||'around')==='around'){ const sh={x:oc.P.x-p0.W.x,y:oc.P.y-p0.W.y}, E2={x:ex.E.x+sh.x,y:ex.E.y+sh.y}; if(cabOnSurf({x:E2.x-ex.d.x*2,y:E2.y-ex.d.y*2},cache,k)){ const p1=pred(E2); if(p1&&Math.hypot(p1.W.x-oc.P.x,p1.W.y-oc.P.y)<5&&!cabHoleClear([p1.W.x,p1.W.y,p1.zb],A[2],p1.zb,null,null,cache).hit){ preE0=ex.E; ex.E=E2; preSh=sh; tg.push({key:ok2,kind:'nd',mode:'around',p:[p1.W.x,p1.W.y,p1.zb-200],lab:'обход проёма',warn:[1,'Спуск сдвинут на '+Math.round(oc.d)+' мм от '+nm]}); } } }
         else { tg.push({key:ok2,kind:'nd',mode:'thru',p:[p0.W.x,p0.W.y,p0.zb-200],lab:'по проёму',warn:[2,'Кабель проходит по '+(oc.hit.t==='door'?'двери':'окну')]}); for(const kk of ['o:'+role+run,'o:w'+role,'o:'+role]) nd[kk]='thru'; } } }catch(_){} }
-    let qa=axisSnap({x:Q[0],y:Q[1]}); /* ось спуска (у стены — на её грани) */ if(preSh) qa={x:qa.x+preSh.x,y:qa.y+preSh.y}; walk(ex.E,k); const zt=Q[2], d=ex.d, Eo=cabOutOf({x:ex.E.x+d.x*40,y:ex.E.y+d.y*40},d,zt-300,cache), qi={x:ex.E.x-d.x*2,y:ex.E.y-d.y*2}, Se=cabOnSurf(qi,cache,k)||cur, zb=under(Se,qi);
+    let qa=axisSnap({x:Q[0],y:Q[1]}); /* ось спуска (у стены — на её грани) */ if(preSh) qa={x:qa.x+preSh.x,y:qa.y+preSh.y}; if(preSh&&preE0){ const dd0=ex.d, inn=200; walk({x:preE0.x-dd0.x*inn,y:preE0.y-dd0.y*inn},k); walk({x:ex.E.x-dd0.x*inn,y:ex.E.y-dd0.y*inn},k); } /* к краю и вдоль карниза до простенка — без косого участка через скат */ walk(ex.E,k); const zt=Q[2], d=ex.d, Eo=cabOutOf({x:ex.E.x+d.x*40,y:ex.E.y+d.y*40},d,zt-300,cache), qi={x:ex.E.x-d.x*2,y:ex.E.y-d.y*2}, Se=cabOnSurf(qi,cache,k)||cur, zb=under(Se,qi);
     const dt=()=>{ const l=pts[pts.length-1]; if(l) l.dt=1; }; let zE=zt; { const l=pts[pts.length-1], pv=pts[pts.length-2]; if(l&&pv&&Math.hypot(l[0]-ex.E.x,l[1]-ex.E.y)<2&&Math.hypot(Eo.x-ex.E.x,Eo.y-ex.E.y)<120){ const lp=Math.hypot(l[0]-pv[0],l[1]-pv[1]); if(lp>1) zE=l[2]+(l[2]-pv[2])/lp*Math.hypot(Eo.x-l[0],Eo.y-l[1]); pts.pop(); } /* край ската и вынос за него — одна точка по продолжению ската, без короткого лишнего сегмента */ } push(Eo.x,Eo.y,zE); dt(); push(Eo.x,Eo.y,zb); dt(); tg.push({key:kk,kind:'nd',mode:'around',p:[Eo.x,Eo.y,(zt+zb)/2]}); 
     { /* под нижней кровлей — обратно на ось спуска (если там не дом и по пути нет стены) */ const dd=Math.hypot(qa.x-Eo.x,qa.y-Eo.y); if(!forced&&dd>1&&!insideAt([qa.x,qa.y,zb-60])){ /* нарисованная точка спуска — главная: после каждого обхода — обратно на неё (X/Y) */ const u2={x:(qa.x-Eo.x)/dd,y:(qa.y-Eo.y)/dd}, hw=cabWallHit(Eo,u2,zb,cache,dd+5,true); if(!hw||hw[0]>dd-5){ push(qa.x,qa.y,zb); dt(); Q=[qa.x,qa.y,zb]; cur=null; continue; } } }
     
