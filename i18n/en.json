@@ -3296,5 +3296,11 @@
 "Подготовка": "Preparing",
 "Отменяю": "Cancelling",
 "Модель дома": "House model",
-"Расчёт отменён": "Calculation cancelled"
+"Расчёт отменён": "Calculation cancelled",
+"Мансардное окно: коснитесь ската крыши. Зелёным — где оно помещается": "Skylight: tap a roof slope. Green shows where it fits",
+"Слуховое окно: коснитесь ската крыши — там будет его передняя стенка. Зелёным — где оно помещается": "Dormer: tap a roof slope — its front wall goes there. Green shows where it fits",
+"Механика: коснитесь крыши — стропила, массива — крепление": "Mechanics: tap the roof for rafters, the array for mounting",
+"Стрелки осей X, Y, Z в начале координат": "X, Y, Z axis arrows at the origin",
+"Оси: вкл": "Axes: on",
+"Оси: выкл": "Axes: off"
 }
