@@ -3544,5 +3544,7 @@
 "мм: стена сдвинута": "mm: wall moved",
 "Размер привязан": "Dimension bound",
 "Привязать": "Bind",
-"размера к": "of dimension to"
+"размера к": "of dimension to",
+"— разные —": "— varies —",
+"Разные значения — введите, чтобы задать всем": "Different values — enter one to set for all"
 }
