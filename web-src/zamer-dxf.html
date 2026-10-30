@@ -898,7 +898,7 @@ function fndSlabHouse(){ const W=doc.items.filter(isWall); if(!W.length){ toast(
   const D=fndDef(), big=O.slice().sort((a,b)=>Math.abs(polyArea2(b))-Math.abs(polyArea2(a)))[0]; pushUndo(); const o={id:uid(),t:'fnd',k:'slab',pts:offPolyOut(big,D.ext),th:D.th}; doc.items.push(o); selId=o.id; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); toast('Плита по контуру дома (выпуск '+fmt(D.ext)+' мм)',true); }
 
 /* ---------- «Переместить»: точки привязки (центр, углы / четверти), магнит к точкам соседей и выравнивание по X/Y пунктиром ---------- */
-let mvB=null, mvGuide=null;
+let mvB=null, mvGuide=null, mvAx0=null;
 const MVT=it=>!!it&&!isHole(it)&&['chim','beam','fnd','tree','prim','dev','circ','text','stair','img'].includes(it.t)||isHole(it)||(!!it&&it.t==='line');
 function gripsOf(it){ const G=[]; try{
   if(it.t==='chim'){ G.push({...it.p,k:'c'}); if(chimRound(it)){ const r=it.w/2; G.push({x:it.p.x+r,y:it.p.y},{x:it.p.x-r,y:it.p.y},{x:it.p.x,y:it.p.y+r},{x:it.p.x,y:it.p.y-r}); } else G.push(...chimCorners(it)); }
@@ -1386,7 +1386,7 @@ function faceParts(Y,p0,p1,gaps){
   if(cur<s1) out.push([at(cur),p1]);
   return out;
 }
-function joints(){ const out=[], SJ=tool==='select'&&!editLine&&!editGrp?selIds():null; for(const it of doc.items){ if(it.t!=='line'||(it.g&&it.g===editGrp?false:(it.id!==editLine&&!(SJ&&SJ.has(it.id)&&SJ.size<=24)))) continue;
+function joints(){ if(mvB&&tool==='select') return []; /* «Переместить»: только точки захвата */ const out=[], SJ=tool==='select'&&!editLine&&!editGrp?selIds():null; for(const it of doc.items){ if(it.t!=='line'||(it.g&&it.g===editGrp?false:(it.id!==editLine&&!(SJ&&SJ.has(it.id)&&SJ.size<=24)))) continue;
     for(const p of [it.a,it.b]) if(!out.some(q=>near(q,p))) out.push(p); } return out; }
 function jointLines(P){ const r=[]; for(const it of doc.items){ if(it.t!=='line') continue;
     if(near(it.a,P)) r.push([it,'a']); else if(near(it.b,P)) r.push([it,'b']); } return r; }
@@ -1857,7 +1857,7 @@ function drawBeamJoins(){ if(tool!=='select'||selMode==='multi') return; const L
   for(const o of L){ const t=Math.min(colReach(o.col,o.dir)+26/view.scale,beamG(o.it).len*0.45), w={x:o.P.x+o.dir.x*t,y:o.P.y+o.dir.y*t}, c=toS(w); drawChainIco(c,!o.on); joinHits.push({beam:1,id:o.it.id,k:o.k,e:o.e,col:o.col.id,on:o.on,x:c.x,y:c.y}); }
   if(mvB) return; ctx.save(); for(const it of doc.items){ if(it.t!=='beam'||!S.has(it.id)) continue; const g=beamG(it); for(const P of [g.A,g.B]){ const q=toS(P); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.fillRect(q.x-5,q.y-5,10,10); ctx.strokeRect(q.x-5,q.y-5,10,10); } } ctx.restore(); }
 function drawJoinIcons(){
-  if(tool!=='select'||!attachOn||editLine||editGrp) return; const S=selIds(); if(!S.size||S.size>8) return;
+  if(tool!=='select'||mvB||!attachOn||editLine||editGrp) return; const S=selIds(); if(!S.size||S.size>8) return;
   for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line'||it.g) continue;
     for(const k of ['a','b']){ const off=nj(it,k)||!endLinked(it,k);
       const P=it[k], Q=it[k==='a'?'b':'a'], d=unit(P,Q), n=lft(unit(it.a,it.b)), o=isWall(it)?offs(it):{L:0,R:0};
@@ -1873,7 +1873,7 @@ function drawJoinIcons(){
       ctx.restore();
       ctx.restore(); } } }
 // длина и угол на чертеже: у отдельной стены/линии и у грани фигуры (цепочка, прямоугольник), которой коснулись
-function tmpTarget(){ if(tool!=='select'||moveSel.size||selJoint||editGrp||!['pick','win','cross'].includes(selMode)) return null; const it=doc.items.find(i=>i.id===selId);
+function tmpTarget(){ if(tool!=='select'||mvB||moveSel.size||selJoint||editGrp||!['pick','win','cross'].includes(selMode)) return null; const it=doc.items.find(i=>i.id===selId);
   if(!it||it.t!=='line'||isArc(it)) return null; const S=selIds(); if(!it.g&&S.size!==1) return null; return it; }
 const ACT='#1864ab'; // размер, который сейчас вводится: синяя заливка, белые цифры, мягкая голубая подсветка линии
 function actGlow(c,A,B){ c.save(); c.setLineDash([]); c.strokeStyle='rgba(77,171,247,.38)'; c.lineWidth=9; c.lineCap='round'; c.beginPath(); c.moveTo(A.x,A.y); c.lineTo(B.x,B.y); c.stroke(); c.restore(); }
@@ -1904,7 +1904,7 @@ function drawSelTemp(){ const it=tmpTarget(); if(!it) return; const len=lineLen(
   if(!(inlineH&&inlineH.id===it.id&&inlineH.kind==='ang')) tmpBox(aval.toFixed(2)+'°',tp.x,tp.y,0);
   labelHits.push({id:it.id,kind:'ang',w:toW(tp.x,tp.y),x:tp.x,y:tp.y,val:aval,one:true});
   ctx.restore(); }
-function render(){ geoMemoOn(); try{ render0(); if(ovlHiId){ const h=doc.items.find(i=>i.id===ovlHiId); if(h){ ctx.save(); ctx.globalAlpha=.9; try{ drawItem(h,true); }catch(_){} ctx.restore(); } } } finally{ geoMemoOff(); } if(OVL&&OVL.plan){ const v3o=typeof v3!=='undefined'&&v3&&v3.el&&!v3.el.hidden, evo=typeof EV!=='undefined'&&EV&&EV.el&&!EV.el.hidden; if(tool!=='select'||v3o||evo||!OVL.L.some(e=>e.id===selId)) ovlHide(); else ovlPos(); } try{ const b=document.getElementById('btnVis'); if(b){ const H=hidP(); b.classList.toggle('go',!!H&&Object.values(H).some(Boolean)); } }catch(_){} }
+function render(){ geoMemoOn(); try{ render0(); if(ovlHiId){ const h=doc.items.find(i=>i.id===ovlHiId); if(h){ ctx.save(); ctx.globalAlpha=.9; try{ drawItem(h,true); }catch(_){} ctx.restore(); } } } finally{ geoMemoOff(); } if(OVL&&OVL.plan){ const v3o=typeof v3!=='undefined'&&v3&&v3.el&&!v3.el.hidden, evo=typeof EV!=='undefined'&&EV&&EV.el&&!EV.el.hidden; if(tool!=='select'||mvB||v3o||evo||!OVL.L.some(e=>e.id===selId)) ovlHide(); else ovlPos(); } try{ const b=document.getElementById('btnVis'); if(b){ const H=hidP(); b.classList.toggle('go',!!H&&Object.values(H).some(Boolean)); } }catch(_){} }
 function render0(){ queueMicrotask(placePanel);
   labelHits=[]; witHits=[]; tdHits=[]; dimHits=[]; joinHits=[]; lockHits=[]; syncDims();
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -4227,8 +4227,8 @@ panel.addEventListener('click',e=>{ { const rk=e.target.closest('[data-rlk]'), s
     case 'close':closeChain();break;
     case 'copy':copyOn=!copyOn;b.setAttribute('aria-pressed',String(copyOn));toast(copyOn?'Режим копии: оригинал останется на месте':'Режим копии выключен');break;
     case 'mvOrtho':{ setAxis(axisMode==='free'?'ortho':'free'); panelKey=''; syncPanel(); toast(axisMode==='free'?'Орто выключено — свободно':'Орто — только по X или Y',true); break; }
-    case 'mvBase':{ mvB=!mvB; mvGuide=null; panelKey=''; syncPanel(); redraw(); if(mvB) toast('Переместить: возьмите за точку (центр или угол) и тяните — магнит к точкам соседей, пунктир выравнивания',true); break; }
-    case 'msStart':{ mvB=false; msStart(); panelKey=''; syncPanel(); redraw(); break; }
+    case 'mvBase':{ mvB=!mvB; mvGuide=null; if(mvB){ if(axisMode!=='free'){ mvAx0=axisMode; setAxis('free'); } } else if(mvAx0){ setAxis(mvAx0); mvAx0=null; } /* «Переместить»: по умолчанию без орто, после — как было */ panelKey=''; syncPanel(); redraw(); if(mvB) toast('Переместить: возьмите за точку (центр или угол) и тяните — магнит к точкам соседей, пунктир выравнивания',true); break; }
+    case 'msStart':{ if(mvB&&mvAx0){ setAxis(mvAx0); mvAx0=null; } mvB=false; msStart(); panelKey=''; syncPanel(); redraw(); break; }
     case 'grpMove':{ msLeave(); selMode=selMode==='mv'?'pick':'mv'; syncSelLbl(); panelKey=''; syncPanel(); redraw(); if(selMode==='mv') toast('Тяните в любом месте — группа сдвинется',true); break; }
     case 'grpRot':{ msLeave(); selMode='rot'; rotC=null; syncSelLbl(); panelKey=''; syncPanel(); redraw(); break; }
     case 'selAll':moveSel=new Set(doc.items.filter(i=>!isHole(i)&&i.t!=='aux').map(i=>i.id)); if(!selId) selId=[...moveSel][0]||null; panelKey='';syncPanel();redraw();break;
@@ -4789,7 +4789,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.8.9':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.9.0':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
