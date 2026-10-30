@@ -3519,5 +3519,16 @@
 "По колонне: верх балки — по верху колонн": "By column: beam top at the column tops",
 "На перекрытии: коснитесь перекрытия — низ на его верхе": "On slab: tap a slab — bottom on its top",
 "Повернуть на 90°": "Rotate 90°",
-"Соединено: балка и колонны — одно целое; нажмите, чтобы разделить": "Joined: beam and columns are one piece; tap to split"
+"Соединено: балка и колонны — одно целое; нажмите, чтобы разделить": "Joined: beam and columns are one piece; tap to split",
+"Обход скатов: на объекте касание ската — ввод замеренного уклона (или датчиком телефона); остальные скаты строятся по первому": "Slope walk: on site, tap a slope and enter the measured pitch (or use the phone sensor); the other slopes follow the first",
+"В отчёт: сохранить этот вид фасада — кабели и устройства ярко, дом полупрозрачно": "To report: save this elevation view — cables and devices bright, house semi-transparent",
+"Фильтр: выбрать все объекты выбранных категорий на всех уровнях": "Filter: select all objects of the chosen categories on all levels",
+"В отчёт: захватить текущий вид для аксонометрии в отчёте": "To report: capture the current view as the report axonometry",
+"Перспектива / ортогональный вид (без перспективы)": "Perspective / orthographic view (no perspective)",
+"Перспектива / ортогональный вид (без перспективы": "Perspective / orthographic view (no perspective",
+"h низ": "h bottom",
+"h верх": "h top",
+"Вид фундамента: ": "Foundation type: ",
+"Фундамент: ": "Foundation: ",
+"Вид дерева: ": "Tree type: "
 }
