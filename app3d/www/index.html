@@ -3785,6 +3785,14 @@ function placeText(){
   pushUndo(); const it={id:uid(),t:'text',p:{...pendingText},s,h,L:'text'}; if(textMode==='leader'&&ldPick) it.ld={pt:{...ldPick},end:doc.settings.ldEnd||'arrow'}; doc.items.push(it); selId=it.id; pendingText=null; ldPick=null; persist(); syncPanel(); redraw();
 }
 
+function jointPanelH(inWall){ const jl=jointLines(selJoint); let h=`
+      <div class="fld inl"><label for="jX">X</label><input class="inp xs" id="jX" inputmode="decimal" value="${r1(selJoint.x-ORG().x)}"></div>
+      <div class="fld inl"><label for="jY">Y</label><input class="inp xs" id="jY" inputmode="decimal" value="${r1(selJoint.y-ORG().y)}"></div>
+      ${IB('alignJ','align','Выровнять узел: почти прямые стены — строго по X/Y')}${mergePair(selJoint)?IB('mergeJ','merge','Убрать вершину'):''}
+      ${(()=>{ const c=cornerPair(selJoint); if(!c) return ''; const md=cornerMode(c[0],c[1],c[2],c[3]), t=md==='m'?'m':(md==='p'||md==='s')?'b':'q', auto=!(c[0].jt&&c[0].jt[c[1]])&&!(c[2].jt&&c[2].jt[c[3]]);
+        return `<div class="seg" role="group" title="Соединение стен в углу">${[['m','Скос','<path d="M4 20V4h16"/><path d="M4 4l6 6" stroke-dasharray="2 2"/><path d="M10 10V20M10 10h10"/>'],['b','Стык','<path d="M4 20V4h16"/><path d="M4 10h16M10 10v10"/>'],['q','Срез','<path d="M4 20V4h16v6H10v10H4z"/>']].map(([k,n,ic])=>`<button class="sico" data-jt="${k}" aria-pressed="${t===k}" title="${n}${t===k&&auto&&k!=='m'?' (авто: разная высота)':''}" aria-label="${n}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">${ic}</svg></button>`).join('')}</div>
+          ${t!=='m'?'<button class="btn" data-act="jtSwap" title="Какая стена проходит, какая упирается (Следующий)">⇄</button>':''}<span class="lbl">${t==='m'?'Скос':t==='b'?'Стык':'Срез'}${auto&&t!=='m'?' · авто':''}</span>`; })()}
+      <p class="hint">Тяните узел пальцем или введите длину. Значки-звенья на концах выделенной стены: соединить / отсоединить.</p>`; if(inWall) h=h.replace(/<p class="hint">[\s\S]*?<\/p>/,''); return h; }
 /* ---------- panel ---------- */
 let panelKey='';
 function syncLineHint(){
@@ -4082,7 +4090,7 @@ function syncPanel(){ try{ toolsDockSync(); }catch(_){}
       ${d.sh==='round'?'':`<div class="fld"><label for="hH">Высота, мм</label><input class="inp sm" id="hH" inputmode="decimal" value="${d.h}"></div>`}
       <div class="fld"><label for="hS">${holeType==='win'?'Подоконник':'Низ'}, мм</label><input class="inp sm" id="hS" inputmode="decimal" value="${d.sill}"></div>`}
 `; if(holeType==='prim') h=primToolPanel();
-  } else if(tool==='select'&&sel&&!selJoint){
+  } else if(tool==='select'&&sel){
     if(sel.g&&editGrp!==sel.g){ const n=doc.items.filter(i=>i.g===sel.g).length;
       h=`<div class="title" style="flex-basis:auto">Фигура <b>${n} ${n%10===1&&n!==11?'грань':(n%10>=2&&n%10<=4&&(n<10||n>20)?'грани':'граней')}</b></div>
         ${!isDet(sel)?`${ICOPY()}${IB('ungrp','ungrp','Разбить на отдельные')}${IDEL()}${IDET()}${lvSel(sel)}`:''}
@@ -4135,15 +4143,7 @@ function syncPanel(){ try{ toolsDockSync(); }catch(_){}
       if(!isDet(sel)) h=`<div class="title">Текст <b>${esc(String(sel.s||'').slice(0,18))}</b></div>${ICOPY()}${IDEL()}${IDET()}${lvSel(sel)}`;
     }
   } else if(tool==='select'&&selJoint){
-    const jl=jointLines(selJoint);
-    h=`
-      <div class="fld inl"><label for="jX">X</label><input class="inp xs" id="jX" inputmode="decimal" value="${r1(selJoint.x-ORG().x)}"></div>
-      <div class="fld inl"><label for="jY">Y</label><input class="inp xs" id="jY" inputmode="decimal" value="${r1(selJoint.y-ORG().y)}"></div>
-      ${IB('alignJ','align','Выровнять узел: почти прямые стены — строго по X/Y')}${mergePair(selJoint)?IB('mergeJ','merge','Убрать вершину'):''}
-      ${(()=>{ const c=cornerPair(selJoint); if(!c) return ''; const md=cornerMode(c[0],c[1],c[2],c[3]), t=md==='m'?'m':(md==='p'||md==='s')?'b':'q', auto=!(c[0].jt&&c[0].jt[c[1]])&&!(c[2].jt&&c[2].jt[c[3]]);
-        return `<div class="seg" role="group" title="Соединение стен в углу">${[['m','Скос','<path d="M4 20V4h16"/><path d="M4 4l6 6" stroke-dasharray="2 2"/><path d="M10 10V20M10 10h10"/>'],['b','Стык','<path d="M4 20V4h16"/><path d="M4 10h16M10 10v10"/>'],['q','Срез','<path d="M4 20V4h16v6H10v10H4z"/>']].map(([k,n,ic])=>`<button class="sico" data-jt="${k}" aria-pressed="${t===k}" title="${n}${t===k&&auto&&k!=='m'?' (авто: разная высота)':''}" aria-label="${n}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">${ic}</svg></button>`).join('')}</div>
-          ${t!=='m'?'<button class="btn" data-act="jtSwap" title="Какая стена проходит, какая упирается (Следующий)">⇄</button>':''}<span class="lbl">${t==='m'?'Скос':t==='b'?'Стык':'Срез'}${auto&&t!=='m'?' · авто':''}</span>`; })()}
-      <p class="hint">Тяните узел пальцем или введите длину. Значки-звенья на концах выделенной стены: соединить / отсоединить.</p>`;
+    h=jointPanelH();
   } else if(tool==='text'&&pendingText){
     h=`<div class="fld"><label for="tText">Текст</label><input class="inp wide" id="tText" autocomplete="off" placeholder="Санузел, h=2700"></div>
       <div class="fld"><label for="tH">Высота, мм</label><input class="inp sm" id="tH" inputmode="decimal" value="${doc.settings.noteH||doc.settings.textH}"></div>
@@ -4159,6 +4159,8 @@ function syncPanel(){ try{ toolsDockSync(); }catch(_){}
         ${rwLastA!=null?`<button class="btn" data-act="rwPrev" title="Такой же уклон, как у предыдущего">= ${r1(rwLastA)}°</button>`:''}<button class="btn" data-act="rwAll" title="Этот уклон — всем скатам (все замерены)">Всем одинаковый</button>
         <span class="lbl">замерено ${MS.length} из ${S.length}</span><button class="btn" data-act="rwNext">Далее ▸</button><button class="btn go" data-act="rwDone">Готово</button>`; } }
   if(tool==='select'&&selMode==='multi'){ const n=selIds().size?selCount():0, SN=IB('selNone','none','Снять выбор'); h=(n>=2&&selIds().size>=2&&moveSel.size?h.split(SN).join('')+`<span class="lbl">касание — добавить/убрать, тянуть выбранное — сдвинуть</span>`:`<div class="title">Выбрать несколько <b>${n}</b></div><span class="lbl">${n?'касание снова — убрать':'касайтесь объектов'}</span>${n?ICOPY():''}`)+`<button class="btn" data-act="msCancel">Отмена</button><button class="btn go" data-act="msDone">Готово</button>`; }
+  if(tool==='select'&&sel&&selJoint&&selMode!=='multi'&&!h.includes('id="jX"')) h+=jointPanelH(true);
+  if(mvB&&tool==='select'&&!sel&&!moveSel.size){ mvB=false; mvGuide=null; if(mvAx0){ setAxis(mvAx0); mvAx0=null; } } /* выбор снят — «Переместить» выключается */
   if(viewMove&&(!sel||sel.id!==viewMove)) viewMove=null;
   { const D=IDEL(), Cp=ICOPY(); if(h.includes(D)){ h=h.replace(D,''); let pre=D; if((panel.classList.contains('inview')||(typeof v3!=='undefined'&&v3&&v3.el&&!v3.el.hidden)||(EV&&EV.el&&!EV.el.hidden))&&sel&&((isIns(sel)&&sel.t!=='solar')||sel.t==='chim'||isHole(sel))) pre+=IB('vMove','mv','Двигать: размеры привязки и перенос пальцем',viewMove===sel.id?'on':''); if(h.includes(Cp)){ h=h.replace(Cp,''); pre+=Cp; } h=pre+h; } const GM=IB('grpMove','mv','Сдвинуть группу: тяните в любом месте'); if(h.includes(GM)) h=GM+h.replace(GM,'');
     if(tool==='select'&&sel&&selMode!=='multi'&&!(panel.classList.contains('inview'))&&MVT(sel)&&h.includes(D)&&!(v3&&v3.el&&!v3.el.hidden)){ h=h.replace(D,D+IB('mvBase','mv','Переместить: возьмите за центр или угол — магнит к точкам соседей, пунктир выравнивания; Орто — по осям',mvB?'on':'')+IB('msStart','msel','Выбрать несколько')); if(!isHole(sel)&&!h.includes('data-act="mvOrtho"')&&!/data-act="copyMenu"/.test(h)) h=h.replace('data-act="msStart"','data-act="msStart"').replace(/(data-act="msStart"[\s\S]*?<\/button>)/,'$1'+IB('mvOrtho','ortho','Орто: двигать только по X или Y (та же кнопка, что сверху)',axisMode!=='free'?'on':'')); if(!isHole(sel)&&!h.includes('data-act="mvOrtho"')) h=h.replace(/(<button class="ibn[^"]*" data-act="copyMenu"[\s\S]*?<\/button>)/,'$1'+IB('mvOrtho','ortho','Орто: двигать только по X или Y (та же кнопка, что сверху)',axisMode!=='free'?'on':'')); } }
@@ -4837,7 +4839,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.9.0':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.9.1':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
