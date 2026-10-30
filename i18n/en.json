@@ -3530,5 +3530,19 @@
 "h верх": "h top",
 "Вид фундамента: ": "Foundation type: ",
 "Фундамент: ": "Foundation: ",
-"Вид дерева: ": "Tree type: "
+"Вид дерева: ": "Tree type: ",
+"Цвет размера": "Dimension colour",
+"Толщина линии размера, мм": "Dimension line weight, mm",
+"Цвет и толщина по умолчанию": "Default colour and weight",
+"Цвет": "Colour",
+"Привязать ": "Bind ",
+" размера к": " of dimension to",
+"Размер привязан: ": "Dimension bound: ",
+" мм: стена сдвинута": " mm: wall moved",
+"Готово: закончить рисование объёмов": "Done: finish drawing volumes",
+"Размер ": "Dimension ",
+"мм: стена сдвинута": "mm: wall moved",
+"Размер привязан": "Dimension bound",
+"Привязать": "Bind",
+"размера к": "of dimension to"
 }
