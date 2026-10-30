@@ -3511,5 +3511,8 @@
 "Скругление R: коснитесь вершины между двумя прямыми": "Fillet R: tap a vertex between two straight segments",
 "«Переместить» выключено": "«Move» is off",
 "Переместить» выключено": "Move» is off",
-"Дуга по 3 точкам": "3-point arc"
+"Дуга по 3 точкам": "3-point arc",
+"Закрыть фасад — к плану": "Close the elevation — back to plan",
+"Закрыть 3D — к плану": "Close 3D — back to plan",
+"К плану": "To plan"
 }
