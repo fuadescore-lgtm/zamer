@@ -3514,5 +3514,10 @@
 "Дуга по 3 точкам": "3-point arc",
 "Закрыть фасад — к плану": "Close the elevation — back to plan",
 "Закрыть 3D — к плану": "Close 3D — back to plan",
-"К плану": "To plan"
+"К плану": "To plan",
+"Прямоугольные": "Rectangular",
+"По колонне: верх балки — по верху колонн": "By column: beam top at the column tops",
+"На перекрытии: коснитесь перекрытия — низ на его верхе": "On slab: tap a slab — bottom on its top",
+"Повернуть на 90°": "Rotate 90°",
+"Соединено: балка и колонны — одно целое; нажмите, чтобы разделить": "Joined: beam and columns are one piece; tap to split"
 }
