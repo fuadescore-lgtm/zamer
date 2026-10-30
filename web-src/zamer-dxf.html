@@ -908,14 +908,20 @@ function gripsOf(it){ const G=[]; try{
   else if(it.t==='fnd'){ if(it.k==='slab') G.push(...(it.pts||[])); else if(it.k==='strip') G.push({...it.a},{...it.b},{x:(it.a.x+it.b.x)/2,y:(it.a.y+it.b.y)/2,k:'c'}); else { const Q=fndG(it), c=it.p||Q.c||(fndCol(it)||{}).p; if(c){ G.push({x:c.x,y:c.y,k:'c'}); const P0=Q.pc.length?Q.pc.reduce((m,q)=>{ const A=Math.abs(polyArea2(q.P)); return A>m.A?{A,P:q.P}:m; },{A:-1,P:null}).P:null; if(P0) G.push(...P0); } } }
   else if(isHole(it)){ const g=holeGeom(it); if(g){ const m=(g.oL-g.oR)/2; G.push({...g.at(g.c,m),k:'c'},{...g.at(g.s0,m)},{...g.at(g.s1,m)}); } }
   else if(it.t==='circ'){ G.push({...it.c,k:'c'},{x:it.c.x+it.r,y:it.c.y},{x:it.c.x-it.r,y:it.c.y},{x:it.c.x,y:it.c.y+it.r},{x:it.c.x,y:it.c.y-it.r}); }
-  else if(it.t==='line'){ G.push({...it.a},{...it.b},{x:(it.a.x+it.b.x)/2,y:(it.a.y+it.b.y)/2,k:'c'}); }
+  else if(it.t==='line'){ G.push({...it.a},{...it.b},{x:(it.a.x+it.b.x)/2,y:(it.a.y+it.b.y)/2,k:'c'});
+    /* стена: углы и середины обеих граней и торцов — за любую можно взять и поставить на вершину другого объекта */
+    if(isWall(it)&&!isArc(it)&&it.w>0){ const L=Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y); if(L>1){ const u=unit(it.a,it.b), n=lft(u), o=offs(it), P=(q,k)=>({x:r3(q.x+n.x*k),y:r3(q.y+n.y*k)}), A1=P(it.a,o.L), B1=P(it.b,o.L), A2=P(it.a,-o.R), B2=P(it.b,-o.R), M=(p,q)=>({x:r3((p.x+q.x)/2),y:r3((p.y+q.y)/2)});
+      const add=q=>{ if(!G.some(g=>Math.hypot(g.x-q.x,g.y-q.y)<1)) G.push(q); };
+      let F=[]; try{ F=wallFootprint(it,-1e6,1e6)||[]; }catch(_){} for(const q of F) add({x:r3(q.x),y:r3(q.y)});
+      for(const q of [A1,B1,A2,B2,M(A1,B1),M(A2,B2),M(A1,A2),M(B1,B2)]) add(q); } } }
   else if(it.p) G.push({...it.p,k:'c'});
   else if(it.pts) G.push(...it.pts);
   }catch(_){} return G; }
 function mvTargets(ids){ const T=[]; for(const it of doc.items){ if(ids.has(it.id)||vHidP(it)) continue; if(it.t==='fnd'&&it.col&&ids.has(it.col)) continue; for(const g of gripsOf(it)) T.push(g); } return T; }
 function mvStepTo(D,p){ const w=toW(p.x,p.y); let dx=w.x-D.g.x, dy=w.y-D.g.y; ({dx,dy}=constrain(dx,dy)); let tx=D.g.x+dx, ty=D.g.y+dy, hitP=null, gx=null, gy=null;
   const ts=toS({x:tx,y:ty}); let bd=14; for(const q of D.T){ const s2=toS(q), d=Math.hypot(s2.x-ts.x,s2.y-ts.y); if(d<bd){ bd=d; hitP=q; } }
-  if(hitP&&axisMode!=='x'&&axisMode!=='y'&&axisMode!=='ortho'){ tx=hitP.x; ty=hitP.y; } else { hitP=null; let bx=8, by=8; for(const q of D.T){ const s2=toS(q); if(dx!==0||axisMode==='free'||!axisMode){ const ddx=Math.abs(s2.x-ts.x); if(ddx<bx&&(axisMode!=='y')){ bx=ddx; gx=q; } } const ddy=Math.abs(s2.y-ts.y); if(ddy<by&&axisMode!=='x'&&!(axisMode==='ortho'&&dy===0&&dx!==0)){ by=ddy; gy=q; } } if(axisMode==='ortho'&&dx===0) gx=null; if(gx) tx=gx.x; if(gy) ty=gy.y; }
+  /* в «Орто» — тоже магнит к вершине под пальцем (зелёный квадрат), если она рядом с пальцем */ if(!hitP&&axisMode==='ortho'){ let bf=14; for(const q of D.T){ const s2=toS(q), d=Math.hypot(s2.x-p.x,s2.y-p.y); if(d<bf){ bf=d; hitP=q; } } if(hitP){ tx=hitP.x; ty=hitP.y; dx=tx-D.g.x; dy=ty-D.g.y; mvGuide={P:{x:tx,y:ty},gx:null,gy:null,hit:hitP,g0:{...D.g}}; } }
+  if(hitP&&axisMode!=='x'&&axisMode!=='y'){ tx=hitP.x; ty=hitP.y; } else { hitP=null; let bx=8, by=8; for(const q of D.T){ const s2=toS(q); if(dx!==0||axisMode==='free'||!axisMode){ const ddx=Math.abs(s2.x-ts.x); if(ddx<bx&&(axisMode!=='y')){ bx=ddx; gx=q; } } const ddy=Math.abs(s2.y-ts.y); if(ddy<by&&axisMode!=='x'&&!(axisMode==='ortho'&&dy===0&&dx!==0)){ by=ddy; gy=q; } } if(axisMode==='ortho'&&dx===0) gx=null; if(gx) tx=gx.x; if(gy) ty=gy.y; }
   dx=tx-D.g.x; dy=ty-D.g.y; mvGuide={P:{x:tx,y:ty},gx,gy,hit:hitP,g0:{...D.g}};
   const S=JSON.parse(D.snap); for(const it of doc.items){ if(!D.ids.has(it.id)) continue; const o=S[it.id]; if(!o) continue; for(const k of Object.keys(it)) if(!(k in o)) delete it[k]; Object.assign(it,JSON.parse(JSON.stringify(o)));
     if(isHole(it)){ const g=holeGeom(it); if(g&&!g.G){ it.pos=r3(o.pos+dx*g.u.x+dy*g.u.y); } continue; } shiftItem(it,dx,dy); }
@@ -4783,7 +4789,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 1.8.8':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 1.8.9':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
