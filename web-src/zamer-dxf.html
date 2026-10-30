@@ -1456,6 +1456,7 @@ function snapGeo0(ex){
       if(isWall(it)){ const w=wallPoly(it),o=offs(it), os=wallOutSide(it,wcen()), fL=os==='L'?'out':'in', fR=os==='R'?'out':'in';
         if(o.L>0){pts.push({p:w.aL,k:'corner',fs:fL},{p:w.bL,k:'corner',fs:fL},{p:mid(w.aL,w.bL),k:'mid',fs:fL});segs.push({a:w.aL,b:w.bL,k:'face',it,fs:fL});}
         if(o.R>0){pts.push({p:w.aR,k:'corner',fs:fR},{p:w.bR,k:'corner',fs:fR},{p:mid(w.aR,w.bR),k:'mid',fs:fR});segs.push({a:w.aR,b:w.bR,k:'face',it,fs:fR});}
+        if(o.L!==o.R){ const c=(o.L-o.R)/2, n=lft(unit(it.a,it.b)), cA={x:r3(it.a.x+n.x*c),y:r3(it.a.y+n.y*c)}, cB={x:r3(it.b.x+n.x*c),y:r3(it.b.y+n.y*c)}; pts.push({p:mid(cA,cB),k:'mid',fs:'axis'}); segs.push({a:cA,b:cB,k:'axis',it,fs:'axis'}); } // ось (центр) стены, нарисованной по грани
       }
     } else if(it.t==='dim'){ pts.push({p:it.a,k:'end'},{p:it.b,k:'end'}); }
     else if(it.t==='grid'){ segs.push({a:it.a,b:it.b,k:'axis'}); }
@@ -2702,7 +2703,7 @@ function onBody(P,W){ if(W.t!=='line') return null;
 function dimRef(P,ex){ let best=null,bd=Infinity;
   for(const W of doc.items){ if(W.t!=='line'||(ex&&ex.has(W.id))) continue; const ob=onBody(P,W); if(!ob) continue;
     const o=isWall(W)?offs(W):{L:0,R:0}, sN=ob.s;
-    const d=Math.min(Math.abs(sN-o.L),Math.abs(sN+o.R),Math.abs(sN)); if(d<bd){ bd=d; best={id:W.id,f:ob.L?ob.t/ob.L:0,o:r3(sN)}; } }
+    const d=Math.min(Math.abs(sN-o.L),Math.abs(sN+o.R),Math.abs(sN),Math.abs(sN-(o.L-o.R)/2)); if(d<bd){ /* грань, линия стены или её ось (центр) */ bd=d; best={id:W.id,f:ob.L?ob.t/ob.L:0,o:r3(sN)}; } }
   return best&&bd<2?best:null; }
 function refPt(r){ const W=doc.items.find(i=>i.id===r.id); if(!W||W.t!=='line') return null; if(isArc(W)){ const P=arcAt(arcG(W),r.f,r.o); return {x:r3(P.x),y:r3(P.y)}; } const u=unit(W.a,W.b), n=lft(u), L=Math.hypot(W.b.x-W.a.x,W.b.y-W.a.y);
   return {x:r3(W.a.x+u.x*r.f*L+n.x*r.o),y:r3(W.a.y+u.y*r.f*L+n.y*r.o)}; }
@@ -2713,7 +2714,7 @@ function attachDim(it){ for(const k of ['a','b']){ const r=dimRef(it[k]); if(r) 
 function dimActW(d,W){ if(!d||d.t!=='dim'||!W||W.t!=='line') return null; const a=d.ra&&d.ra.id===W.id, b=d.rb&&d.rb.id===W.id; return a!==b?(a?'a':'b'):null; }
 function dimActSel(d){ if(tool!=='select'||moveSel.size>1||!selId||selId===d.id) return null; const W=doc.items.find(i=>i.id===selId); return dimActW(d,W)?W:null; }
 // концы нескольких стен/линий в одной точке — к какой привязать размер (стены первыми)
-function dimRefCands(P){ const L=[]; for(const W of doc.items){ if(W.t!=='line') continue; const ob=onBody(P,W); if(!ob) continue; const o=isWall(W)?offs(W):{L:0,R:0}, sN=ob.s, d=Math.min(Math.abs(sN-o.L),Math.abs(sN+o.R),Math.abs(sN)); if(d<2) L.push({W,r:{id:W.id,f:ob.L?ob.t/ob.L:0,o:r3(sN)}}); } L.sort((x,y)=>(isWall(y.W)?1:0)-(isWall(x.W)?1:0)); return L; }
+function dimRefCands(P){ const L=[]; for(const W of doc.items){ if(W.t!=='line') continue; const ob=onBody(P,W); if(!ob) continue; const o=isWall(W)?offs(W):{L:0,R:0}, sN=ob.s, d=Math.min(Math.abs(sN-o.L),Math.abs(sN+o.R),Math.abs(sN),Math.abs(sN-(o.L-o.R)/2)); if(d<2) L.push({W,r:{id:W.id,f:ob.L?ob.t/ob.L:0,o:r3(sN)}}); } L.sort((x,y)=>(isWall(y.W)?1:0)-(isWall(x.W)?1:0)); return L; }
 function dimAskRefs(nd,ks){ const k=ks[0]; if(!k) return; const C=dimRefCands(nd[k]); if(C.length<2){ dimAskRefs(nd,ks.slice(1)); return; } const cur=nd['r'+k]&&nd['r'+k].id; const s=toS(nd[k]), cr=cv.getBoundingClientRect(), x=cr.left+s.x, y=cr.top+s.y;
   popMenu({getBoundingClientRect:()=>({left:x-20,right:x+20,top:y-10,bottom:y+10}),closest:()=>null},`<div class="mh">Привязать ${k==='a'?'начало':'конец'} размера к</div><div class="mr" style="flex-direction:column;align-items:stretch">${C.map((c,i)=>`<button class="btn" data-drf="${i}" aria-pressed="${c.W.id===cur}">${isWall(c.W)?'Стена':'Линия'} ${fmtU(lineLen(c.W))} · ${Math.round(((Math.atan2(c.W.b.y-c.W.a.y,c.W.b.x-c.W.a.x)*180/Math.PI)+360)%180)}°</button>`).join('')}</div>`,b=>{ const i=b.dataset.drf; if(i==null) return; nd['r'+k]=C[+i].r; persist(); redraw(); toast('Размер привязан: '+(isWall(C[+i].W)?'стена':'линия')+' '+fmtU(lineLen(C[+i].W)),true); dimAskRefs(nd,ks.slice(1)); }); }
 function buildRefs(attach,SEL){ SEL=SEL||moveSel;
@@ -4885,7 +4886,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.0.1':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.0.2':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
