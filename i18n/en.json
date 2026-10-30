@@ -3474,5 +3474,9 @@
 "стене": "wall",
 "Вынос": "Projection",
 "полу": "floor",
-"Нужно хотя бы 2 точки": "At least 2 points are needed"
+"Нужно хотя бы 2 точки": "At least 2 points are needed",
+"Сюда панель не ложится — коснитесь верха или наклонной грани объёма": "A panel cannot lie here — tap the top or a sloped face of the solid",
+"верху объёма: наклон": "the top of the solid: tilt",
+"грани объёма (отступ": "a face of the solid (offset",
+"от горизонта. Угол, край и ряды — в меню панели": "from horizontal. Angle, edge and rows are in the panel menu"
 }
