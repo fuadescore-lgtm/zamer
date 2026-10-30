@@ -3546,5 +3546,6 @@
 "Привязать": "Bind",
 "размера к": "of dimension to",
 "— разные —": "— varies —",
-"Разные значения — введите, чтобы задать всем": "Different values — enter one to set for all"
+"Разные значения — введите, чтобы задать всем": "Different values — enter one to set for all",
+"Эта команда — по одному объекту: выбран первый": "This command works on one object: the first was used"
 }
