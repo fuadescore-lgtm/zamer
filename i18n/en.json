@@ -3590,5 +3590,20 @@
 "модель АКБ не выбрана — расчёт для 51,2 В: выберите АКБ в меню прибора": "battery model not selected — calculated for 51.2 V: choose the battery in the device menu",
 "трасса проходит сквозь ": "route passes through ",
 " — сдвиньте прибор (например, не перед окном) или трассу": " — move the device (e.g. not in front of a window) or the route",
-"Кабель гибкий ": "Flexible cable "
+"Кабель гибкий ": "Flexible cable ",
+"Выровнять карту": "Align map",
+"Выровнять картинку": "Align image",
+"По двум точкам": "By two points",
+"По стене плана": "To a plan wall",
+"Повернуть": "Rotate",
+"карту": "map",
+"картинку": "image",
+"Угол, °": "Angle, °",
+"2 точки": "2 points",
+"Тяните кружок — карта вращается вокруг точки (касание карты — другая точка поворота). Магнит к 0° и 90°": "Drag the circle — the map rotates around the point (tap the map for another pivot). Snaps to 0° and 90°",
+"Коснитесь начала линии на карте (угол дома, край дорожки)": "Tap the start of a line on the map (house corner, path edge)",
+"Теперь коснитесь конца этой линии на карте": "Now tap the end of this line on the map",
+"Коснитесь стены на плане — карта встанет вдоль неё": "Tap a wall on the plan — the map will align to it",
+"Север по двум точкам: коснитесь точки, потом точки в сторону севера": "North by two points: tap a point, then a point towards north",
+"Теперь коснитесь точки в сторону севера": "Now tap a point towards north"
 }
