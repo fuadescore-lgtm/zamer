@@ -202,6 +202,7 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
 .tmenu{position:absolute;z-index:7;bottom:8px;min-width:220px;max-width:min(360px,calc(100% - 16px));max-height:calc(100% - 16px);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;box-shadow:0 10px 30px var(--shadow)}
 .tmenu .mh{font-family:var(--f-ui);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .tmenu{min-width:0!important}
+#toolMenu.tm2{display:block;column-width:250px;column-gap:14px;column-fill:auto;width:min(760px,calc(100% - 16px));max-width:calc(100% - 16px);height:calc(100% - 16px)}#toolMenu.tm2>*{break-inside:avoid;margin-bottom:8px}#toolMenu .tmg{display:flex;flex-direction:column;gap:6px}
 .tmenu .mg{display:flex;flex-wrap:wrap;gap:4px}
 .tmenu .mg button{width:42px;height:42px;padding:0;display:grid;place-items:center;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-weight:600;font-size:13px}
 .tmenu .mg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
@@ -4634,7 +4635,8 @@ function openToolMenu(t,btn){ const m=$('#toolMenu'); menuFor=t; let h='';
   else if(t==='text'){ h=`<div class="mh">Текст</div><div class="mg">${['tplain','tleader'].map(k=>mb(k,'t'+textMode,'tm')).join('')}</div>
       <div class="mr"><div class="fld"><span class="lbl">Конец выноски</span>${ldEndSeg('ldend',doc.settings.ldEnd||'arrow')}</div></div>`; }
   else if(t==='edit'){ h=`<div class="mh">Изменить</div><div class="mg">${['split','merge','mirrorc','mirrorm','align'].map(k=>mb(k,editMode,'em')).join('')}${mb('rot',selMode,'em')}${mb('array',arrayOn?'array':'','em')}</div>`; }
-  m.innerHTML=h; m.hidden=false;
+  m.innerHTML=h; m.hidden=false; m.scrollTop=0;
+  { const sr0=stage.getBoundingClientRect(); m.classList.remove('tm2'); if(m.scrollHeight>m.clientHeight+4&&sr0.width>=560){ m.classList.add('tm2'); const K=[...m.children]; let g=null; for(const c of K){ if(c.classList.contains('mh')||!g){ g=document.createElement('div'); g.className='tmg'; m.insertBefore(g,c); } g.appendChild(c); } } } // альбом: не помещается по высоте — в две колонки
   const r=btn.getBoundingClientRect(), sr=stage.getBoundingClientRect(), w=m.offsetWidth;
   m.style.left=Math.max(8,Math.min(sr.width-w-8,r.left-sr.left+r.width/2-w/2))+'px'; }
 $('#toolMenu').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
