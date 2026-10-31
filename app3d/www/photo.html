@@ -173,6 +173,7 @@ const S = {
   tool: null, draft: [], sel: null, confirm: null,
 };
 const $ = s => document.querySelector(s);
+const CAN_PLAN = (() => { try { return window.parent !== window && typeof window.parent.__photoToPlan === "function"; } catch (e) { return false; } })();
 const EMBED = (() => { try { return window.parent !== window && typeof window.parent.__closePhoto === "function"; } catch (e) { return false; } })();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
@@ -559,6 +560,7 @@ function renderProject() {
         <p class="small muted" id="copymsg">Таблица копируется с табуляцией: её можно вставить прямо в Excel или Google Таблицы.</p>`
         : `<p class="muted small">Откройте фото, отметьте эталон и коснитесь углов окон и дверей — размеры появятся здесь.</p>`}
     </section>
+    ${CAN_PLAN ? planHTML(p) : ""}
     ${p.example ? "" : `<div class="row">${S.confirm === "delp" ? `<span class="small">Удалить объект со всеми замерами?</span><button class="btn danger" id="delp2">Удалить</button><button class="btn" id="delpc">Отмена</button>` : `<button class="linkbtn danger" id="delp">Удалить объект</button>`}</div>`}`;
   document.querySelectorAll(".slot").forEach(b => b.onclick = () => {
     const k = b.dataset.k;
@@ -568,6 +570,7 @@ function renderProject() {
     else { pickTarget = k; S.picking = k; render(); }
   });
   const exs = $("#exslot"); if (exs) exs.onclick = () => { S.confirm = null; S.cur = null; go("new"); };
+  if (CAN_PLAN) bindPlan(p);
   bindPicker();
   const cp = $("#copy"); if (cp) cp.onclick = () => copyText(rowsTSV(p, rows), $("#copymsg"));
   const d1 = $("#delp"); if (d1) d1.onclick = () => { S.confirm = "delp"; render(); };
@@ -595,7 +598,6 @@ function pickerHTML() {
   return `<div class="picker" role="dialog" aria-label="Добавить фото">
     <p><strong>${esc(slotName(S.picking))}</strong></p>
     <div class="row"><label class="btn primary filebtn">Снять камерой<input type="file" id="inCam" accept="image/*" capture="environment" aria-label="Снять камерой"></label><label class="btn filebtn">Выбрать из галереи<input type="file" id="inGal" accept="image/*" aria-label="Выбрать из галереи"></label></div>
-    <p class="small muted">Если окно выбора не открылось, откройте эту страницу в браузере телефона (Chrome или Safari) под своим аккаунтом Claude: там выбор фото работает всегда.</p>
     <button class="btn" id="pickc">Отмена</button></div>`;
 }
 function bindPicker() {
@@ -617,6 +619,86 @@ $("#pickMany").onchange = async e => {
   for (const [k] of pairs) busySlots.add(k); render();
   for (const [k, f] of pairs) await addPhoto(p, k, f);
 };
+
+/* ---------- План в BIMsketcher ---------- */
+// Стороны: 1 — главный фасад, 2 — справа от него, 3 — задний, 4 — слева (обход дома вправо).
+// Сверху (ось Y вверх) это обход против часовой: 1 — низ, 2 — правая, 3 — верх, 4 — левая.
+// Фото стороны снято снаружи, поэтому её левый край — начало стены при таком обходе.
+const PLAN_T = { win: { t: "win" }, door: { t: "door" }, gate: { t: "door", dk: "gar" }, open: { t: "open" } };
+function sideInfo(p, s) {
+  let first = null;
+  for (const c of ["F", "L", "R"]) {
+    const k = "s" + s + c, ph = p.photos && p.photos[k];
+    if (!ph || !ph.ref || ph.ref.kind !== "wall" || !(ph.ref.W > 0)) continue;
+    if (!first) first = { k, ph };
+    if ((ph.items || []).some(i => PLAN_T[i.type])) return { k, ph };
+  }
+  return first;
+}
+function planDefaults(p) {
+  const info = [1, 2, 3, 4].map(s => sideInfo(p, s));
+  const hs = info.filter(Boolean).map(i => i.ph.ref.H).sort((a, b) => a - b);
+  return { info, len: info.map(i => i ? r5(i.ph.ref.W) : ""), ht: hs.length ? r5(hs[Math.floor(hs.length / 2)]) : 3000 };
+}
+function planHTML(p) {
+  const d = planDefaults(p);
+  if (S.confirm !== "plan") return `<section class="panel">
+      <div><p class="eyebrow">План в BIMsketcher</p><h2>Стены и проёмы из замеров</h2></div>
+      <p class="small muted">Создаст новый чертёж: наружные стены по длинам сторон, толщина внутрь, окна и двери на своих местах. Дальше — внутренняя планировка как обычно.</p>
+      <div class="row"><button class="btn primary" id="toplan">Создать план</button></div></section>`;
+  const nm = ["главный фасад", "справа от главного", "задний фасад", "слева от главного"];
+  return `<section class="panel form" id="planf">
+    <div><p class="eyebrow">План в BIMsketcher</p><h2>Проверьте размеры</h2></div>
+    <p class="small muted">Дом строится прямоугольником. Длины взяты из эталонов «Стена»; если стороны 1 и 3 (или 2 и 4) различаются, берётся среднее.</p>
+    ${[1, 2, 3, 4].map((s, i) => { const inf = d.info[i]; const n = inf ? (inf.ph.items || []).filter(t => PLAN_T[t.type]).length : 0; return `
+      <div class="field"><label for="pl${s}">Сторона ${s} · ${nm[i]}, мм ${inf ? `<span class="muted">(фото «${esc(POS.find(x => x[0] === inf.k[2])[1].toLowerCase())}», проёмов: ${n})</span>` : `<span class="muted">(нет эталона «Стена»)</span>`}</label>
+      <input id="pl${s}" type="number" inputmode="numeric" min="0" value="${d.len[i]}"></div>`; }).join("")}
+    <div class="two">
+      <div class="field"><label for="pth">Толщина стен, мм</label><input id="pth" type="number" inputmode="numeric" min="50" value="400"></div>
+      <div class="field"><label for="pht">Высота стен от пола, мм</label><input id="pht" type="number" inputmode="numeric" min="1000" value="${d.ht}"></div>
+    </div>
+    <div class="field"><label for="pfo">Пол 1 этажа выше низа стены на, мм (цоколь)</label><input id="pfo" type="number" inputmode="numeric" min="0" value="0"></div>
+    <p class="small" id="perr" style="color:var(--danger)" hidden></p>
+    <div class="row"><button class="btn primary" id="planok">Создать чертёж</button><button class="btn" id="planc">Отмена</button></div>
+  </section>`;
+}
+function buildPlan(p, v) {
+  const L = v.len, avg = (a, b) => a && b ? (a + b) / 2 : (a || b);
+  const A = r5(avg(L[0], L[2])), B = r5(avg(L[1], L[3]));
+  if (!(A >= 500) || !(B >= 500)) return { err: "Нужны длины хотя бы одной из сторон 1 или 3 и одной из сторон 2 или 4." };
+  if (!(v.th >= 50 && v.th < Math.min(A, B) / 2)) return { err: "Проверьте толщину стен." };
+  const warn = [];
+  if (L[0] && L[2] && Math.abs(L[0] - L[2]) > 50) warn.push(`стороны 1 и 3 различаются на ${r5(Math.abs(L[0] - L[2]))} мм`);
+  if (L[1] && L[3] && Math.abs(L[1] - L[3]) > 50) warn.push(`стороны 2 и 4 различаются на ${r5(Math.abs(L[1] - L[3]))} мм`);
+  const pts = [[0, 0], [A, 0], [A, B], [0, B]], holes = []; let skipped = 0;
+  const info = [1, 2, 3, 4].map(s => sideInfo(p, s));
+  info.forEach((inf, i) => {
+    if (!inf) return;
+    const H = refMatrix(inf.ph), len = i % 2 ? B : A;
+    for (const it of inf.ph.items || []) {
+      const T = PLAN_T[it.type]; if (!T) continue;
+      const m = measure(inf.ph, it, H); if (!m) { skipped++; continue; }
+      const width = r5(m.w), height = r5(m.h), pos = r5(m.left + m.w / 2);
+      let sill = Math.max(0, r5(m.bottom - v.fo)); if (T.t !== "win" && sill < 100) sill = 0;
+      if (pos - width / 2 < -20 || pos + width / 2 > len + 20 || sill + height > v.ht + 20) { skipped++; continue; }
+      holes.push({ side: i, t: T.t, dk: T.dk, pos: Math.max(width / 2, Math.min(len - width / 2, pos)), width, height: Math.min(height, v.ht - sill), sill });
+    }
+  });
+  return { name: p.name + " — план", pts, thick: v.th, ht: v.ht, holes, skipped, warn };
+}
+function bindPlan(p) {
+  const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on("#toplan", () => { S.confirm = "plan"; render(); const f = $("#planf"); if (f) f.scrollIntoView({ block: "start" }); });
+  on("#planc", () => { S.confirm = null; render(); });
+  on("#planok", () => {
+    const v = { len: [1, 2, 3, 4].map(s => +$("#pl" + s).value || 0), th: +$("#pth").value || 0, ht: +$("#pht").value || 0, fo: +$("#pfo").value || 0 };
+    const spec = buildPlan(p, v), er = $("#perr");
+    if (spec.err) { er.textContent = spec.err; er.hidden = false; return; }
+    let res; try { res = window.parent.__photoToPlan(spec); } catch (e) { res = { ok: false, msg: String(e) }; }
+    if (!res || !res.ok) { er.textContent = "Не удалось создать чертёж: " + ((res && res.msg) || "ошибка"); er.hidden = false; return; }
+    S.confirm = null;
+  });
+}
 
 /* ---------- Экран: замер на фото ---------- */
 const V = { s: 1, tx: 0, ty: 0, img: null, src: "", cw: 0, ch: 0, drag: null, gest: null, ptrs: new Map(), loupe: null };

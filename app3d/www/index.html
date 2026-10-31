@@ -5092,7 +5092,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.2.3':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.2.4':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 // Фотообмер (photo.html): обмер фасада по фото — открывается поверх чертежа, проект не закрывается
 function openPhoto(){ let o=document.getElementById('photoOv');
   if(!o){ o=document.createElement('div'); o.id='photoOv'; o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:Canvas';
@@ -5100,6 +5100,16 @@ function openPhoto(){ let o=document.getElementById('photoOv');
     f.style.cssText='border:0;width:100%;height:100%;display:block'; o.appendChild(f); document.body.appendChild(o); }
   o.hidden=false; }
 window.__closePhoto=()=>{ const o=document.getElementById('photoOv'); if(o) o.hidden=true; };
+// Фотообмер → новый чертёж: наружный контур по замерам, толщина стен внутрь (side:1 при обходе против часовой), проёмы на стенах
+window.__photoToPlan=spec=>{ try{
+  const d=newDoc(spec.name); store.docs[d.id]=d; openDoc(d.id);
+  const ids=[], P=spec.pts;
+  for(let i=0;i<4;i++){ const a=P[i], b=P[(i+1)%4];
+    const w={id:uid(),t:'line',a:{x:a[0],y:a[1]},b:{x:b[0],y:b[1]},L:'walls',w:spec.thick,side:1}; if(spec.ht) w.ht=spec.ht; doc.items.push(w); ids.push(w.id); }
+  for(const h of spec.holes){ const o={id:uid(),t:h.t,wall:ids[h.side],pos:h.pos,width:h.width,height:h.height,sill:h.sill,hinge:0,swing:-1}; if(h.dk==='gar'){ o.dk='gar'; o.gk='sect'; } doc.items.push(o); }
+  doc.settings.wallW=spec.thick; persist(); panelKey=''; syncPanel(); redraw(); fitView(); window.__closePhoto();
+  toast('План из фотообмера: стен 4, проёмов '+spec.holes.length+(spec.skipped?', не перенесено '+spec.skipped:'')+(spec.warn&&spec.warn.length?'. Внимание: '+spec.warn.join('; '):''),true);
+  return {ok:true,id:d.id}; }catch(e){ console.warn(e); return {ok:false,msg:String(e&&e.message||e)}; } };
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
