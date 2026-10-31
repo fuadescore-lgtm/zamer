@@ -199,7 +199,7 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
 .ibn.on{background:var(--sel);color:#fff;border-color:var(--sel)}.ibn.on svg{stroke:#fff}
 .vbusy{position:fixed;inset:0;background:rgb(0 0 0 / .35);display:flex;align-items:center;justify-content:center;z-index:60;border-radius:inherit}.vbcard{background:var(--surface);color:var(--ink);border-radius:14px;padding:18px 20px;min-width:260px;max-width:86%;box-shadow:0 12px 34px var(--shadow);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}.vbcard b{font-size:16px}.vbstep{font-size:13px;color:var(--muted);min-height:18px}.vbbar{width:100%;height:6px;border-radius:3px;background:var(--rule);overflow:hidden}.vbbar i{display:block;height:100%;width:0;background:var(--sel);transition:width .25s}.vspin{width:34px;height:34px;border-radius:50%;border:4px solid var(--rule);border-top-color:var(--sel);animation:vspin .8s linear infinite;will-change:transform}.btn .vspin{width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:-2px;margin-right:6px}@keyframes vspin{to{transform:rotate(360deg)}}
 .ovlchip{position:absolute;z-index:45;min-width:40px;height:30px;padding:0 10px;border-radius:15px;border:1.5px solid var(--sel);background:var(--surface);color:var(--sel);font:700 13px/1 system-ui,sans-serif;box-shadow:0 4px 14px var(--shadow);cursor:pointer}
-.tmenu{position:absolute;z-index:7;bottom:8px;min-width:220px;max-width:min(360px,calc(100% - 16px));display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;box-shadow:0 10px 30px var(--shadow)}
+.tmenu{position:absolute;z-index:7;bottom:8px;min-width:220px;max-width:min(360px,calc(100% - 16px));max-height:calc(100% - 16px);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--surface);border:1px solid var(--rule);border-radius:12px;box-shadow:0 10px 30px var(--shadow)}
 .tmenu .mh{font-family:var(--f-ui);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .tmenu{min-width:0!important}
 .tmenu .mg{display:flex;flex-wrap:wrap;gap:4px}
@@ -4887,7 +4887,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.0.4':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.0.5':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
