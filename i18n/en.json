@@ -3612,5 +3612,11 @@
 "шт. с разных уровней на": "items from different levels to",
 "на всех уровнях": "on all levels",
 "Выделено на всех уровнях": "Selected on all levels",
-"Таких объектов нет на всех уровнях": "No such objects on any level"
+"Таких объектов нет на всех уровнях": "No such objects on any level",
+"Орто включено: ровно по X / Y, пунктир — выравнивание с углами": "Ortho on: straight along X / Y, dashes — alignment with corners",
+"Орто выключено: точка свободно": "Ortho off: point moves freely",
+"Замкнуть нечего: нужна цепь хотя бы из двух линий": "Nothing to close: need a chain of at least two lines",
+"касание — выбрать точку или линию, тяните — двигать; корзина — удалить": "tap — select a point or line, drag — move; trash — delete",
+"Орто: вкл. — ровно по X / Y от предыдущей вершины, пунктир — выравнивание с углами; выкл. — свободно. Углы объектов прилипают всегда": "Ortho: on — straight along X / Y from the previous vertex, dashes — alignment with corners; off — free. Object corners always snap",
+"Разделить: точка посередине выбранной линии": "Split: a point in the middle of the selected line"
 }
