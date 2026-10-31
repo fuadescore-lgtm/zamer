@@ -3652,5 +3652,9 @@
 "Правка эскиза: тяните вершины; «＋ точка» — касание края; глубина — в меню; ✓ — сохранить": "Edit sketch: drag vertices; “+ point” — tap an edge; depth — in the menu; ✓ — save",
 "Эскиз: в 3D или на фасаде коснитесь стены / грани — это плоскость; рисуйте контур, замкните его, задайте глубину и ✓": "Sketch: in 3D or on an elevation tap a wall / face — that is the plane; draw the contour, close it, set the depth and ✓",
 "Ось глубины смотрит на вас — тяните в 3D или на боковом фасаде": "The depth axis points at you — drag in 3D or on a side elevation",
-"Фотообмер": "Photo survey"
+"Фотообмер": "Photo survey",
+"Балка / перемычка": "Beam / lintel",
+"Отделка": "Finish",
+"Декор": "Decor",
+"Крыша-объём": "Roof solid"
 }
