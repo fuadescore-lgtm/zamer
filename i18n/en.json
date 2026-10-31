@@ -3586,5 +3586,9 @@
 "петля строки минимальной площади. «Через одну» — строка уходит по нечётным панелям и возвращается по чётным: обратный кабель почти не нужен (если выводов панели хватает на шаг через одну": "string loop of minimum area. \"Every other\" — the string goes out on odd modules and returns on even ones: almost no return cable is needed (if module leads reach every other module",
 "Соедините DC-кабель с панелями — построятся хвосты строк": "Connect the DC cable to the panels — string tails will be built",
 "Строка ": "String ",
-"панели → точка сбора: + ": "panels → collection point: + "
+"панели → точка сбора: + ": "panels → collection point: + ",
+"модель АКБ не выбрана — расчёт для 51,2 В: выберите АКБ в меню прибора": "battery model not selected — calculated for 51.2 V: choose the battery in the device menu",
+"трасса проходит сквозь ": "route passes through ",
+" — сдвиньте прибор (например, не перед окном) или трассу": " — move the device (e.g. not in front of a window) or the route",
+"Кабель гибкий ": "Flexible cable "
 }
