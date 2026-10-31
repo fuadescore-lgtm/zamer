@@ -1,0 +1,875 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Фотообмер фасада</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-column field-notebook app — header bar, photo sheet with measurement overlay, results ledger below. */
+:root {
+  --bg: #EEF1EE;
+  --surface: #FFFFFF;
+  --sunken: #E3E8E4;
+  --ink: #17232A;
+  --muted: #56666C;
+  --line: #CFD7D2;
+  --tape: #D99A00;        /* эталон: цвет рулетки */
+  --tape-ink: #6E4E00;
+  --open: #0A7487;        /* проёмы */
+  --open-soft: rgba(10,116,135,.12);
+  --warn: #9A5B00;
+  --warn-bg: #FFF2D6;
+  --danger: #B3261E;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0F1619; --surface: #172126; --sunken: #111A1E; --ink: #E4EBE8; --muted: #91A2A7; --line: #2A393F;
+  --tape: #F0B72A; --tape-ink: #F0B72A; --open: #44C2D3; --open-soft: rgba(68,194,211,.14);
+  --warn: #F3C46B; --warn-bg: #3A2C10; --danger: #F2867E; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0F1619; --surface: #172126; --sunken: #111A1E; --ink: #E4EBE8; --muted: #91A2A7; --line: #2A393F;
+  --tape: #F0B72A; --tape-ink: #F0B72A; --open: #44C2D3; --open-soft: rgba(68,194,211,.14);
+  --warn: #F3C46B; --warn-bg: #3A2C10; --danger: #F2867E; color-scheme: dark; }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+* { box-sizing: border-box; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--open); outline-offset: 2px; }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 10px; min-height: 54px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 6px; }
+.bar h1 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .01em; }
+.back { border: 0; background: transparent; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 22px; line-height: 1; }
+.back:hover { background: var(--sunken); }
+.status { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.status.err { color: var(--danger); }
+
+main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--muted); font-weight: 600; margin: 0; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 14px; font-weight: 500; min-height: 42px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.tape { background: var(--tape); color: #1B1300; border-color: var(--tape); }
+.btn.danger { color: var(--danger); }
+.btn.on { outline: 2px solid var(--open); outline-offset: -2px; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.note { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Список объектов */
+.plist { display: flex; flex-direction: column; gap: 10px; }
+.pitem { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; text-align: left; width: 100%;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+.pitem:hover { border-color: var(--muted); }
+.pthumb { width: 64px; height: 48px; border-radius: 8px; background: var(--sunken) center/cover no-repeat; }
+.pitem .t { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pitem .s { font-size: 13px; color: var(--muted); }
+.badge { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--sunken); color: var(--muted); }
+.form { display: grid; gap: 10px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 13px; color: var(--muted); }
+.field input, .field select { border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 9px 11px; min-height: 42px; width: 100%; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Слоты съёмки */
+.side { display: grid; gap: 8px; }
+.side h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 16px; display: flex; gap: 8px; align-items: baseline; }
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.slot { position: relative; aspect-ratio: 4 / 3; max-width: 100%; border-radius: 10px; border: 1px dashed var(--line); background: var(--surface) center/cover no-repeat;
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 6px; text-align: left; overflow: hidden; }
+.slot.has { border-style: solid; }
+.slot .lab { font-size: 11px; font-weight: 600; background: var(--surface); color: var(--ink); border-radius: 6px; padding: 2px 6px; align-self: flex-start; }
+.slot .plus { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 26px; }
+.slot .cnt { position: absolute; top: 6px; right: 6px; font-size: 11px; font-weight: 600; background: var(--open); color: var(--surface); border-radius: 999px; padding: 1px 7px; }
+.slot .busy { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--surface) 70%, transparent); font-size: 13px; }
+.diagram { width: 100%; max-width: 360px; height: auto; display: block; }
+
+/* Лист замера */
+.sheet { position: relative; background: var(--sunken); border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+#cv { display: block; width: 100%; height: min(62vh, 560px); touch-action: none; cursor: crosshair; }
+.zoom { display: flex; gap: 8px; align-items: center; margin-top: -8px; }
+.zoom button { min-width: 44px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 18px; padding: 0 10px; }
+.zoom span { font-size: 13px; color: var(--muted); }
+.hint { font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--tape); border-radius: 10px; padding: 10px 12px; }
+.hint.open { border-left-color: var(--open); }
+.tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.tools .btn { padding: 8px 6px; font-size: 14px; }
+
+/* Ведомость */
+.ledger { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-weight: 600; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+tr.sel td { background: var(--open-soft); }
+tr.refrow td { background: color-mix(in srgb, var(--tape) 12%, transparent); }
+.tag { display: inline-block; min-width: 30px; font-weight: 600; }
+.tol { color: var(--muted); font-size: 12px; }
+.warnchip { display: inline-block; margin-top: 2px; font-size: 12px; color: var(--warn); }
+.linkbtn { border: 0; background: none; padding: 4px 6px; color: var(--muted); font-size: 13px; text-decoration: underline; }
+.linkbtn.danger { color: var(--danger); }
+
+label.btn { display: inline-flex; align-items: center; justify-content: center; }
+.filebtn { position: relative; overflow: hidden; }
+.filebtn input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 100px; }
+.picker { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0,0,0,.12); display: grid; gap: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.picker .row .btn { flex: 1 1 140px; }
+@media (max-width: 420px) { .two { grid-template-columns: 1fr; } .bar h1 { font-size: 17px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="bar">
+  <button class="back" id="back" aria-label="Назад" hidden>&#8592;</button>
+  <h1 id="title">Фотообмер фасада</h1>
+  <span class="status" id="status"></span>
+</header>
+<main id="view"></main>
+<input type="file" id="pickOne" accept="image/*" hidden>
+<input type="file" id="pickCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="pickMany" accept="image/*" multiple hidden>
+
+<script>
+"use strict";
+/* ---------- Справочники ---------- */
+const SIDES = [1, 2, 3, 4];
+const POS = [["L", "Левый угол"], ["F", "Фронтально"], ["R", "Правый угол"]];
+const SLOT_ORDER = SIDES.flatMap(s => POS.map(p => "s" + s + p[0]));
+const TYPES = {
+  win:  { name: "Окно",    pre: "О", pts: 4 },
+  door: { name: "Дверь",   pre: "Д", pts: 4 },
+  gate: { name: "Ворота",  pre: "В", pts: 4 },
+  open: { name: "Проём",   pre: "П", pts: 4 },
+  line: { name: "Отрезок", pre: "Л", pts: 2 },
+};
+const REF_KINDS = {
+  wall:  { name: "Стена: длина × высота", zero: "от низа стены" },
+  dopen: { name: "Дверной проём по фасаду", zero: "от порога" },
+  dframe:{ name: "Дверь по коробке", zero: "от порога" },
+  win:   { name: "Окно (проём по фасаду)", zero: "от низа окна-эталона" },
+  rect:  { name: "Другой прямоугольник", zero: "от низа эталона" },
+};
+
+/* ---------- Состояние ---------- */
+const S = {
+  db: null, assets: null, uid: null, col: null,
+  cloud: false, loaded: false, loadErr: "",
+  projects: new Map(),   // id -> project
+  view: "list", cur: null, slot: null,
+  tool: null, draft: [], sel: null, confirm: null,
+};
+const $ = s => document.querySelector(s);
+const EMBED = (() => { try { return window.parent !== window && typeof window.parent.__closePhoto === "function"; } catch (e) { return false; } })();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const slotName = k => "Сторона " + k[1] + " · " + POS.find(p => p[0] === k[2])[1].toLowerCase();
+
+function setStatus(t, err) { const el = $("#status"); el.textContent = t || ""; el.classList.toggle("err", !!err); }
+
+/* ---------- Геометрия: гомография ---------- */
+function solve(A, b) {               // Гаусс с выбором главного элемента
+  const n = b.length; A = A.map((r, i) => [...r, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let m = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[m][c])) m = r;
+    if (Math.abs(A[m][c]) < 1e-12) return null;
+    [A[c], A[m]] = [A[m], A[c]];
+    for (let r = 0; r < n; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k <= n; k++) A[r][k] -= f * A[c][k]; }
+  }
+  return A.map((r, i) => r[n] / r[i]);
+}
+function homog(src, dst) {           // 4 точки src -> dst
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+  }
+  const h = solve(A, b); return h ? [...h, 1] : null;
+}
+function apply(H, [x, y]) { const w = H[6] * x + H[7] * y + H[8]; return [(H[0] * x + H[1] * y + H[2]) / w, (H[3] * x + H[4] * y + H[5]) / w]; }
+function sortQuad(pts) {             // -> ВЛ, ВП, НП, НЛ (в координатах фото, y вниз)
+  const cx = pts.reduce((a, p) => a + p[0], 0) / 4, cy = pts.reduce((a, p) => a + p[1], 0) / 4;
+  const s = [...pts].sort((a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx));
+  // после сортировки по углу первая точка — с углом около -135° (верхняя левая)
+  let k = 0, best = Infinity; s.forEach((p, i) => { const v = p[0] + p[1]; if (v < best) { best = v; k = i; } });
+  return [...s.slice(k), ...s.slice(0, k)];
+}
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+function refMatrix(ph) {
+  const r = ph && ph.ref; if (!r || !(r.W > 0) || !(r.H > 0) || r.pts.length !== 4) return null;
+  return homog(sortQuad(r.pts), [[0, r.H], [r.W, r.H], [r.W, 0], [0, 0]]);
+}
+function mmPerPx(H, c) { const a = apply(H, c); return Math.max(dist(a, apply(H, [c[0] + 1, c[1]])), dist(a, apply(H, [c[0], c[1] + 1]))); }
+function measure(ph, it, H) {
+  if (!H) return null;
+  if (it.type === "line") {
+    if (it.pts.length < 2) return null;
+    const a = apply(H, it.pts[0]), b = apply(H, it.pts[1]);
+    const k = Math.max(mmPerPx(H, it.pts[0]), mmPerPx(H, it.pts[1]));
+    return { len: dist(a, b), tolL: 2 * k };
+  }
+  if (it.pts.length < 4) return null;
+  const qi = sortQuad(it.pts), q = qi.map(p => apply(H, p));
+  const wTop = q[1][0] - q[0][0], wBot = q[2][0] - q[3][0], hL = q[0][1] - q[3][1], hR = q[1][1] - q[2][1];
+  const c = [qi.reduce((a, p) => a + p[0], 0) / 4, qi.reduce((a, p) => a + p[1], 0) / 4];
+  const k = mmPerPx(H, c);
+  return {
+    w: Math.abs((wTop + wBot) / 2), h: Math.abs((hL + hR) / 2),
+    tolW: Math.hypot((wTop - wBot) / 2, 2 * k), tolH: Math.hypot((hL - hR) / 2, 2 * k),
+    bottom: (q[2][1] + q[3][1]) / 2, left: (q[0][0] + q[3][0]) / 2,
+  };
+}
+const r5 = v => Math.round(v / 5) * 5;
+const fmm = v => r5(v).toLocaleString("ru-RU");
+const ftol = v => "± " + Math.max(5, r5(v));
+function warnings(it, m) {
+  if (!m) return [];
+  const w = [];
+  if (it.type === "door" && (m.h < 1800 || m.h > 2600)) w.push("Высота двери нетипична: проверьте эталон");
+  if (it.type === "win" && (m.w > 4000 || m.h > 3000 || m.w < 250)) w.push("Размер окна нетипичен: проверьте эталон");
+  if (m.tolW > 40 || m.tolH > 40) w.push("Углы отмечены неровно или элемент не в плоскости эталона");
+  return w;
+}
+
+/* ---------- Пример (генерируется на месте) ---------- */
+function makeExample() {
+  const W = 1600, Hh = 1200, c = document.createElement("canvas"); c.width = W; c.height = Hh;
+  const g = c.getContext("2d");
+  // фасад 9000 × 3000 мм, перспектива с левого-фронтального ракурса
+  const M = homog([[0, 3000], [9000, 3000], [9000, 0], [0, 0]], [[250, 470], [1370, 395], [1395, 985], [228, 1040]]);
+  const P = (x, y) => apply(M, [x, y]);
+  const poly = (pts, fill, stroke, lw) => { g.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2; g.stroke(); } };
+  const sky = g.createLinearGradient(0, 0, 0, Hh); sky.addColorStop(0, "#9DB9CF"); sky.addColorStop(.55, "#D8E3E8"); sky.addColorStop(.56, "#7F8C6A"); sky.addColorStop(1, "#5F6B4D");
+  g.fillStyle = sky; g.fillRect(0, 0, W, Hh);
+  poly([[-600, 3000], [4500, 5100], [9600, 3000]], "#7B3F33", "#4E2620", 3);            // крыша (фронтон)
+  poly([[0, 3000], [4500, 4850], [9000, 3000]], "#E9E1D2", "#B9AE98", 2);                 // фронтон
+  poly([[4200, 3700], [4800, 3700], [4800, 4350], [4200, 4350]], "#3B4249", "#22272B", 2); // слуховое окно во фронтоне
+  poly([[0, 3000], [9000, 3000], [9000, 0], [0, 0]], "#E3DACA", "#A99D86", 2);           // стена
+  poly([[0, 450], [9000, 450], [9000, 0], [0, 0]], "#8E8A80", null);                     // цоколь
+  const win = (x, y, w, h) => { poly([[x, y + h], [x + w, y + h], [x + w, y], [x, y]], "#F4F3EF", "#6C665B", 2); poly([[x + 70, y + h - 70], [x + w - 70, y + h - 70], [x + w - 70, y + 70], [x + 70, y + 70]], "#4D6475", null); poly([[x + w / 2 - 25, y + h - 70], [x + w / 2 + 25, y + h - 70], [x + w / 2 + 25, y + 70], [x + w / 2 - 25, y + 70]], "#F4F3EF", null); poly([[x - 60, y], [x + w + 60, y], [x + w + 60, y - 50], [x - 60, y - 50]], "#BDB6A8", null); };
+  win(2700, 900, 1400, 1400); win(5600, 900, 1400, 1400);
+  poly([[1000, 2100], [1900, 2100], [1900, 0], [1000, 0]], "#5A3B2A", "#2E1E15", 2);    // дверь
+  poly([[1720, 1050], [1800, 1050], [1800, 950], [1720, 950]], "#C9A65A", null);
+  poly([[700, 2500], [2200, 2500], [2200, 2350], [700, 2350]], "#6E6A62", null);         // козырёк
+  const j = (x, y) => { const p = P(x, y); return [Math.round(p[0] + (Math.sin(x + y) * 1.2)), Math.round(p[1] + (Math.cos(x - y) * 1.2))]; };
+  const quad = (x, y, w, h) => [j(x, y + h), j(x + w, y + h), j(x + w, y), j(x, y)];
+  return {
+    id: "example", example: true, name: "Пример: одноэтажный дом", address: "Сгенерированный снимок, не сохраняется",
+    photos: {
+      s1F: {
+        src: c.toDataURL("image/jpeg", .86), w: W, h: Hh,
+        ref: { kind: "wall", W: 9000, H: 3000, pts: quad(0, 0, 9000, 3000) },
+        items: [
+          { id: "e1", type: "win", label: "О1", pts: quad(2700, 900, 1400, 1400) },
+          { id: "e2", type: "win", label: "О2", pts: quad(5600, 900, 1400, 1400) },
+          { id: "e3", type: "door", label: "Д1", pts: quad(1000, 0, 900, 2100) },
+          { id: "e4", type: "line", label: "Л1", pts: [j(4100, 1600), j(5600, 1600)] },
+        ],
+      },
+    },
+  };
+}
+
+/* ---------- Хранилище ---------- */
+function ser(p) {
+  const photos = {};
+  for (const [k, ph] of Object.entries(p.photos || {})) {
+    if (!ph.asset) continue;
+    photos[k] = { asset: ph.asset, w: ph.w, h: ph.h, ref: ph.ref || null, items: ph.items || [] };
+  }
+  return { name: p.name, address: p.address || "", created: p.created || Date.now(), updated: Date.now(), photos };
+}
+const dirty = new Set(); let saving = false, saveTimer = null;
+function touch(p) {
+  if (!p || p.example) return;
+  if (!S.cloud && !S.localDb) { setStatus("Только в этой вкладке"); return; }
+  dirty.add(p.id); setStatus("Не сохранено");
+  clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700);
+}
+async function flush() {
+  if (saving || !(S.cloud || S.localDb)) return; saving = true;
+  try {
+    while (dirty.size) {
+      const id = dirty.values().next().value; dirty.delete(id);
+      const p = S.projects.get(id); if (!p) continue;
+      setStatus("Сохраняю…");
+      try { if (S.localDb && !S.cloud) await idbReq("projects", "readwrite", st => st.put(serLocal(p), id)); else await S.col.doc(id).set(ser(p)); }
+      catch (e) {
+        if (e && e.code === "unavailable" && S.cloud) { await new Promise(r => setTimeout(r, 800 + Math.random() * 600)); try { await S.col.doc(id).set(ser(p)); continue; } catch (e2) { e = e2; } }
+        setStatus(e && (e.code === "quota_exceeded" || e.name === "QuotaExceededError") ? "Память заполнена" : "Не удалось сохранить", true); dirty.add(id); saving = false; return;
+      }
+    }
+    setStatus("Сохранено");
+  } finally { saving = false; }
+}
+let IDB = null;
+function idbOpen() {
+  return new Promise(res => {
+    try {
+      const r = indexedDB.open("fotoobmer", 1);
+      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore("projects"); d.createObjectStore("blobs"); };
+      r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null);
+    } catch (e) { res(null); }
+  });
+}
+function idbReq(store, mode, fn) {
+  return new Promise((res, rej) => {
+    const tx = IDB.transaction(store, mode), r = fn(tx.objectStore(store));
+    tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  });
+}
+const serLocal = p => JSON.parse(JSON.stringify(p, (k, v) => k === "local" ? undefined : v));
+async function initLocal() {
+  IDB = await idbOpen();
+  if (!IDB) { S.loaded = true; S.loadErr = "local"; render(); return; }
+  S.localDb = true; S.loadErr = "";
+  try {
+    const all = await idbReq("projects", "readonly", st => st.getAll());
+    for (const p of all || []) {
+      for (const ph of Object.values(p.photos || {})) {
+        if (ph.blobKey) { const b = await idbReq("blobs", "readonly", st => st.get(ph.blobKey)); if (b) ph.local = URL.createObjectURL(b); }
+      }
+      S.projects.set(p.id, p);
+    }
+  } catch (e) { setStatus("Не удалось прочитать сохранённое", true); }
+  S.loaded = true; render();
+}
+async function initStore() {
+  const ex = makeExample(); S.projects.set(ex.id, ex);
+  if (!window.claude || !claude.use) { await initLocal(); return; }
+  try {
+    const [db, user, assets] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("assets")]);
+    const id = user ? await user.id() : null;
+    if (!db || !id) { await initLocal(); return; }
+    S.db = db; S.uid = id; S.assets = assets; S.col = db.collection("data/users/" + id);
+    S.cloud = !!assets;
+    const timer = setTimeout(() => { if (!S.loaded) { S.loadErr = "slow"; S.loaded = true; render(); } }, 10000);
+    S.col.onSnapshot(snap => {
+      for (const d of snap.docs) {
+        if (dirty.has(d.id) || (S.cur && S.cur.id === d.id)) continue;
+        const v = JSON.parse(JSON.stringify(d.data())); v.id = d.id; S.projects.set(d.id, v);
+      }
+      for (const ch of snap.docChanges()) if (ch.type === "removed" && !(S.cur && S.cur.id === ch.doc.id)) S.projects.delete(ch.doc.id);
+      if (!snap.metadata.fromCache) { clearTimeout(timer); S.loadErr = ""; }
+      S.loaded = true;
+      if (S.view === "list") render();
+    }, err => { clearTimeout(timer); S.loaded = true; S.loadErr = err && err.code === "revoked" ? "local" : "slow"; render(); });
+  } catch (e) { await initLocal(); }
+}
+const photoSrc = ph => ph ? (ph.src || ph.local || (ph.asset ? "/_blob/" + ph.asset : "")) : "";
+
+/* ---------- Фото: подготовка и загрузка ---------- */
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+async function prepImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url);
+    const k = Math.min(1, 2560 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .88));
+    return { blob, w, h };
+  } finally { URL.revokeObjectURL(url); }
+}
+const busySlots = new Set();
+async function addPhoto(p, slot, file) {
+  busySlots.add(slot); render();
+  try {
+    const { blob, w, h } = await prepImage(file);
+    const old = p.photos[slot];
+    const ph = { w, h, ref: null, items: [], local: URL.createObjectURL(blob) };
+    if (S.assets) {
+      try { const r = await S.assets.upload(blob, { type: "image/jpeg" }); ph.asset = r.id; }
+      catch (e) {
+        if (e && e.code === "store_unavailable") { await new Promise(r => setTimeout(r, 900)); const r = await S.assets.upload(blob, { type: "image/jpeg" }); ph.asset = r.id; }
+        else throw e;
+      }
+    }
+    if (!S.assets && S.localDb) {
+      const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key;
+      if (old && old.blobKey) idbReq("blobs", "readwrite", st => st.delete(old.blobKey)).catch(() => {});
+    }
+    if (old && old.local) URL.revokeObjectURL(old.local);
+    p.photos[slot] = ph; touch(p);
+  } catch (e) {
+    const msg = e && e.code === "too_large" ? "Фото слишком большое" : e && e.code === "quota_or_state" ? "Место для фото закончилось" : "Не удалось добавить фото";
+    setStatus(msg, true);
+  } finally { busySlots.delete(slot); render(); }
+}
+
+/* ---------- Навигация ---------- */
+function go(view, opts = {}) {
+  if (S.view === "photo" && view !== "photo") flush();
+  S.view = view; Object.assign(S, opts);
+  S.tool = null; S.draft = []; S.sel = null; S.confirm = null; S.picking = null;
+  window.scrollTo(0, 0); render();
+}
+$("#back").onclick = () => {
+  if (S.view === "photo") go("project");
+  else if (S.view === "project") { flush(); S.cur = null; go("list"); }
+  else if (S.view === "list") { flush(); if (EMBED) window.parent.__closePhoto(); }
+  else go("list");
+};
+// «Назад» Android внутри BIMsketcher: true — шаг назад сделан здесь, false — закрыть фотообмер
+window.__photoBack = () => {
+  if (S.picking) { S.picking = null; render(); return true; }
+  if (S.tool) { S.tool = null; S.draft = []; render(); return true; }
+  if (S.view !== "list") { $("#back").onclick(); return true; }
+  flush(); return false;
+};
+
+function render() {
+  $("#back").hidden = S.view === "list" && !EMBED;
+  if (S.view === "list") renderList(); else if (S.view === "project") renderProject(); else if (S.view === "new") renderNew(); else renderPhoto();
+}
+
+/* ---------- Экран: список объектов ---------- */
+function projThumb(p) { for (const k of SLOT_ORDER) { const s = photoSrc(p.photos && p.photos[k]); if (s) return s; } return ""; }
+function countItems(p) { let n = 0; for (const ph of Object.values(p.photos || {})) n += (ph.items || []).length; return n; }
+function renderList() {
+  $("#title").textContent = EMBED ? "Фотообмер" : "Фотообмер фасада";
+  if (!S.loaded) setStatus("Загрузка…"); else if (S.loadErr === "local") setStatus("Только в этой вкладке"); else if (!dirty.size && !saving) setStatus(S.cloud ? "Сохраняется в аккаунте" : S.localDb ? "Хранится на этом телефоне" : "");
+  const list = [...S.projects.values()].sort((a, b) => (a.example ? 1 : 0) - (b.example ? 1 : 0) || (b.updated || b.created || 0) - (a.updated || a.created || 0));
+  const real = list.filter(p => !p.example);
+  $("#view").innerHTML = `
+    <div class="row" style="justify-content:space-between">
+      <div><p class="eyebrow">Объекты обмера</p><h2>${real.length ? "Ваши дома" : "Начните с первого дома"}</h2></div>
+      <button class="btn primary" id="newp">Новый объект</button>
+    </div>
+    ${S.loadErr === "local" ? `<p class="note">В этом браузере сохранение недоступно: фото и замеры останутся только до закрытия страницы.</p>` : ""}
+    ${S.loadErr === "slow" ? `<p class="note">Сохранённые объекты пока не загрузились. Проверьте соединение; список обновится сам.</p>` : ""}
+    ${!real.length && S.loaded ? `<p class="muted">Создайте объект, добавьте 12 фото дома по схеме и отметьте один контрольный размер. Ниже пример: откройте его, чтобы увидеть, как выглядят замеры.</p>` : ""}
+    <div class="plist">
+      ${list.map(p => `
+        <button class="pitem" data-id="${esc(p.id)}">
+          <span class="pthumb" style="background-image:url('${esc(projThumb(p))}')"></span>
+          <span style="min-width:0"><span class="t" style="display:block">${esc(p.name)}</span>
+            <span class="s">${Object.keys(p.photos || {}).length} из 12 фото · ${countItems(p)} замеров${p.address ? " · " + esc(p.address) : ""}</span></span>
+          ${p.example ? `<span class="badge">Пример</span>` : `<span class="muted" aria-hidden="true">&#8250;</span>`}
+        </button>`).join("")}
+    </div>`;
+  $("#newp").onclick = () => go("new");
+  document.querySelectorAll(".pitem").forEach(b => b.onclick = () => { S.cur = S.projects.get(b.dataset.id); go("project"); });
+}
+
+/* ---------- Экран: новый объект ---------- */
+function renderNew() {
+  $("#title").textContent = "Новый объект";
+  $("#view").innerHTML = `
+    <div class="panel form" id="nf">
+      <div class="field"><label for="pn">Название</label><input id="pn" required maxlength="80" placeholder="Например: дом Коваленко"></div>
+      <div class="field"><label for="pa">Адрес (необязательно)</label><input id="pa" maxlength="140" placeholder="Город, улица, номер"></div>
+      <p class="small" id="nerr" style="color:var(--danger)" hidden>Введите название объекта.</p>
+      <div class="row"><button class="btn primary" type="button" id="nok">Создать</button><button class="btn" type="button" id="nc">Отмена</button></div>
+    </div>`;
+  $("#pn").focus();
+  $("#nc").onclick = () => go("list");
+  const create = () => {
+    if (!$("#pn").value.trim()) { $("#nerr").hidden = false; $("#pn").focus(); return; }
+    const p = { id: uid(), name: $("#pn").value.trim() || "Без названия", address: $("#pa").value.trim(), created: Date.now(), photos: {} };
+    S.projects.set(p.id, p); touch(p); S.cur = p; go("project");
+  };
+  $("#nok").onclick = create;
+  ["#pn", "#pa"].forEach(id => $(id).onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); create(); } });
+}
+
+/* ---------- Экран: объект ---------- */
+const SCHEME_SVG = `<svg class="diagram" viewBox="0 0 360 200" role="img" aria-label="Схема съёмки: три кадра на каждую сторону">
+  <rect x="120" y="60" width="120" height="80" fill="none" stroke="var(--ink)" stroke-width="2"/>
+  <text x="180" y="105" text-anchor="middle" font-size="12" fill="var(--muted)">дом</text>
+  <g fill="var(--open)"><circle cx="180" cy="178" r="6"/><circle cx="92" cy="166" r="6"/><circle cx="268" cy="166" r="6"/></g>
+  <g stroke="var(--open)" stroke-width="1.5" stroke-dasharray="4 3"><line x1="180" y1="172" x2="180" y2="144"/><line x1="97" y1="162" x2="124" y2="140"/><line x1="263" y1="162" x2="236" y2="140"/></g>
+  <text x="180" y="196" text-anchor="middle" font-size="11" fill="var(--ink)">фронтально</text>
+  <text x="62" y="186" font-size="11" fill="var(--ink)">левый угол</text>
+  <text x="246" y="186" font-size="11" fill="var(--ink)">правый угол</text>
+  <text x="180" y="40" text-anchor="middle" font-size="11" fill="var(--muted)">так же для сторон 2, 3 и 4 — всего 12 кадров</text>
+</svg>`;
+function allRows(p) {
+  const rows = [];
+  for (const k of SLOT_ORDER) {
+    const ph = p.photos && p.photos[k]; if (!ph || !(ph.items || []).length) continue;
+    const H = refMatrix(ph);
+    for (const it of ph.items) rows.push({ k, ph, it, m: measure(ph, it, H) });
+  }
+  return rows;
+}
+function rowsTSV(p, rows) {
+  const head = ["Сторона", "Фото", "Элемент", "Тип", "Ширина, мм", "Высота, мм", "Длина, мм", "Низ, мм", "От левого края эталона, мм", "Погрешность, мм"];
+  const lines = [head.join("\t")];
+  for (const r of rows) {
+    const m = r.m || {};
+    lines.push([r.k[1], POS.find(x => x[0] === r.k[2])[1], r.it.label, TYPES[r.it.type].name,
+      m.w != null ? r5(m.w) : "", m.h != null ? r5(m.h) : "", m.len != null ? r5(m.len) : "",
+      m.bottom != null ? r5(m.bottom) : "", m.left != null ? r5(m.left) : "",
+      m.len != null ? Math.max(5, r5(m.tolL)) : (m.w != null ? Math.max(5, r5(Math.max(m.tolW, m.tolH))) : "")].join("\t"));
+  }
+  return lines.join("\n");
+}
+function renderProject() {
+  const p = S.cur; if (!p) return go("list");
+  $("#title").textContent = p.name;
+  if (p.example) setStatus("Пример не сохраняется"); else if (!S.cloud && !S.localDb) setStatus("Только в этой вкладке");
+  const rows = allRows(p);
+  const filled = Object.keys(p.photos || {}).length;
+  $("#view").innerHTML = `
+    ${p.example ? `<p class="note">Это пример на сгенерированном снимке: в него нельзя добавить фото. Откройте «Сторона 1 · фронтально», чтобы посмотреть замер.</p>` : ""}
+    ${S.confirm === "exslot" ? `<div class="panel"><p>Чтобы снимать свой дом, создайте объект: в нём ячейки открывают камеру.</p><div class="row"><button class="btn primary" id="exslot">Создать объект</button></div></div>` : ""}
+    ${pickerHTML()}
+    <section class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div><p class="eyebrow">Съёмка</p><h2>${filled} из 12 фото</h2></div>
+        ${p.example ? "" : `<label class="btn filebtn">Добавить несколько фото<input type="file" id="inMany" accept="image/*" multiple aria-label="Добавить несколько фото"></label>`}
+      </div>
+      ${filled < 12 && !p.example ? SCHEME_SVG + `<p class="small muted">Снимайте основной камерой без зума, держите телефон ровно, дом целиком от земли до конька. «Добавить несколько» заполнит пустые ячейки по порядку.</p>` : ""}
+      ${SIDES.map(s => `
+        <div class="side"><h3>Сторона ${s}${s === 1 ? ` <span class="small muted">главный фасад</span>` : ""}</h3>
+          <div class="slots">${POS.map(([c, nm]) => {
+            const k = "s" + s + c, ph = p.photos && p.photos[k], n = ph ? (ph.items || []).length : 0;
+            return `<button class="slot ${ph ? "has" : ""}" data-k="${k}" style="${ph ? `background-image:url('${esc(photoSrc(ph))}')` : ""}" aria-label="${esc(slotName(k))}">
+              ${ph ? "" : `<span class="plus" aria-hidden="true">+</span>`}
+              ${n ? `<span class="cnt">${n}</span>` : ""}
+              ${busySlots.has(k) ? `<span class="busy">Загрузка…</span>` : ""}
+              <span class="lab">${nm}</span></button>`; }).join("")}</div>
+        </div>`).join("")}
+    </section>
+    <section class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div><p class="eyebrow">Ведомость</p><h2>${rows.length ? rows.length + " замеров" : "Замеров пока нет"}</h2></div>
+        ${rows.length ? `<button class="btn" id="copy">Скопировать таблицу</button>` : ""}
+      </div>
+      ${rows.length ? `<div class="ledger"><table>
+        <thead><tr><th>Фото</th><th>Элемент</th><th class="num">Ш × В, мм</th><th class="num">Низ</th></tr></thead>
+        <tbody>${rows.map(r => `<tr><td class="small">${esc(slotName(r.k))}</td><td><span class="tag">${esc(r.it.label)}</span> ${TYPES[r.it.type].name}</td>
+          <td class="num num">${r.m ? (r.m.len != null ? fmm(r.m.len) : fmm(r.m.w) + " × " + fmm(r.m.h)) : "нет эталона"}</td>
+          <td class="num num">${r.m && r.m.bottom != null ? fmm(r.m.bottom) : ""}</td></tr>`).join("")}</tbody></table></div>
+        <p class="small muted" id="copymsg">Таблица копируется с табуляцией: её можно вставить прямо в Excel или Google Таблицы.</p>`
+        : `<p class="muted small">Откройте фото, отметьте эталон и коснитесь углов окон и дверей — размеры появятся здесь.</p>`}
+    </section>
+    ${p.example ? "" : `<div class="row">${S.confirm === "delp" ? `<span class="small">Удалить объект со всеми замерами?</span><button class="btn danger" id="delp2">Удалить</button><button class="btn" id="delpc">Отмена</button>` : `<button class="linkbtn danger" id="delp">Удалить объект</button>`}</div>`}`;
+  document.querySelectorAll(".slot").forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    if (busySlots.has(k)) return;
+    if (p.photos && p.photos[k]) go("photo", { slot: k });
+    else if (p.example) { S.confirm = "exslot"; render(); }
+    else { pickTarget = k; S.picking = k; render(); }
+  });
+  const exs = $("#exslot"); if (exs) exs.onclick = () => { S.confirm = null; S.cur = null; go("new"); };
+  bindPicker();
+  const cp = $("#copy"); if (cp) cp.onclick = () => copyText(rowsTSV(p, rows), $("#copymsg"));
+  const d1 = $("#delp"); if (d1) d1.onclick = () => { S.confirm = "delp"; render(); };
+  const dc = $("#delpc"); if (dc) dc.onclick = () => { S.confirm = null; render(); };
+  const d2 = $("#delp2"); if (d2) d2.onclick = async () => {
+    S.projects.delete(p.id); dirty.delete(p.id);
+    if (S.cloud) { try { await S.col.doc(p.id).delete(); } catch (e) { setStatus("Не удалось удалить", true); } }
+    else if (S.localDb) {
+      try {
+        await idbReq("projects", "readwrite", st => st.delete(p.id));
+        for (const ph of Object.values(p.photos || {})) if (ph.blobKey) await idbReq("blobs", "readwrite", st => st.delete(ph.blobKey));
+      } catch (e) { setStatus("Не удалось удалить", true); }
+    }
+    S.cur = null; go("list");
+  };
+}
+function copyText(t, msgEl) {
+  const ok = () => { if (msgEl) msgEl.textContent = "Скопировано. Вставьте в таблицу."; };
+  try { navigator.clipboard.writeText(t).then(ok, () => fallback()); } catch (e) { fallback(); }
+  function fallback() { const ta = document.createElement("textarea"); ta.value = t; ta.style.width = "100%"; ta.rows = 6; ta.readOnly = true; if (msgEl) { msgEl.textContent = "Скопируйте вручную:"; msgEl.after(ta); } ta.select(); }
+}
+let pickTarget = null;
+function pickerHTML() {
+  if (!S.picking) return "";
+  return `<div class="picker" role="dialog" aria-label="Добавить фото">
+    <p><strong>${esc(slotName(S.picking))}</strong></p>
+    <div class="row"><label class="btn primary filebtn">Снять камерой<input type="file" id="inCam" accept="image/*" capture="environment" aria-label="Снять камерой"></label><label class="btn filebtn">Выбрать из галереи<input type="file" id="inGal" accept="image/*" aria-label="Выбрать из галереи"></label></div>
+    <p class="small muted">Если окно выбора не открылось, откройте эту страницу в браузере телефона (Chrome или Safari) под своим аккаунтом Claude: там выбор фото работает всегда.</p>
+    <button class="btn" id="pickc">Отмена</button></div>`;
+}
+function bindPicker() {
+  const c = $("#pickc"); if (c) c.onclick = () => { S.picking = null; render(); };
+  ["#inCam", "#inGal"].forEach(id => { const el = $(id); if (el) el.onchange = onPickOne; });
+  const m = $("#inMany"); if (m) m.onchange = e => $("#pickMany").onchange(e);
+}
+const onPickOne = e => {
+  const f = e.target.files && e.target.files[0]; const k = pickTarget; S.picking = null;
+  if (f && S.cur && k) addPhoto(S.cur, k, f); else render();
+  e.target.value = "";
+};
+$("#pickOne").onchange = onPickOne; $("#pickCam").onchange = onPickOne;
+$("#pickMany").onchange = async e => {
+  const files = [...(e.target.files || [])], p = S.cur; e.target.value = ""; if (!p) return;
+  const empty = SLOT_ORDER.filter(k => !(p.photos && p.photos[k]));
+  const pairs = files.slice(0, empty.length).map((f, i) => [empty[i], f]);
+  if (files.length > empty.length) setStatus("Лишние фото не добавлены: свободно " + empty.length, true);
+  for (const [k] of pairs) busySlots.add(k); render();
+  for (const [k, f] of pairs) await addPhoto(p, k, f);
+};
+
+/* ---------- Экран: замер на фото ---------- */
+const V = { s: 1, tx: 0, ty: 0, img: null, src: "", cw: 0, ch: 0, drag: null, gest: null, ptrs: new Map(), loupe: null };
+function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function renderPhoto() {
+  const p = S.cur, ph = p && p.photos[S.slot]; if (!ph) return go("project");
+  $("#title").textContent = slotName(S.slot);
+  const H = refMatrix(ph);
+  const r = ph.ref;
+  let hint, hintCls = "";
+  if (S.tool === "ref") hint = `Коснитесь 4 углов эталона (${S.draft.length} из 4): например, углов стены у земли и у карниза или углов двери. Порядок любой.`;
+  else if (S.tool === "refform") hint = "Укажите, что отмечено, и введите размеры в миллиметрах.";
+  else if (S.tool) { const t = TYPES[S.tool]; hint = `${t.name}: коснитесь ${t.pts === 2 ? "двух концов" : "4 углов"} (${S.draft.length} из ${t.pts}). Порядок любой.`; hintCls = "open"; }
+  else if (!r) hint = "Шаг 1. Отметьте эталон: прямоугольник известного размера на этой стене.";
+  else if (S.sel) hint = "Перетащите точки, чтобы уточнить положение: появится лупа. Двумя пальцами можно приблизить.";
+  else { hint = "Шаг 2. Выберите элемент и коснитесь его углов на фото."; hintCls = "open"; }
+  const items = ph.items || [];
+  const kind = r && REF_KINDS[r.kind] ? REF_KINDS[r.kind] : REF_KINDS.rect;
+  $("#view").innerHTML = `
+    <div class="sheet">
+      <canvas id="cv" aria-label="Фото с разметкой"></canvas>
+    </div>
+    <div class="zoom"><button id="zin" aria-label="Приблизить">+</button><button id="zout" aria-label="Отдалить">&#8722;</button><button id="zfit" style="font-size:14px">Вписать</button><span>или двумя пальцами</span></div>
+    <p class="hint ${hintCls}" id="hint">${hint}</p>
+    ${S.tool === "refform" ? refFormHTML(r) : ""}
+    ${S.tool && S.tool !== "refform" ? `<div class="row"><button class="btn" id="undo" ${S.draft.length ? "" : "disabled"}>Убрать точку</button><button class="btn" id="cancel">Отмена</button></div>` : ""}
+    ${!S.tool ? `<div class="tools">
+      <button class="btn tape" id="tref">${r ? "Эталон" : "Отметить эталон"}</button>
+      ${Object.entries(TYPES).map(([k, t]) => `<button class="btn" data-tool="${k}" ${H ? "" : "disabled"}>${t.name}</button>`).join("")}
+    </div>` : ""}
+    <section class="panel">
+      <div><p class="eyebrow">Замеры на этом фото</p>
+      ${r ? `<p class="small muted">Эталон: ${esc(kind.name)}, <span class="num">${fmm(r.W)} × ${fmm(r.H)}</span> мм. Высоты считаются ${kind.zero}. Размеры верны для элементов в плоскости той же стены.</p>` : `<p class="small muted">Без эталона размеры не считаются.</p>`}</div>
+      ${items.length || r ? `<div class="ledger"><table>
+        <thead><tr><th>Элемент</th><th class="num">Ш × В, мм</th><th class="num">Низ</th><th class="num">Слева</th><th></th></tr></thead>
+        <tbody>
+        ${r ? `<tr class="refrow ${S.sel === "ref" ? "sel" : ""}" data-sel="ref"><td><span class="tag">Э</span> Эталон</td><td class="num num">${fmm(r.W)} × ${fmm(r.H)}</td><td class="num num">0</td><td class="num num">0</td><td></td></tr>` : ""}
+        ${items.map(it => { const m = measure(ph, it, H), w = warnings(it, m); return `
+          <tr class="${S.sel === it.id ? "sel" : ""}" data-sel="${esc(it.id)}">
+            <td><span class="tag">${esc(it.label)}</span> ${TYPES[it.type].name}${w.map(x => `<br><span class="warnchip">${esc(x)}</span>`).join("")}</td>
+            <td class="num num">${!m ? "—" : m.len != null ? fmm(m.len) + `<br><span class="tol">${ftol(m.tolL)}</span>` : fmm(m.w) + " × " + fmm(m.h) + `<br><span class="tol">${ftol(Math.max(m.tolW, m.tolH))}</span>`}</td>
+            <td class="num num">${m && m.bottom != null ? fmm(m.bottom) : ""}</td>
+            <td class="num num">${m && m.left != null ? fmm(m.left) : ""}</td>
+            <td class="num">${S.confirm === it.id ? `<button class="linkbtn danger" data-del2="${esc(it.id)}">Удалить?</button>` : `<button class="linkbtn" data-del="${esc(it.id)}" aria-label="Удалить ${esc(it.label)}">&#10005;</button>`}</td>
+          </tr>`; }).join("")}
+        </tbody></table></div>` : ""}
+      ${pickerHTML()}
+      ${!p.example ? `<div class="row">${S.confirm === "replace" ? `<span class="small">Заменить фото? Разметка на нём будет удалена.</span><button class="btn danger" id="rep2">Заменить</button><button class="btn" id="repc">Отмена</button>` : `<button class="linkbtn" id="rep">Заменить фото</button>`}</div>` : ""}
+    </section>`;
+  bindPhoto(ph);
+  setupCanvas(ph);
+}
+function refFormHTML(r) {
+  const k = (r && r.kind) || "wall";
+  return `<div class="panel form" id="rf">
+    <div class="field"><label for="rk">Что отмечено</label><select id="rk">${Object.entries(REF_KINDS).map(([v, o]) => `<option value="${v}" ${v === k ? "selected" : ""}>${o.name}</option>`).join("")}</select></div>
+    <div class="two">
+      <div class="field"><label for="rw">Ширина (длина), мм</label><input id="rw" type="number" inputmode="numeric" min="100" max="60000" required value="${r && r.W ? r.W : ""}" placeholder="9000"></div>
+      <div class="field"><label for="rh">Высота, мм</label><input id="rh" type="number" inputmode="numeric" min="100" max="30000" required value="${r && r.H ? r.H : ""}" placeholder="3000"></div>
+    </div>
+    <p class="small muted">Длинный эталон точнее: длина и высота стены лучше, чем дверь. Для двери выберите, что измерено: проём или коробка.</p>
+    <p class="small" id="rerr" style="color:var(--danger)" hidden>Введите оба размера в миллиметрах, не меньше 100.</p>
+    <div class="row"><button class="btn tape" type="button" id="rok">Сохранить эталон</button><button class="btn" type="button" id="rfc">Отмена</button></div>
+  </div>`;
+}
+function bindPhoto(ph) {
+  const p = S.cur;
+  const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on("#zin", () => zoomAt(1.4)); on("#zout", () => zoomAt(1 / 1.4)); on("#zfit", () => { fit(ph); draw(); });
+  on("#tref", () => {
+    if (p.example) { S.sel = "ref"; render(); return; }
+    if (ph.ref) { S.sel = "ref"; S.tool = "refform"; S.draft = ph.ref.pts.slice(); render(); }
+    else { S.tool = "ref"; S.draft = []; S.sel = null; render(); }
+  });
+  document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { S.tool = b.dataset.tool; S.draft = []; S.sel = null; render(); });
+  on("#undo", () => { S.draft.pop(); render(); });
+  on("#cancel", () => { S.tool = null; S.draft = []; render(); });
+  on("#rfc", () => { S.tool = null; if (!ph.ref) S.draft = []; render(); });
+  const rok = $("#rok"); if (rok) rok.onclick = () => {
+    const W = +$("#rw").value, Hh = +$("#rh").value;
+    if (!(W >= 100 && Hh >= 100)) { $("#rerr").hidden = false; return; }
+    const pts = ph.ref ? ph.ref.pts : S.draft.slice(0, 4);
+    ph.ref = { kind: $("#rk").value, W, H: Hh, pts };
+    S.tool = null; S.draft = []; S.sel = null; touch(p); render();
+  };
+  document.querySelectorAll("tr[data-sel]").forEach(tr => tr.onclick = e => { if (e.target.closest("button")) return; S.sel = tr.dataset.sel; S.confirm = null; render(); });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.confirm = b.dataset.del; render(); });
+  document.querySelectorAll("[data-del2]").forEach(b => b.onclick = () => { ph.items = ph.items.filter(i => i.id !== b.dataset.del2); if (S.sel === b.dataset.del2) S.sel = null; S.confirm = null; touch(p); render(); });
+  on("#rep", () => { S.confirm = "replace"; render(); });
+  on("#repc", () => { S.confirm = null; render(); });
+  on("#rep2", () => { S.confirm = null; pickTarget = S.slot; S.picking = S.slot; render(); });
+  bindPicker();
+}
+function nextLabel(ph, type) { const pre = TYPES[type].pre; let n = 1; const used = new Set((ph.items || []).map(i => i.label)); while (used.has(pre + n)) n++; return pre + n; }
+
+/* --- холст --- */
+function setupCanvas(ph) {
+  const cv = $("#cv"); const src = photoSrc(ph);
+  const wNow = cv.getBoundingClientRect().width;
+  cv.style.height = Math.round(Math.max(260, Math.min(window.innerHeight * .62, wNow * ph.h / ph.w))) + "px";
+  const rect = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  V.cw = rect.width; V.ch = rect.height; cv.width = Math.round(V.cw * dpr); cv.height = Math.round(V.ch * dpr);
+  V.dpr = dpr; V.ptrs.clear(); V.drag = null; V.gest = null; V.loupe = null;
+  const ready = () => { if (V.fitFor !== S.slot + "|" + src || !V.fitDone) { fit(ph); V.fitFor = S.slot + "|" + src; V.fitDone = true; } draw(); };
+  if (V.src === src && V.img) ready();
+  else { V.img = null; V.src = src; draw(); loadImg(src).then(img => { if (V.src === src) { V.img = img; V.fitDone = false; ready(); } }).catch(() => { setStatus("Фото не загрузилось", true); }); }
+  bindCanvas(cv, ph);
+}
+function fit(ph) { const s = Math.min(V.cw / ph.w, V.ch / ph.h); V.s = s; V.tx = (V.cw - ph.w * s) / 2; V.ty = (V.ch - ph.h * s) / 2; }
+const toS = p => [p[0] * V.s + V.tx, p[1] * V.s + V.ty];
+const toI = (x, y) => [(x - V.tx) / V.s, (y - V.ty) / V.s];
+function zoomAt(f, cx = V.cw / 2, cy = V.ch / 2) { const ph = S.cur.photos[S.slot]; const minS = Math.min(V.cw / ph.w, V.ch / ph.h) * .5; const ns = Math.max(minS, Math.min(V.s * f, 8)); const ip = toI(cx, cy); V.s = ns; V.tx = cx - ip[0] * ns; V.ty = cy - ip[1] * ns; draw(); }
+
+function draw() {
+  const cv = $("#cv"); if (!cv) return; const g = cv.getContext("2d"), ph = S.cur.photos[S.slot];
+  g.setTransform(V.dpr, 0, 0, V.dpr, 0, 0); g.clearRect(0, 0, V.cw, V.ch);
+  g.fillStyle = css("--sunken"); g.fillRect(0, 0, V.cw, V.ch);
+  if (!V.img) { g.fillStyle = css("--muted"); g.font = "14px " + css("--font-body"); g.textAlign = "center"; g.fillText("Загрузка фото…", V.cw / 2, V.ch / 2); return; }
+  g.save(); g.translate(V.tx, V.ty); g.scale(V.s, V.s); g.drawImage(V.img, 0, 0, ph.w, ph.h); g.restore();
+  const tape = css("--tape"), open = css("--open"), H = refMatrix(ph);
+  const shapes = overlayShapes(ph, H);
+  for (const sh of shapes) drawShape(g, sh, tape, open, toS);
+  // черновик
+  if (S.draft.length && S.tool && S.tool !== "refform") {
+    const col = S.tool === "ref" ? tape : open;
+    g.strokeStyle = col; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath();
+    const ord = S.draft.length === 4 ? sortQuad(S.draft) : S.draft;
+    ord.forEach((p, i) => { const q = toS(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); if (ord.length === 4) g.closePath(); g.stroke(); g.setLineDash([]);
+    S.draft.forEach((p, i) => handle(g, toS(p), col, String(i + 1)));
+  }
+  if (V.loupe) drawLoupe(g, ph, shapes, tape, open);
+}
+function overlayShapes(ph, H) {
+  const out = [];
+  if (ph.ref) out.push({ id: "ref", kind: "ref", pts: S.tool === "refform" ? ph.ref.pts : ph.ref.pts, label: "Эталон " + fmm(ph.ref.W || 0) + "×" + fmm(ph.ref.H || 0) });
+  else if (S.tool === "refform" && S.draft.length === 4) out.push({ id: "ref", kind: "ref", pts: S.draft, label: "Эталон" });
+  for (const it of ph.items || []) {
+    const m = measure(ph, it, H);
+    const txt = !m ? it.label : m.len != null ? it.label + "  " + fmm(m.len) : it.label + "  " + fmm(m.w) + "×" + fmm(m.h);
+    out.push({ id: it.id, kind: it.type, pts: it.pts, label: txt });
+  }
+  return out;
+}
+function drawShape(g, sh, tape, open, T) {
+  const col = sh.kind === "ref" ? tape : open, sel = S.sel === sh.id;
+  const pts = sh.pts.length === 4 ? sortQuad(sh.pts) : sh.pts;
+  g.beginPath(); pts.forEach((p, i) => { const q = T(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+  if (pts.length === 4) { g.closePath(); g.fillStyle = col; g.globalAlpha = sel ? .22 : .12; g.fill(); g.globalAlpha = 1; }
+  g.strokeStyle = col; g.lineWidth = sel ? 3 : 2; g.stroke();
+  if (T !== toS) return;
+  if (sel) pts.forEach(p => handle(g, T(p), col));
+  // подпись
+  let c = pts.reduce((a, p) => { const q = T(p); return [a[0] + q[0] / pts.length, a[1] + q[1] / pts.length]; }, [0, 0]);
+  g.font = "600 12px " + css("--font-body"); const w = g.measureText(sh.label).width + 10;
+  if (sh.kind === "ref") { const tl = T(pts[0]); c = [tl[0] + w / 2 + 2, tl[1] + 12]; }
+  const y = pts.length === 2 ? c[1] - 16 : c[1];
+  g.fillStyle = sh.kind === "ref" ? tape : open; g.globalAlpha = .92; g.fillRect(c[0] - w / 2, y - 10, w, 20); g.globalAlpha = 1;
+  g.fillStyle = sh.kind === "ref" ? "#1B1300" : "#FFFFFF"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(sh.label, c[0], y + 1);
+}
+function handle(g, q, col, num) {
+  g.beginPath(); g.arc(q[0], q[1], num ? 9 : 7, 0, Math.PI * 2); g.fillStyle = "#FFFFFF"; g.fill(); g.lineWidth = 2.5; g.strokeStyle = col; g.stroke();
+  if (num) { g.fillStyle = "#17232A"; g.font = "600 10px " + css("--font-body"); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(num, q[0], q[1] + .5); }
+}
+function drawLoupe(g, ph, shapes, tape, open) {
+  const p = V.loupe, q = toS(p), R = 58, m = 3.5;
+  let L = [q[0] - 115, q[1]]; if (L[0] < R + 6) L = [q[0] + 115, q[1]];
+  L[1] = Math.max(R + 6, Math.min(V.ch - R - 6, L[1]));
+  const k = V.s * m, T = pt => [L[0] + (pt[0] - p[0]) * k, L[1] + (pt[1] - p[1]) * k];
+  g.save(); g.beginPath(); g.arc(L[0], L[1], R, 0, Math.PI * 2); g.clip();
+  g.fillStyle = css("--sunken"); g.fillRect(L[0] - R, L[1] - R, 2 * R, 2 * R);
+  g.save(); g.translate(L[0], L[1]); g.scale(k, k); g.translate(-p[0], -p[1]); g.drawImage(V.img, 0, 0, ph.w, ph.h); g.restore();
+  for (const sh of shapes) drawShape(g, sh, tape, open, T);
+  g.strokeStyle = "#FFFFFF"; g.lineWidth = 3; g.beginPath(); g.moveTo(L[0] - 14, L[1]); g.lineTo(L[0] + 14, L[1]); g.moveTo(L[0], L[1] - 14); g.lineTo(L[0], L[1] + 14); g.stroke();
+  g.strokeStyle = "#D7263D"; g.lineWidth = 1.2; g.stroke();
+  g.restore();
+  g.beginPath(); g.arc(L[0], L[1], R, 0, Math.PI * 2); g.lineWidth = 2; g.strokeStyle = css("--ink"); g.stroke();
+}
+function hitHandle(x, y, ph) {
+  const cands = [];
+  if (S.tool && S.tool !== "refform") S.draft.forEach((p, i) => cands.push({ arr: S.draft, i }));
+  if (S.sel === "ref" && ph.ref && !S.cur.example) ph.ref.pts.forEach((p, i) => cands.push({ arr: ph.ref.pts, i }));
+  const it = (ph.items || []).find(i => i.id === S.sel);
+  if (it && !S.cur.example) it.pts.forEach((p, i) => cands.push({ arr: it.pts, i }));
+  let best = null, bd = 26;
+  for (const c of cands) { const q = toS(c.arr[c.i]); const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+function inPoly(pt, poly) { let ins = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a[1] > pt[1]) !== (b[1] > pt[1]) && pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins; } return ins; }
+function nearSeg(pt, a, b, tol) { const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy || 1; const t = Math.max(0, Math.min(1, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / l)); return Math.hypot(pt[0] - a[0] - t * dx, pt[1] - a[1] - t * dy) < tol; }
+function onTap(x, y, ph) {
+  const p = S.cur, ip = toI(x, y);
+  if (ip[0] < 0 || ip[1] < 0 || ip[0] > ph.w || ip[1] > ph.h) return;
+  if (S.tool && S.tool !== "refform") {
+    if (p.example) return;
+    S.draft.push([Math.round(ip[0] * 10) / 10, Math.round(ip[1] * 10) / 10]);
+    const need = S.tool === "ref" ? 4 : TYPES[S.tool].pts;
+    if (S.draft.length >= need) {
+      if (S.tool === "ref") { S.tool = "refform"; render(); return; }
+      const it = { id: uid(), type: S.tool, label: nextLabel(ph, S.tool), pts: S.draft.slice(0, need) };
+      ph.items = ph.items || []; ph.items.push(it); S.sel = it.id; S.tool = null; S.draft = []; touch(p); render(); return;
+    }
+    render(); return;
+  }
+  // выбор элемента
+  const items = [...(ph.items || [])].reverse(); let hit = null;
+  for (const it of items) { if (it.pts.length === 4 ? inPoly(ip, sortQuad(it.pts)) : nearSeg(ip, it.pts[0], it.pts[1], 14 / V.s)) { hit = it.id; break; } }
+  if (!hit && ph.ref && inPoly(ip, sortQuad(ph.ref.pts))) hit = "ref";
+  S.sel = hit; S.confirm = null; render();
+}
+function bindCanvas(cv, ph) {
+  const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  cv.onpointerdown = e => {
+    cv.setPointerCapture(e.pointerId); const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
+    if (V.ptrs.size === 1) {
+      const h = hitHandle(x, y, ph);
+      if (h) { V.drag = h; V.loupe = h.arr[h.i]; draw(); }
+      else V.gest = { t: "pan", x0: x, y0: y, tx0: V.tx, ty0: V.ty, moved: false };
+    } else if (V.ptrs.size === 2) {
+      V.drag = null; V.loupe = null;
+      const [a, b] = [...V.ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      V.gest = { t: "pinch", d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, s0: V.s, im: toI(mid[0], mid[1]) };
+    }
+  };
+  cv.onpointermove = e => {
+    if (!V.ptrs.has(e.pointerId)) return; const [x, y] = pos(e); V.ptrs.set(e.pointerId, [x, y]);
+    if (V.drag) {
+      const ip = toI(x, y); V.drag.arr[V.drag.i] = [Math.max(0, Math.min(ph.w, Math.round(ip[0] * 10) / 10)), Math.max(0, Math.min(ph.h, Math.round(ip[1] * 10) / 10))];
+      V.loupe = V.drag.arr[V.drag.i]; draw();
+    } else if (V.gest && V.gest.t === "pan") {
+      const dx = x - V.gest.x0, dy = y - V.gest.y0; if (Math.hypot(dx, dy) > 6) V.gest.moved = true;
+      if (V.gest.moved) { V.tx = V.gest.tx0 + dx; V.ty = V.gest.ty0 + dy; draw(); }
+    } else if (V.gest && V.gest.t === "pinch" && V.ptrs.size >= 2) {
+      const [a, b] = [...V.ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const minS = Math.min(V.cw / ph.w, V.ch / ph.h) * .5;
+      V.s = Math.max(minS, Math.min(8, V.gest.s0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / V.gest.d0));
+      V.tx = mid[0] - V.gest.im[0] * V.s; V.ty = mid[1] - V.gest.im[1] * V.s; draw();
+    }
+  };
+  const end = e => {
+    if (!V.ptrs.has(e.pointerId)) return; const [x, y] = pos(e); V.ptrs.delete(e.pointerId);
+    if (V.drag) { V.drag = null; V.loupe = null; touch(S.cur); render(); return; }
+    if (V.gest && V.gest.t === "pan" && !V.gest.moved && e.type === "pointerup") { V.gest = null; onTap(x, y, ph); return; }
+    if (V.ptrs.size === 1) { const [p] = [...V.ptrs.values()]; V.gest = { t: "pan", x0: p[0], y0: p[1], tx0: V.tx, ty0: V.ty, moved: true }; }
+    else if (!V.ptrs.size) V.gest = null;
+  };
+  cv.onpointerup = end; cv.onpointercancel = end;
+  cv.onwheel = e => { e.preventDefault(); const [x, y] = pos(e); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, x, y); };
+}
+window.addEventListener("resize", () => { if (S.view === "photo") { const ph = S.cur.photos[S.slot]; const cv = $("#cv"); if (!cv) return; const r = cv.getBoundingClientRect(); if (Math.abs(r.width - V.cw) > 2) { V.cw = r.width; V.ch = r.height; cv.width = Math.round(V.cw * V.dpr); cv.height = Math.round(V.ch * V.dpr); fit(ph); draw(); } } });
+document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
+
+/* ---------- Старт ---------- */
+render();
+initStore();
+</script>
+</body></html>
