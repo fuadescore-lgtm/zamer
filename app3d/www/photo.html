@@ -162,6 +162,8 @@ const TYPES = {
   gate: { name: "Ворота",  pre: "В", pts: 4 },
   open: { name: "Проём",   pre: "П", pts: 4 },
   line: { name: "Отрезок", pre: "Л", pts: 2 },
+  ridge: { name: "Конёк", pre: "К", pts: 1 },
+  chim: { name: "Дымоход", pre: "Т", pts: 4 },
 };
 const REF_KINDS = {
   wall:  { name: "Стена: длина × высота", zero: "от низа стены" },
@@ -240,6 +242,11 @@ function refMatrix(ph) {
 function mmPerPx(H, c) { const a = apply(H, c); return Math.max(dist(a, apply(H, [c[0] + 1, c[1]])), dist(a, apply(H, [c[0], c[1] + 1]))); }
 function measure(ph, it, H) {
   if (!H) return null;
+  if (it.type === "ridge") {
+    if (!it.pts.length) return null;
+    const a = apply(H, it.pts[0]);
+    return { z: a[1], along: a[0], tolZ: 2 * mmPerPx(H, it.pts[0]) };
+  }
   if (it.type === "line") {
     if (it.pts.length < 2) return null;
     const a = apply(H, it.pts[0]), b = apply(H, it.pts[1]);
@@ -258,6 +265,13 @@ function measure(ph, it, H) {
   };
 }
 const r5 = v => Math.round(v / 5) * 5;
+// размер элемента для таблиц: конёк — высота, отрезок — длина, остальное — ширина × высота
+function sizeText(it, m, tol) {
+  if (!m) return "—";
+  if (m.z != null) return "выс. " + fmm(m.z) + (tol ? `<br><span class="tol">${ftol(m.tolZ)}</span>` : "");
+  if (m.len != null) return fmm(m.len) + (tol ? `<br><span class="tol">${ftol(m.tolL)}</span>` : "");
+  return (it.type === "chim" ? "≈ " : "") + fmm(m.w) + " × " + fmm(m.h) + (tol && it.type !== "chim" ? `<br><span class="tol">${ftol(Math.max(m.tolW, m.tolH))}</span>` : "");
+}
 const fmm = v => r5(v).toLocaleString("ru-RU");
 const ftol = v => "± " + Math.max(5, r5(v));
 function warnings(it, m) {
@@ -265,7 +279,8 @@ function warnings(it, m) {
   const w = [];
   if (it.type === "door" && (m.h < 1800 || m.h > 2600)) w.push("Высота двери нетипична: проверьте эталон");
   if (it.type === "win" && (m.w > 4000 || m.h > 3000 || m.w < 250)) w.push("Размер окна нетипичен: проверьте эталон");
-  if (m.tolW > 40 || m.tolH > 40) w.push("Углы отмечены неровно или элемент не в плоскости эталона");
+  if (it.type === "chim") w.push("Труба не в плоскости стены: на фасаде размеры условные, в модели — по двум снимкам");
+  else if (m.tolW > 40 || m.tolH > 40) w.push("Углы отмечены неровно или элемент не в плоскости эталона");
   return w;
 }
 
@@ -316,7 +331,7 @@ const VLIGHT = v3norm([-0.45, -0.7, 0.55]);
 function vShade(rgb, nrm) { const k = 0.62 + 0.38 * Math.max(0, v3dot(nrm, VLIGHT)); return `rgb(${rgb.map(v => Math.round(v * k)).join(",")})`; }
 // снимок 1600×1200 + истинные точки для разметки (эталон-стена и проёмы видимой стороны)
 function vRender(s, c) {
-  const W = 1600, Hh = 1200, f = 1150, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const W = 1600, Hh = 1200, f = 1152, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
   const g = cv.getContext("2d"), sh = vShot(s, c), cam = vCamera(sh.eye, sh.target, W, Hh, f);
   const { A, B, H, ridge, over, plinth } = VHOUSE;
   // небо и земля
@@ -425,7 +440,62 @@ function vRender(s, c) {
   // разметка: только видимая «своя» сторона кадра
   const sd = vSide(s), jit = (p, i) => [Math.round(p[0] + Math.sin(i * 12.9898 + s * 7.1) * 1.3), Math.round(p[1] + Math.cos(i * 4.1414 + s * 3.3) * 1.3)];
   const q4 = (t, z, w2, h2, i) => [[t, z + h2], [t + w2, z + h2], [t + w2, z], [t, z]].map((p, k) => jit(cam.proj(vAt(sd, p[0], p[1])), i * 4 + k));
-  return { src: cv.toDataURL("image/jpeg", .86), w: W, h: Hh, wall: q4(0, 0, sd.len, H, 0), open: VHOUSE.open[s].map((o, i) => ({ type: o[0], pts: q4(o[1], o[2], o[3], o[4], i + 1) })), len: sd.len };
+  // как разметил бы пользователь: вершина фронтона («Конёк») и видимая грань трубы («Дымоход»)
+  const J = (P3, i) => jit(cam.proj(P3), i);
+  const ridgePt = (s === 2 || s === 4) ? [J(vAt(sd, sd.len / 2, H + ridge), 90)] : null;
+  let chimPts = null;
+  if (s === 1) chimPts = [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy0, rz(cy0) + 40], [cx0, cy0, rz(cy0) + 40]].map((P3, i) => J(P3, 100 + i));
+  if (s === 2) chimPts = [[cx1, cy0, cz], [cx1, cy1, cz], [cx1, cy1, cz - 450], [cx1, cy0, cz - 450]].map((P3, i) => J(P3, 110 + i));
+  return { src: cv.toDataURL("image/jpeg", .86), w: W, h: Hh, wall: q4(0, 0, sd.len, H, 0), open: VHOUSE.open[s].map((o, i) => ({ type: o[0], pts: q4(o[1], o[2], o[3], o[4], i + 1) })), len: sd.len, ridgePt, chimPts };
+}
+
+/* ---------- Положение камеры по эталону-стене и пересечение лучей (для дымохода) ---------- */
+// Фокус камеры телефона в пикселях: основная камера ≈ 26 мм экв. → f ≈ 0,72 × длинная сторона кадра.
+const camF = ph => 0.72 * Math.max(ph.w, ph.h);
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m, A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g, det = a * A + b * B + c * C;
+  return [A / det, -(b * i - c * h) / det, (b * f - c * e) / det, B / det, (a * i - c * g) / det, -(a * f - c * d) / det, C / det, -(a * h - b * g) / det, (a * e - b * d) / det];
+}
+const m3v = (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]];
+// Камера в координатах плоскости стены: X — вдоль стены от левого края, Y — вверх от низа, Z — наружу от стены.
+// H — матрица «фото → мм на стене» (refMatrix). Возвращает центр камеры C и функцию луча для точки фото.
+function wallPose(ph, H) {
+  const f = camF(ph), cx = ph.w / 2, cy = ph.h / 2;
+  const P = inv3(H);                                        // мм на стене → фото
+  const Ki = [1 / f, 0, -cx / f, 0, 1 / f, -cy / f, 0, 0, 1];
+  const B = (() => { const r = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r.push(Ki[i * 3] * P[j] + Ki[i * 3 + 1] * P[3 + j] + Ki[i * 3 + 2] * P[6 + j]); return r; })();
+  const col = j => [B[j], B[3 + j], B[6 + j]], nrm = v => Math.hypot(v[0], v[1], v[2]);
+  let b1 = col(0), b2 = col(1), b3 = col(2), lam = 2 / (nrm(b1) + nrm(b2));
+  if (b3[2] * lam < 0) lam = -lam;                          // стена перед камерой
+  let r1 = b1.map(v => v * lam), r2 = b2.map(v => v * lam); const t = b3.map(v => v * lam);
+  // ортогонализация: r1, r2 — оси стены в системе камеры
+  const n1 = nrm(r1); r1 = r1.map(v => v / n1);
+  const d12 = r1[0] * r2[0] + r1[1] * r2[1] + r1[2] * r2[2]; r2 = r2.map((v, k) => v - d12 * r1[k]); const n2 = nrm(r2); r2 = r2.map(v => v / n2);
+  const r3 = [r1[1] * r2[2] - r1[2] * r2[1], r1[2] * r2[0] - r1[0] * r2[2], r1[0] * r2[1] - r1[1] * r2[0]];
+  // R: стена → камера (столбцы r1 r2 r3); центр камеры C = −Rᵀ t
+  const RT = [r1, r2, r3];                                   // строки Rᵀ
+  const C = RT.map(r => -(r[0] * t[0] + r[1] * t[1] + r[2] * t[2]));
+  const sgn = C[2] < 0 ? -1 : 1;                             // ось Z стены — к камере (наружу)
+  const fix = v => [v[0], v[1], v[2] * sgn];
+  return {
+    C: fix(C),
+    ray: q => { const d = [(q[0] - cx) / f, (q[1] - cy) / f, 1]; return fix(RT.map(r => r[0] * d[0] + r[1] * d[1] + r[2] * d[2])); },
+  };
+}
+// стена стороны s в мировых координатах дома (как в плане): начало, направление вдоль стены, наружу
+function sideFrame(s, A, B) {
+  return { 1: { O: [0, 0], u: [1, 0], n: [0, -1] }, 2: { O: [A, 0], u: [0, 1], n: [1, 0] }, 3: { O: [A, B], u: [-1, 0], n: [0, 1] }, 4: { O: [0, B], u: [0, -1], n: [-1, 0] } }[s];
+}
+const toWorld = (fr, p) => [fr.O[0] + fr.u[0] * p[0] + fr.n[0] * p[2], fr.O[1] + fr.u[1] * p[0] + fr.n[1] * p[2], p[1]];
+const dirWorld = (fr, d) => [fr.u[0] * d[0] + fr.n[0] * d[2], fr.u[1] * d[0] + fr.n[1] * d[2], d[1]];
+// ближайшая точка между двумя лучами (середина общего перпендикуляра) и расстояние между ними
+function meetRays(o1, d1, o2, d2) {
+  const w = [o1[0] - o2[0], o1[1] - o2[1], o1[2] - o2[2]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const a = dot(d1, d1), b = dot(d1, d2), c = dot(d2, d2), d = dot(d1, w), e = dot(d2, w), den = a * c - b * b;
+  if (Math.abs(den) < 1e-9) return null;
+  const s = (b * e - c * d) / den, t = (a * e - b * d) / den;
+  const p1 = o1.map((v, k) => v + d1[k] * s), p2 = o2.map((v, k) => v + d2[k] * t);
+  return { p: p1.map((v, k) => (v + p2[k]) / 2), gap: Math.hypot(p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]) };
 }
 
 // 12 снимков обхода дома; на фронтальных — эталон «Стена» и проёмы (как разметил бы пользователь)
@@ -438,6 +508,8 @@ function makeExample() {
     if (c === "F") {
       ph.ref = { kind: "wall", W: r.len, H: VHOUSE.H, pts: r.wall };
       const cnt = {}; ph.items = r.open.map(o => { cnt[o.type] = (cnt[o.type] || 0) + 1; return { id: uid(), type: o.type, label: TYPES[o.type].pre + cnt[o.type], pts: o.pts }; });
+      if (r.ridgePt) ph.items.push({ id: uid(), type: "ridge", label: "К1", pts: r.ridgePt });
+      if (r.chimPts) ph.items.push({ id: uid(), type: "chim", label: "Т1", pts: r.chimPts });
     }
     photos["s" + s + c] = ph;
   }
@@ -693,7 +765,7 @@ function rowsTSV(p, rows) {
   for (const r of rows) {
     const m = r.m || {};
     lines.push([r.k[1], POS.find(x => x[0] === r.k[2])[1], r.it.label, TYPES[r.it.type].name,
-      m.w != null ? r5(m.w) : "", m.h != null ? r5(m.h) : "", m.len != null ? r5(m.len) : "",
+      m.w != null ? r5(m.w) : "", m.h != null ? r5(m.h) : (m.z != null ? r5(m.z) : ""), m.len != null ? r5(m.len) : "",
       m.bottom != null ? r5(m.bottom) : "", m.left != null ? r5(m.left) : "",
       m.len != null ? Math.max(5, r5(m.tolL)) : (m.w != null ? Math.max(5, r5(Math.max(m.tolW, m.tolH))) : "")].join("\t"));
   }
@@ -706,9 +778,10 @@ function renderProject() {
   const rows = allRows(p);
   const filled = Object.keys(p.photos || {}).length;
   $("#view").innerHTML = `
-    ${p.example ? `<p class="note">Это пример: 12 виртуальных снимков обхода дома, как их сделали бы вы на объекте. На фронтальных кадрах размечены эталон, окна и двери${CAN_PLAN ? ". Нажмите «План» вверху — откроется модель в редакторе" : ""}.</p>` : ""}
+    ${p.example ? `<p class="note">Это пример: 12 виртуальных снимков обхода дома, как их сделали бы вы на объекте. На фронтальных кадрах размечены эталон, окна и двери${CAN_PLAN ? ". Нажмите «Сгенерировать модель» — откроется 3D-модель в редакторе" : ""}.</p>` : ""}
     ${S.confirm === "exslot" ? `<div class="panel"><p>Чтобы снимать свой дом, создайте объект: в нём ячейки открывают камеру.</p><div class="row"><button class="btn primary" id="exslot">Создать объект</button></div></div>` : ""}
     ${pickerHTML()}
+    ${CAN_PLAN && filled ? modelHTML(p) : ""}
     <section class="panel">
       <div class="row" style="justify-content:space-between">
         <div><p class="eyebrow">Съёмка</p><h2>${filled} из 12 фото</h2></div>
@@ -735,7 +808,7 @@ function renderProject() {
       ${rows.length ? `<div class="ledger"><table>
         <thead><tr><th>Фото</th><th>Элемент</th><th class="num">Ш × В, мм</th><th class="num">Низ</th></tr></thead>
         <tbody>${rows.map(r => `<tr><td class="small">${esc(slotName(r.k))}</td><td><span class="tag">${esc(r.it.label)}</span> ${TYPES[r.it.type].name}</td>
-          <td class="num num">${r.m ? (r.m.len != null ? fmm(r.m.len) : fmm(r.m.w) + " × " + fmm(r.m.h)) : "нет эталона"}</td>
+          <td class="num num">${r.m ? sizeText(r.it, r.m, false) : "нет эталона"}</td>
           <td class="num num">${r.m && r.m.bottom != null ? fmm(r.m.bottom) : ""}</td></tr>`).join("")}</tbody></table></div>
         <p class="small muted" id="copymsg">Таблица копируется с табуляцией: её можно вставить прямо в Excel или Google Таблицы.</p>`
         : `<p class="muted small">Откройте фото, отметьте эталон и коснитесь углов окон и дверей — размеры появятся здесь.</p>`}
@@ -823,13 +896,31 @@ function planDefaults(p) {
 }
 function planValues(p) {
   const d = planDefaults(p), o = p.planOpts || {};
-  return { len: [0, 1, 2, 3].map(i => +(o.len && o.len[i]) || +d.len[i] || 0), th: +o.th || 400, ht: +o.ht || d.ht, fo: +o.fo || 0, info: d.info };
+  return { len: [0, 1, 2, 3].map(i => +(o.len && o.len[i]) || +d.len[i] || 0), th: +o.th || 400, ht: +o.ht || d.ht, fo: +o.fo || 0, ov: o.ov != null && o.ov !== "" ? +o.ov : 500, info: d.info };
+}
+function modelHTML(p) {
+  const v = planValues(p), sp = buildPlan(p, v), li = [];
+  if (sp.err) li.push(`<li class="muted">${esc(sp.err)}</li>`);
+  else {
+    li.push(`<li><b>Стены:</b> ${fmm(sp.A)} × ${fmm(sp.B)} мм, высота ${fmm(sp.ht)}, толщина ${fmm(sp.thick)}</li>`);
+    li.push(`<li><b>Окна и двери:</b> ${sp.holes.length}${sp.skipped ? ` <span class="muted">(не вошло: ${sp.skipped})</span>` : ""}</li>`);
+    li.push(sp.roof ? `<li><b>Крыша:</b> двускатная, конёк ${fmm(sp.roof.ridgeZ)} мм от земли, уклон ${String(sp.roof.ang).replace(".", ",")}°, свес ${fmm(sp.roof.ov)}</li>`
+      : `<li class="muted"><b>Крыша:</b> не найдена — отметьте «Конёк» на фото фронтона</li>`);
+    li.push(sp.chim ? `<li><b>Дымоход:</b> ${fmm(sp.chim.w)} × ${fmm(sp.chim.l)} мм, верх ${fmm(sp.chim.top)} мм от земли${sp.chim.two ? " (по двум снимкам)" : " <span class=\"muted\">(по одному снимку — положение приблизительное)</span>"}</li>`
+      : `<li class="muted"><b>Дымоход:</b> не отмечен</li>`);
+  }
+  return `<section class="panel" id="modelp">
+    <div class="row" style="justify-content:space-between"><div><p class="eyebrow">Модель дома</p><h2>Что найдено на фото</h2></div>
+      <button class="btn primary" id="genModel" ${sp.err ? "disabled" : ""}>Сгенерировать модель</button></div>
+    <ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">${li.join("")}</ul>
+    <p class="small muted">Модель открывается в редакторе BIMsketcher в 3D: стены, окна и двери, крыша, дымоход. Повторное «Сгенерировать» заменит модель, «План» вверху откроет её с вашими правками.</p>
+  </section>`;
 }
 function planHTML(p) {
   const v = planValues(p), nm = ["главный фасад", "справа от главного", "задний фасад", "слева от главного"];
   return `<section class="panel form" id="planf">
-    <div class="row" style="justify-content:space-between"><div><p class="eyebrow">План</p><h2>Модель из замеров</h2></div><button class="btn primary" id="planOpen">Открыть план</button></div>
-    <p class="small muted">Стены по наружному контуру, толщина внутрь, окна и двери на своих местах. Дальше — стены, перегородки и всё остальное инструментами редактора. Дом пока строится прямоугольником.</p>
+    <div class="row" style="justify-content:space-between"><div><p class="eyebrow">Параметры модели</p><h2>Размеры для построения</h2></div><button class="btn" id="planOpen">Открыть план</button></div>
+    <p class="small muted">Стены по наружному контуру, толщина внутрь, окна и двери на своих местах. Дом пока строится прямоугольником.</p>
     ${[1, 2, 3, 4].map((s, i) => { const inf = v.info[i]; const n = inf ? (inf.ph.items || []).filter(t => PLAN_T[t.type]).length : 0; return `
       <div class="field"><label for="pl${s}">Сторона ${s} · ${nm[i]}, мм ${inf ? `<span class="muted">(фото «${esc(POS.find(x => x[0] === inf.k[2])[1].toLowerCase())}», проёмов: ${n})</span>` : `<span class="muted">(нет эталона «Стена»)</span>`}</label>
       <input id="pl${s}" type="number" inputmode="numeric" min="0" value="${v.len[i] || ""}"></div>`; }).join("")}
@@ -837,7 +928,10 @@ function planHTML(p) {
       <div class="field"><label for="pth">Толщина стен, мм</label><input id="pth" type="number" inputmode="numeric" min="50" value="${v.th}"></div>
       <div class="field"><label for="pht">Высота стен от пола, мм</label><input id="pht" type="number" inputmode="numeric" min="1000" value="${v.ht}"></div>
     </div>
-    <div class="field"><label for="pfo">Пол 1 этажа выше низа стены на, мм (цоколь)</label><input id="pfo" type="number" inputmode="numeric" min="0" value="${v.fo}"></div>
+    <div class="two">
+      <div class="field"><label for="pfo">Пол 1 этажа выше низа стены на, мм (цоколь)</label><input id="pfo" type="number" inputmode="numeric" min="0" value="${v.fo}"></div>
+      <div class="field"><label for="pov">Свес крыши, мм</label><input id="pov" type="number" inputmode="numeric" min="0" value="${v.ov}"></div>
+    </div>
     <p class="small" id="perr" style="color:var(--danger)" hidden></p>
     <div class="row"><button class="linkbtn" id="planRe">Построить план заново по этим размерам</button></div>
   </section>`;
@@ -864,24 +958,83 @@ function buildPlan(p, v) {
       holes.push({ side: i, t: T.t, dk: T.dk, pos: Math.max(width / 2, Math.min(len - width / 2, pos)), width, height: Math.min(height, v.ht - sill), sill });
     }
   });
-  return { name: p.name + " — план", pts, thick: v.th, ht: v.ht, holes, skipped, warn };
+  const roof = roofFromPhotos(p, A, B, v), chim = chimFromPhotos(p, A, B, roof);
+  return { name: p.name + " — план", pts, A, B, thick: v.th, ht: v.ht, fo: v.fo, holes, skipped, warn, roof, chim };
+}
+// крыша: «Конёк» на фото фронтона лежит в плоскости стены с эталоном — его высота точная
+function roofFromPhotos(p, A, B, v) {
+  const marks = [];
+  for (const s of [1, 2, 3, 4]) for (const c of ["F", "L", "R"]) {
+    const ph = p.photos && p.photos["s" + s + c]; if (!ph || !ph.ref || ph.ref.kind !== "wall") continue;
+    const H = refMatrix(ph);
+    for (const it of ph.items || []) if (it.type === "ridge") { const m = measure(ph, it, H); if (m) marks.push({ s, z: m.z, wallH: ph.ref.H }); }
+  }
+  if (!marks.length) return null;
+  const along = marks.some(m => m.s === 2 || m.s === 4) ? "x" : "y", span = along === "x" ? B : A;
+  const rise = marks.reduce((a, m) => a + (m.z - m.wallH), 0) / marks.length;
+  if (!(rise > 100)) return null;
+  return { type: "gable", along, ang: Math.round(Math.atan(rise / (span / 2)) * 1800 / Math.PI) / 10, rise: r5(rise),
+    ridgeZ: r5(marks.reduce((a, m) => a + m.z, 0) / marks.length), ov: v.ov, th: 250, n: marks.length };
+}
+// дымоход: по эталону-стене находится положение камеры каждого снимка; лучи на верх трубы с двух сторон пересекаются в её центре
+function chimFromPhotos(p, A, B, roof) {
+  const views = [];
+  for (const s of [1, 2, 3, 4]) for (const c of ["F", "L", "R"]) {
+    const ph = p.photos && p.photos["s" + s + c]; if (!ph || !ph.ref || ph.ref.kind !== "wall") continue;
+    const H = refMatrix(ph); if (!H) continue;
+    for (const it of ph.items || []) if (it.type === "chim" && it.pts.length === 4) {
+      const q = sortQuad(it.pts); views.push({ s, pose: wallPose(ph, H), fr: sideFrame(s, A, B), tl: q[0], tr: q[1], mid: [(q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2] });
+    }
+  }
+  if (!views.length) return null;
+  const ray = (v, pt) => ({ o: toWorld(v.fr, v.pose.C), d: dirWorld(v.fr, v.pose.ray(pt)) });
+  let P = null, two = false;
+  const a = views[0], b = views.find(v => (v.s % 2) !== (a.s % 2));
+  if (b) { const r1 = ray(a, a.mid), r2 = ray(b, b.mid), m = meetRays(r1.o, r1.d, r2.o, r2.d); if (m && m.gap < 1500) { P = m.p; two = true; } }
+  if (!P) {   // один снимок: труба считается стоящей на линии конька
+    const r = ray(a, a.mid), ax = roof && roof.along === "y" ? 0 : 1, c0 = ax ? B / 2 : A / 2, t = (c0 - r.o[ax]) / r.d[ax];
+    if (!(t > 0)) return null; P = r.o.map((v, k) => v + r.d[k] * t);
+  }
+  // уточнение: отмеченная линия — верх видимой грани трубы, а не её центр. Грань стоит на половину сечения ближе к камере:
+  // точка на плоскости грани даёт высоту верха и положение центра вдоль стены снимка; два прохода
+  const hitPlane = (v, pt, c0) => { const r = ray(v, pt), n = v.fr.n, den = r.d[0] * n[0] + r.d[1] * n[1]; if (Math.abs(den) < 1e-9) return null;
+    const t = ((c0[0] - r.o[0]) * n[0] + (c0[1] - r.o[1]) * n[1]) / den; return r.o.map((x, k) => x + r.d[k] * t); };
+  let w = 0, l = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    const size = { w: 0, l: 0 }, xs = [], ys = [], zs = [];
+    for (const v of views) {
+      const alongX = Math.abs(v.fr.u[0]) > .5, half = (alongX ? l : w) / 2;   // половина сечения поперёк этой стены
+      const face = [P[0] + v.fr.n[0] * half, P[1] + v.fr.n[1] * half];
+      const L = hitPlane(v, v.tl, face), R = hitPlane(v, v.tr, face), M = hitPlane(v, v.mid, face);
+      if (!L || !R || !M) continue;
+      const wd = Math.hypot(L[0] - R[0], L[1] - R[1]);
+      if (alongX) { size.w = size.w || wd; xs.push(M[0]); } else { size.l = size.l || wd; ys.push(M[1]); }
+      zs.push(M[2]);
+    }
+    w = size.w || size.l; l = size.l || size.w;
+    const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    if (xs.length) P[0] = avg(xs); if (ys.length) P[1] = avg(ys); if (zs.length) P[2] = avg(zs);
+  }
+  if (!(w > 100 && l > 100)) return null;
+  return { x: r5(P[0]), y: r5(P[1]), w: r5(w), l: r5(l), top: r5(P[2]), two };
 }
 function readPlanForm(p) {
   if (!$("#pth")) return;
-  p.planOpts = { len: [1, 2, 3, 4].map(s => +$("#pl" + s).value || 0), th: +$("#pth").value || 0, ht: +$("#pht").value || 0, fo: +$("#pfo").value || 0 };
+  p.planOpts = { len: [1, 2, 3, 4].map(s => +$("#pl" + s).value || 0), th: +$("#pth").value || 0, ht: +$("#pht").value || 0, fo: +$("#pfo").value || 0, ov: $("#pov").value === "" ? 500 : +$("#pov").value };
   touch(p);
 }
 function bindPlan(p) {
-  const form = $("#planf"); if (form) form.onchange = () => readPlanForm(p);
+  const form = $("#planf"); if (form) form.onchange = () => { readPlanForm(p); render(); };
   const ob = $("#planOpen"); if (ob) ob.onclick = () => openPlan(p, false);
   const rb = $("#planRe"); if (rb) rb.onclick = () => openPlan(p, true);
+  const gm = $("#genModel"); if (gm) gm.onclick = () => openPlan(p, true, true);
 }
 function planErr(t) { const er = $("#perr"); if (er) { er.textContent = t; er.hidden = false; er.scrollIntoView({ block: "center" }); } else setStatus(t, true); }
-async function openPlan(p, force) {
+async function openPlan(p, force, view3d) {
   readPlanForm(p);
   const v = planValues(p), spec = buildPlan(p, v);
   if (spec.err) { planErr(spec.err); return; }
-  spec.key = p.id; spec.force = !!force;
+  spec.key = p.id; spec.force = !!force; spec.view3d = !!view3d;
   const res = EMBED ? await hostPlan(spec) : await enginePlan(spec, p.name);
   if (!res || !res.ok) planErr("Не удалось открыть план: " + ((res && res.msg) || "ошибка"));
 }
@@ -950,7 +1103,7 @@ function renderPhoto() {
         ${items.map(it => { const m = measure(ph, it, H), w = warnings(it, m); return `
           <tr class="${S.sel === it.id ? "sel" : ""}" data-sel="${esc(it.id)}">
             <td><span class="tag">${esc(it.label)}</span> ${TYPES[it.type].name}${w.map(x => `<br><span class="warnchip">${esc(x)}</span>`).join("")}</td>
-            <td class="num num">${!m ? "—" : m.len != null ? fmm(m.len) + `<br><span class="tol">${ftol(m.tolL)}</span>` : fmm(m.w) + " × " + fmm(m.h) + `<br><span class="tol">${ftol(Math.max(m.tolW, m.tolH))}</span>`}</td>
+            <td class="num num">${sizeText(it, m, true)}</td>
             <td class="num num">${m && m.bottom != null ? fmm(m.bottom) : ""}</td>
             <td class="num num">${m && m.left != null ? fmm(m.left) : ""}</td>
             <td class="num">${S.confirm === it.id ? `<button class="linkbtn danger" data-del2="${esc(it.id)}">Удалить?</button>` : `<button class="linkbtn" data-del="${esc(it.id)}" aria-label="Удалить ${esc(it.label)}">&#10005;</button>`}</td>
@@ -1048,7 +1201,7 @@ function overlayShapes(ph, H) {
   else if (S.tool === "refform" && S.draft.length === 4) out.push({ id: "ref", kind: "ref", pts: S.draft, label: "Эталон" });
   for (const it of ph.items || []) {
     const m = measure(ph, it, H);
-    const txt = !m ? it.label : m.len != null ? it.label + "  " + fmm(m.len) : it.label + "  " + fmm(m.w) + "×" + fmm(m.h);
+    const txt = !m ? it.label : m.z != null ? it.label + "  " + fmm(m.z) : m.len != null ? it.label + "  " + fmm(m.len) : it.label + "  " + (it.type === "chim" ? "≈" : "") + fmm(m.w) + "×" + fmm(m.h);
     out.push({ id: it.id, kind: it.type, pts: it.pts, label: txt });
   }
   return out;
@@ -1056,6 +1209,15 @@ function overlayShapes(ph, H) {
 function drawShape(g, sh, tape, open, T) {
   const col = sh.kind === "ref" ? tape : open, sel = S.sel === sh.id;
   const pts = sh.pts.length === 4 ? sortQuad(sh.pts) : sh.pts;
+  if (pts.length === 1) {                 // «Конёк»: треугольник-вершина над точкой
+    const q = T(pts[0]); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q[0] - 11, q[1] + 15); g.lineTo(q[0] + 11, q[1] + 15); g.closePath();
+    g.fillStyle = col; g.globalAlpha = .85; g.fill(); g.globalAlpha = 1; g.strokeStyle = "#FFFFFF"; g.lineWidth = 1.5; g.stroke();
+    if (T !== toS) return;
+    if (sel) handle(g, q, col);
+    g.font = "600 12px " + css("--font-body"); const w = g.measureText(sh.label).width + 10;
+    g.fillStyle = col; g.globalAlpha = .92; g.fillRect(q[0] - w / 2, q[1] - 34, w, 20); g.globalAlpha = 1;
+    g.fillStyle = "#FFFFFF"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(sh.label, q[0], q[1] - 23); return;
+  }
   g.beginPath(); pts.forEach((p, i) => { const q = T(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
   if (pts.length === 4) { g.closePath(); g.fillStyle = col; g.globalAlpha = sel ? .22 : .12; g.fill(); g.globalAlpha = 1; }
   g.strokeStyle = col; g.lineWidth = sel ? 3 : 2; g.stroke();
@@ -1115,7 +1277,7 @@ function onTap(x, y, ph) {
   }
   // выбор элемента
   const items = [...(ph.items || [])].reverse(); let hit = null;
-  for (const it of items) { if (it.pts.length === 4 ? inPoly(ip, sortQuad(it.pts)) : nearSeg(ip, it.pts[0], it.pts[1], 14 / V.s)) { hit = it.id; break; } }
+  for (const it of items) { if (it.pts.length === 4 ? inPoly(ip, sortQuad(it.pts)) : it.pts.length === 1 ? dist(ip, it.pts[0]) < 22 / V.s : nearSeg(ip, it.pts[0], it.pts[1], 14 / V.s)) { hit = it.id; break; } }
   if (!hit && ph.ref && inPoly(ip, sortQuad(ph.ref.pts))) hit = "ref";
   S.sel = hit; S.confirm = null; render();
 }
