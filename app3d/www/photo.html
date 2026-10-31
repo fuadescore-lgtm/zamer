@@ -354,11 +354,34 @@ function vRender(s, c) {
       }
     }
   }
-  // крыша и дымоход: видимые грани от дальних к ближним
-  const sl = ridge / (B / 2), zE = H - over * sl, zR = H + ridge;
-  const roof = [
-    { p: [[-over, -over, zE], [A + over, -over, zE], [A + over, B / 2, zR], [-over, B / 2, zR]], n: v3norm([0, -sl, 1]), c: [124, 66, 52] },
-    { p: [[A + over, B + over, zE], [-over, B + over, zE], [-over, B / 2, zR], [A + over, B / 2, zR]], n: v3norm([0, sl, 1]), c: [124, 66, 52] },
+  // крыша — плита толщиной th: верх скатов, свесы снизу (карнизные и у фронтонов), лобовые доски по карнизу,
+  // ветровые доски вдоль обоих скатов фронтонов — так край крыши виден с любой стороны дома
+  const sl = ridge / (B / 2), zE = H - over * sl, zR = H + ridge, th = 220, X0 = -over, X1 = A + over, Y0 = -over, Y1 = B + over, YM = B / 2;
+  const nS = v3norm([0, -sl, 1]), nN = v3norm([0, sl, 1]), uS = v3norm([0, sl, -1]), uN = v3norm([0, -sl, -1]);
+  const TOP = [124, 66, 52], SOFF = [176, 146, 112], BOARD = [92, 58, 44];
+  const R = [
+    { p: [[X0, Y0, zE], [X1, Y0, zE], [X1, YM, zR], [X0, YM, zR]], n: nS, c: TOP, top: "S" },
+    { p: [[X1, Y1, zE], [X0, Y1, zE], [X0, YM, zR], [X1, YM, zR]], n: nN, c: TOP, top: "N" },
+    // свесы снизу: средняя часть карниза видна только со своей стороны дома, углы — с двух соседних сторон,
+    // свес за фронтоном — со стороны фронтона (иначе их закрывают стены)
+    { p: [[0, Y0, zE - th], [A, Y0, zE - th], [A, 0, H - th], [0, 0, H - th]], n: uS, c: SOFF, soff: [1] },
+    { p: [[A, Y1, zE - th], [0, Y1, zE - th], [0, B, H - th], [A, B, H - th]], n: uN, c: SOFF, soff: [3] },
+    { p: [[A, Y0, zE - th], [X1, Y0, zE - th], [X1, 0, H - th], [A, 0, H - th]], n: uS, c: SOFF, soff: [1, 2] },
+    { p: [[X0, Y0, zE - th], [0, Y0, zE - th], [0, 0, H - th], [X0, 0, H - th]], n: uS, c: SOFF, soff: [1, 4] },
+    { p: [[X1, Y1, zE - th], [A, Y1, zE - th], [A, B, H - th], [X1, B, H - th]], n: uN, c: SOFF, soff: [3, 2] },
+    { p: [[0, Y1, zE - th], [X0, Y1, zE - th], [X0, B, H - th], [0, B, H - th]], n: uN, c: SOFF, soff: [3, 4] },
+    { p: [[A, 0, H - th], [X1, 0, H - th], [X1, YM, zR - th], [A, YM, zR - th]], n: uS, c: SOFF, soff: [2] },
+    { p: [[X1, B, H - th], [A, B, H - th], [A, YM, zR - th], [X1, YM, zR - th]], n: uN, c: SOFF, soff: [2] },
+    { p: [[X0, 0, H - th], [0, 0, H - th], [0, YM, zR - th], [X0, YM, zR - th]], n: uS, c: SOFF, soff: [4] },
+    { p: [[0, B, H - th], [X0, B, H - th], [X0, YM, zR - th], [0, YM, zR - th]], n: uN, c: SOFF, soff: [4] },
+    // лобовые доски по карнизам
+    { p: [[X0, Y0, zE], [X1, Y0, zE], [X1, Y0, zE - th], [X0, Y0, zE - th]], n: [0, -1, 0], c: BOARD },
+    { p: [[X1, Y1, zE], [X0, Y1, zE], [X0, Y1, zE - th], [X1, Y1, zE - th]], n: [0, 1, 0], c: BOARD },
+    // ветровые доски: оба ската на каждом фронтоне
+    { p: [[X1, Y0, zE], [X1, YM, zR], [X1, YM, zR - th], [X1, Y0, zE - th]], n: [1, 0, 0], c: BOARD, side: 2 },
+    { p: [[X1, YM, zR], [X1, Y1, zE], [X1, Y1, zE - th], [X1, YM, zR - th]], n: [1, 0, 0], c: BOARD, side: 2 },
+    { p: [[X0, YM, zR], [X0, Y0, zE], [X0, Y0, zE - th], [X0, YM, zR - th]], n: [-1, 0, 0], c: BOARD, side: 4 },
+    { p: [[X0, Y1, zE], [X0, YM, zR], [X0, YM, zR - th], [X0, Y1, zE - th]], n: [-1, 0, 0], c: BOARD, side: 4 },
   ];
   const C = VHOUSE.chimney, cx0 = C.x, cx1 = C.x + C.w, cy0 = C.y, cy1 = C.y + C.d, cz = C.top;
   const rz = y => zE + (y + over) * sl;                    // высота южного ската над точкой y
@@ -370,21 +393,34 @@ function vRender(s, c) {
     { p: [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy1, cz], [cx0, cy1, cz]], n: [0, 0, 1] },
   ];
   const cen = q => [q.p.reduce((a, p) => a + p[0], 0) / q.p.length, q.p.reduce((a, p) => a + p[1], 0) / q.p.length, q.p.reduce((a, p) => a + p[2], 0) / q.p.length];
-  const drawRoof = q => poly(q.p, vShade(q.c, q.n), "rgba(60,25,18,.6)", 1.2);
-  const drawChim = () => chim.filter(q => faces(q.n, cen(q))).sort((a, b) => Math.hypot(...v3sub(cen(b), cam.eye)) - Math.hypot(...v3sub(cen(a), cam.eye)))
-    .forEach(q => poly(q.p, vShade([150, 84, 62], q.n), "rgba(60,30,20,.7)", 1.2));
-  // труба стоит на южном скате: северный скат (вид сзади) рисуется поверх неё, южный — под ней
-  const southSeen = faces(roof[0].n, cen(roof[0])), northSeen = faces(roof[1].n, cen(roof[1]));
-  if (southSeen) drawRoof(roof[0]);
+  const far = (a, b) => Math.hypot(...v3sub(cen(b), cam.eye)) - Math.hypot(...v3sub(cen(a), cam.eye));
+  const drawFace = q => poly(q.p, vShade(q.c, q.n), "rgba(50,25,18,.55)", 1.1);
+  let chimDone = false;
+  const drawChim = () => { if (chimDone) return; chimDone = true;
+    chim.filter(q => faces(q.n, cen(q))).sort(far).forEach(q => poly(q.p, vShade([150, 84, 62], q.n), "rgba(60,30,20,.7)", 1.2)); };
+  // труба стоит на южном скате: она поверх южного ската и под северным (вид сзади закрывает её коньком)
+  const wallVis = k => walls.some(w => w.k === k);
+  const vis = R.filter(q => faces(q.n, cen(q)) && (!q.soff || q.soff.some(wallVis))).sort(far);
+  // сначала свесы снизу (они под скатами), затем скаты и доски от дальних к ближним
+  vis.filter(q => q.soff).forEach(drawFace);
+  for (const q of vis) { if (q.soff) continue; if (q.top === "N") drawChim(); drawFace(q); if (q.top === "S") drawChim(); }
   drawChim();
-  if (northSeen) drawRoof(roof[1]);
-  // фронтон перед трубой (вид с торца) закрывает её нижнюю часть: дорисовать треугольник фронтона поверх
+  // фронтон перед трубой (вид с торца) закрывает её нижнюю часть: дорисовать фронтон и его ветровые доски поверх
   const bbox = pts => { const P = pts.map(cam.proj); if (P.some(p => !p)) return null; const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
-  const cb = bbox(chim.flatMap(q => q.p));
   for (const w of walls) {
     if (w.k !== 2 && w.k !== 4) continue;
-    const tri = [vAt(w.sd, 0, H), vAt(w.sd, w.sd.len, H), vAt(w.sd, w.sd.len / 2, H + ridge)], tb = bbox(tri);
-    if (cb && tb && cb[0] < tb[2] && cb[2] > tb[0] && cb[1] < tb[3] && cb[3] > tb[1]) poly(tri, vShade([233, 225, 210], [w.sd.n[0], w.sd.n[1], 0]), "rgba(60,50,40,.55)");
+    const tri = [vAt(w.sd, 0, H), vAt(w.sd, w.sd.len, H), vAt(w.sd, w.sd.len / 2, H + ridge)], T2 = tri.map(cam.proj);
+    if (T2.some(p => !p)) continue;
+    const inTri = q => { const sg = (a, b) => (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]); const d1 = sg(T2[0], T2[1]), d2 = sg(T2[1], T2[2]), d3 = sg(T2[2], T2[0]); return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)); };
+    const cp = chim.flatMap(q => q.p).map(cam.proj).filter(Boolean);
+    if (cp.some(inTri)) {
+      poly(tri, vShade([233, 225, 210], [w.sd.n[0], w.sd.n[1], 0]), "rgba(60,50,40,.55)");
+      // край скатов, нависающий над фронтоном снаружи, — поверх фронтона
+      const xa = w.k === 2 ? A : X0, xb = w.k === 2 ? X1 : 0;
+      [{ p: [[xa, Y0, zE], [xb, Y0, zE], [xb, YM, zR], [xa, YM, zR]], n: nS, c: TOP }, { p: [[xb, Y1, zE], [xa, Y1, zE], [xa, YM, zR], [xb, YM, zR]], n: nN, c: TOP }]
+        .filter(q => faces(q.n, cen(q))).forEach(q => poly(q.p, vShade(q.c, q.n)));
+      vis.filter(q => q.side === w.k || (q.soff && q.soff.length === 1 && q.soff[0] === w.k)).forEach(drawFace);
+    }
   }
   // разметка: только видимая «своя» сторона кадра
   const sd = vSide(s), jit = (p, i) => [Math.round(p[0] + Math.sin(i * 12.9898 + s * 7.1) * 1.3), Math.round(p[1] + Math.cos(i * 4.1414 + s * 3.3) * 1.3)];
