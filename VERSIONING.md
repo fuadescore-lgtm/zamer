@@ -15,6 +15,6 @@
 - Всё, что сделано, сначала проверяется самим Claude (сценарий в Chrome с эмуляцией телефона, сборка APK, содержимое APK),
   и только потом считается готовым.
 - После каждого изменения пользователю отправляется HTML-файл для просмотра в Claude (справа в окне чата):
-  `python3 tools/build_photo_preview.py` → `Fotoobmer-<версия>.html` (главное — фотообмер; BIMsketcher встроен как редактор плана).
+  `python3 tools/build_photo_preview.py` → `PHOTOGRAM-<версия>.html` (главное — PHOTOGRAM, фотообмер; BIMsketcher встроен как редактор плана).
   Для BIMsketcher отдельно: `python3 tools/build_preview.py` → `BIMsketcher-<версия>.html`.
 

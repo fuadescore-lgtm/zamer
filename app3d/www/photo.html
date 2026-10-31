@@ -1,4 +1,4 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Фотообмер фасада</title>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>PHOTOGRAM</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -141,7 +141,7 @@ label.btn { display: inline-flex; align-items: center; justify-content: center; 
 
 <header class="bar">
   <button class="back" id="back" aria-label="Назад" hidden>&#8592;</button>
-  <h1 id="title">Фотообмер фасада</h1>
+  <h1 id="title">PHOTOGRAM</h1>
   <span class="status" id="status"></span>
   <button class="btn primary planbtn" id="planBtn" hidden>План</button>
 </header>
@@ -693,7 +693,7 @@ function render() {
 function projThumb(p) { for (const k of SLOT_ORDER) { const s = photoSrc(p.photos && p.photos[k]); if (s) return s; } return ""; }
 function countItems(p) { let n = 0; for (const ph of Object.values(p.photos || {})) n += (ph.items || []).length; return n; }
 function renderList() {
-  $("#title").textContent = EMBED ? "Фотообмер" : "Фотообмер фасада";
+  $("#title").textContent = "PHOTOGRAM";
   if (!S.loaded) setStatus("Загрузка…"); else if (S.loadErr === "local") setStatus("Только в этой вкладке"); else if (!dirty.size && !saving) setStatus(S.cloud ? "Сохраняется в аккаунте" : S.localDb ? "Хранится на этом телефоне" : "");
   const list = [...S.projects.values()].sort((a, b) => (a.example ? 1 : 0) - (b.example ? 1 : 0) || (b.updated || b.created || 0) - (a.updated || a.created || 0));
   const real = list.filter(p => !p.example);
