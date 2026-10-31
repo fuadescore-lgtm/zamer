@@ -247,42 +247,66 @@ function warnings(it, m) {
 }
 
 /* ---------- Пример (генерируется на месте) ---------- */
-function makeExample() {
+// Дом 9000 × 7000 мм, стены 3000 мм: четыре фасада с известными размерами проёмов.
+const DEMO = {
+  s1F: { W: 9000, H: 3000, gable: true, q: [[250, 470], [1370, 395], [1395, 985], [228, 1040]],
+    items: [["win", 2700, 900, 1400, 1400], ["win", 5600, 900, 1400, 1400], ["door", 1000, 0, 900, 2100]], line: [4100, 5600, 1600] },
+  s2F: { W: 7000, H: 3000, q: [[300, 420], [1330, 450], [1350, 1020], [280, 990]], items: [["win", 2900, 900, 1200, 1400]] },
+  s3F: { W: 9000, H: 3000, gable: true, q: [[210, 430], [1390, 455], [1380, 1000], [225, 975]],
+    items: [["win", 1500, 900, 1200, 1400], ["win", 6300, 900, 1200, 1400], ["door", 4000, 0, 900, 2100]] },
+  s4F: { W: 7000, H: 3000, q: [[330, 450], [1290, 410], [1310, 1010], [310, 1035]], items: [["win", 3000, 1000, 1000, 1200]] },
+};
+function demoFacade(cfg) {
   const W = 1600, Hh = 1200, c = document.createElement("canvas"); c.width = W; c.height = Hh;
-  const g = c.getContext("2d");
-  // фасад 9000 × 3000 мм, перспектива с левого-фронтального ракурса
-  const M = homog([[0, 3000], [9000, 3000], [9000, 0], [0, 0]], [[250, 470], [1370, 395], [1395, 985], [228, 1040]]);
+  const g = c.getContext("2d"), FW = cfg.W, FH = cfg.H;
+  const M = homog([[0, FH], [FW, FH], [FW, 0], [0, 0]], cfg.q);
   const P = (x, y) => apply(M, [x, y]);
   const poly = (pts, fill, stroke, lw) => { g.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2; g.stroke(); } };
   const sky = g.createLinearGradient(0, 0, 0, Hh); sky.addColorStop(0, "#9DB9CF"); sky.addColorStop(.55, "#D8E3E8"); sky.addColorStop(.56, "#7F8C6A"); sky.addColorStop(1, "#5F6B4D");
   g.fillStyle = sky; g.fillRect(0, 0, W, Hh);
-  poly([[-600, 3000], [4500, 5100], [9600, 3000]], "#7B3F33", "#4E2620", 3);            // крыша (фронтон)
-  poly([[0, 3000], [4500, 4850], [9000, 3000]], "#E9E1D2", "#B9AE98", 2);                 // фронтон
-  poly([[4200, 3700], [4800, 3700], [4800, 4350], [4200, 4350]], "#3B4249", "#22272B", 2); // слуховое окно во фронтоне
-  poly([[0, 3000], [9000, 3000], [9000, 0], [0, 0]], "#E3DACA", "#A99D86", 2);           // стена
-  poly([[0, 450], [9000, 450], [9000, 0], [0, 0]], "#8E8A80", null);                     // цоколь
-  const win = (x, y, w, h) => { poly([[x, y + h], [x + w, y + h], [x + w, y], [x, y]], "#F4F3EF", "#6C665B", 2); poly([[x + 70, y + h - 70], [x + w - 70, y + h - 70], [x + w - 70, y + 70], [x + 70, y + 70]], "#4D6475", null); poly([[x + w / 2 - 25, y + h - 70], [x + w / 2 + 25, y + h - 70], [x + w / 2 + 25, y + 70], [x + w / 2 - 25, y + 70]], "#F4F3EF", null); poly([[x - 60, y], [x + w + 60, y], [x + w + 60, y - 50], [x - 60, y - 50]], "#BDB6A8", null); };
-  win(2700, 900, 1400, 1400); win(5600, 900, 1400, 1400);
-  poly([[1000, 2100], [1900, 2100], [1900, 0], [1000, 0]], "#5A3B2A", "#2E1E15", 2);    // дверь
-  poly([[1720, 1050], [1800, 1050], [1800, 950], [1720, 950]], "#C9A65A", null);
-  poly([[700, 2500], [2200, 2500], [2200, 2350], [700, 2350]], "#6E6A62", null);         // козырёк
-  const j = (x, y) => { const p = P(x, y); return [Math.round(p[0] + (Math.sin(x + y) * 1.2)), Math.round(p[1] + (Math.cos(x - y) * 1.2))]; };
+  if (cfg.gable) { poly([[-600, FH], [FW / 2, FH + 2100], [FW + 600, FH]], "#7B3F33", "#4E2620", 3); poly([[0, FH], [FW / 2, FH + 1850], [FW, FH]], "#E9E1D2", "#B9AE98", 2); }
+  else poly([[-600, FH], [FW + 600, FH], [FW + 400, FH + 700], [-400, FH + 700]], "#7B3F33", "#4E2620", 3);
+  poly([[0, FH], [FW, FH], [FW, 0], [0, 0]], "#E3DACA", "#A99D86", 2);
+  poly([[0, 450], [FW, 450], [FW, 0], [0, 0]], "#8E8A80", null);
+  for (const [t, x, y, w, h] of cfg.items) {
+    if (t === "win") {
+      poly([[x, y + h], [x + w, y + h], [x + w, y], [x, y]], "#F4F3EF", "#6C665B", 2);
+      poly([[x + 70, y + h - 70], [x + w - 70, y + h - 70], [x + w - 70, y + 70], [x + 70, y + 70]], "#4D6475", null);
+      poly([[x + w / 2 - 25, y + h - 70], [x + w / 2 + 25, y + h - 70], [x + w / 2 + 25, y + 70], [x + w / 2 - 25, y + 70]], "#F4F3EF", null);
+      poly([[x - 60, y], [x + w + 60, y], [x + w + 60, y - 50], [x - 60, y - 50]], "#BDB6A8", null);
+    } else {
+      poly([[x, y + h], [x + w, y + h], [x + w, y], [x, y]], "#5A3B2A", "#2E1E15", 2);
+      poly([[x + w - 180, y + 1050], [x + w - 100, y + 1050], [x + w - 100, y + 950], [x + w - 180, y + 950]], "#C9A65A", null);
+      poly([[x - 300, y + h + 400], [x + w + 300, y + h + 400], [x + w + 300, y + h + 250], [x - 300, y + h + 250]], "#6E6A62", null);
+    }
+  }
+  const j = (x, y) => { const p = P(x, y); return [Math.round(p[0] + Math.sin(x + y) * 1.2), Math.round(p[1] + Math.cos(x - y) * 1.2)]; };
   const quad = (x, y, w, h) => [j(x, y + h), j(x + w, y + h), j(x + w, y), j(x, y)];
-  return {
-    id: "example", example: true, name: "Пример: одноэтажный дом", address: "Сгенерированный снимок, не сохраняется",
-    photos: {
-      s1F: {
-        src: c.toDataURL("image/jpeg", .86), w: W, h: Hh,
-        ref: { kind: "wall", W: 9000, H: 3000, pts: quad(0, 0, 9000, 3000) },
-        items: [
-          { id: "e1", type: "win", label: "О1", pts: quad(2700, 900, 1400, 1400) },
-          { id: "e2", type: "win", label: "О2", pts: quad(5600, 900, 1400, 1400) },
-          { id: "e3", type: "door", label: "Д1", pts: quad(1000, 0, 900, 2100) },
-          { id: "e4", type: "line", label: "Л1", pts: [j(4100, 1600), j(5600, 1600)] },
-        ],
-      },
-    },
-  };
+  const cnt = {};
+  const items = cfg.items.map(([t, x, y, w, h]) => { cnt[t] = (cnt[t] || 0) + 1; return { id: uid(), type: t, label: TYPES[t].pre + cnt[t], pts: quad(x, y, w, h) }; });
+  if (cfg.line) items.push({ id: uid(), type: "line", label: "Л1", pts: [j(cfg.line[0], cfg.line[2]), j(cfg.line[1], cfg.line[2])] });
+  return { src: c.toDataURL("image/jpeg", .86), w: W, h: Hh, ref: { kind: "wall", W: FW, H: FH, pts: quad(0, 0, FW, FH) }, items };
+}
+function makeExample() {
+  const photos = {}; for (const [k, cfg] of Object.entries(DEMO)) photos[k] = demoFacade(cfg);
+  return { id: "example", example: true, name: "Пример: одноэтажный дом", address: "9000 × 7000 мм, сгенерированные снимки, не сохраняется", photos };
+}
+function dataUrlBlob(u) { const [h, b] = u.split(","), bin = atob(b), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: h.slice(5, h.indexOf(";")) }); }
+// заполнить пустой объект демо-фото: копии снимков, эталонов и замеров примера
+async function fillDemo(p) {
+  const ex = makeExample();
+  for (const k of Object.keys(ex.photos)) busySlots.add(k); render();
+  try {
+    for (const [k, src] of Object.entries(ex.photos)) {
+      const blob = dataUrlBlob(src.src);
+      const ph = { w: src.w, h: src.h, ref: JSON.parse(JSON.stringify(src.ref)), items: src.items.map(it => ({ ...JSON.parse(JSON.stringify(it)), id: uid() })), local: URL.createObjectURL(blob) };
+      if (S.assets) { const r = await S.assets.upload(blob, { type: "image/jpeg" }); ph.asset = r.id; }
+      else if (S.localDb) { const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key; }
+      p.photos[k] = ph; busySlots.delete(k);
+    }
+    touch(p);
+  } catch (e) { setStatus("Не удалось добавить демо-фото", true); }
+  finally { for (const k of Object.keys(ex.photos)) busySlots.delete(k); render(); }
 }
 
 /* ---------- Хранилище ---------- */
@@ -527,7 +551,7 @@ function renderProject() {
   const rows = allRows(p);
   const filled = Object.keys(p.photos || {}).length;
   $("#view").innerHTML = `
-    ${p.example ? `<p class="note">Это пример на сгенерированном снимке: в него нельзя добавить фото. Откройте «Сторона 1 · фронтально», чтобы посмотреть замер.</p>` : ""}
+    ${p.example ? `<p class="note">Это пример на сгенерированных снимках: в него нельзя добавить фото. Откройте любой фасад, чтобы посмотреть замер${CAN_PLAN ? ", или нажмите «Создать план» внизу" : ""}.</p>` : ""}
     ${S.confirm === "exslot" ? `<div class="panel"><p>Чтобы снимать свой дом, создайте объект: в нём ячейки открывают камеру.</p><div class="row"><button class="btn primary" id="exslot">Создать объект</button></div></div>` : ""}
     ${pickerHTML()}
     <section class="panel">
@@ -535,6 +559,7 @@ function renderProject() {
         <div><p class="eyebrow">Съёмка</p><h2>${filled} из 12 фото</h2></div>
         ${p.example ? "" : `<label class="btn filebtn">Добавить несколько фото<input type="file" id="inMany" accept="image/*" multiple aria-label="Добавить несколько фото"></label>`}
       </div>
+      ${!filled && !p.example ? `<div class="row"><button class="btn" id="demo">Заполнить демо-примером</button><span class="small muted">4 фасада дома 9000 × 7000 мм с готовой разметкой — чтобы сразу попробовать «Создать план»</span></div>` : ""}
       ${filled < 12 && !p.example ? SCHEME_SVG + `<p class="small muted">Снимайте основной камерой без зума, держите телефон ровно, дом целиком от земли до конька. «Добавить несколько» заполнит пустые ячейки по порядку.</p>` : ""}
       ${SIDES.map(s => `
         <div class="side"><h3>Сторона ${s}${s === 1 ? ` <span class="small muted">главный фасад</span>` : ""}</h3>
@@ -571,6 +596,7 @@ function renderProject() {
   });
   const exs = $("#exslot"); if (exs) exs.onclick = () => { S.confirm = null; S.cur = null; go("new"); };
   if (CAN_PLAN) bindPlan(p);
+  const dm = $("#demo"); if (dm) dm.onclick = () => fillDemo(p);
   bindPicker();
   const cp = $("#copy"); if (cp) cp.onclick = () => copyText(rowsTSV(p, rows), $("#copymsg"));
   const d1 = $("#delp"); if (d1) d1.onclick = () => { S.confirm = "delp"; render(); };
