@@ -50,6 +50,10 @@ jobs:
           # рекламный идентификатор не используется: запретить, даже если его добавит библиотека
           grep -q 'xmlns:tools' $M || sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android"#& xmlns:tools="http://schemas.android.com/tools"#' $M
           grep -q 'permission.AD_ID' $M || sed -i 's#</manifest>#    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />\n</manifest>#' $M
+          # камера для <input capture> (Фотообмер): с Android 11 приложение камеры видно только через <queries>,
+          # иначе Capacitor не находит его и открывает выбор файлов вместо съёмки
+          grep -q 'media.action.IMAGE_CAPTURE' $M || sed -i 's#</manifest>#    <queries>\n        <intent>\n            <action android:name="android.media.action.IMAGE_CAPTURE" />\n        </intent>\n    </queries>\n</manifest>#' $M
+          grep -c 'media.action.IMAGE_CAPTURE' $M
           # файл проекта .bimsk: фильтры «Открыть в BIMsketcher» после первого </intent-filter> (MAIN/LAUNCHER)
           grep -q 'x-bimsketcher' $M || python3 -c "import sys;p=sys.argv[1];s=open(p).read();f=open(sys.argv[2]).read();i=s.index('</intent-filter>')+len('</intent-filter>');open(p,'w').write(s[:i]+'\n'+f+s[i:])" $M ../native3d/intent-filters.xml
           grep -c 'x-bimsketcher' $M
