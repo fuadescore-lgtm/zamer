@@ -124,6 +124,9 @@ tr.refrow td { background: color-mix(in srgb, var(--tape) 12%, transparent); }
 .tag { display: inline-block; min-width: 30px; font-weight: 600; }
 .tol { color: var(--muted); font-size: 12px; }
 .warnchip { display: inline-block; margin-top: 2px; font-size: 12px; color: var(--warn); }
+.tapechip { display: inline-block; margin-top: 2px; font-size: 12px; color: var(--tape-ink); }
+.truef { display: grid; gap: 8px; }
+.truef .two3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .linkbtn { border: 0; background: none; padding: 4px 6px; color: var(--muted); font-size: 13px; text-decoration: underline; }
 .linkbtn.danger { color: var(--danger); }
 
@@ -1078,6 +1081,7 @@ function renderPhoto() {
     </div>
     <div class="zoom"><button id="zin" aria-label="Приблизить">+</button><button id="zout" aria-label="Отдалить">&#8722;</button><button id="zfit" style="font-size:14px">Вписать</button><span>или двумя пальцами</span></div>
     <p class="hint ${hintCls}" id="hint">${hint}</p>
+    ${trueHTML(p, ph, H)}
     ${S.tool === "refform" ? refFormHTML(r) : ""}
     ${S.tool && S.tool !== "refform" ? `<div class="row"><button class="btn" id="undo" ${S.draft.length ? "" : "disabled"}>Убрать точку</button><button class="btn" id="cancel">Отмена</button></div>` : ""}
     ${!S.tool ? `<div class="tools">
@@ -1093,7 +1097,7 @@ function renderPhoto() {
         ${r ? `<tr class="refrow ${S.sel === "ref" ? "sel" : ""}" data-sel="ref"><td><span class="tag">Э</span> Эталон</td><td class="num num">${fmm(r.W)} × ${fmm(r.H)}</td><td class="num num">0</td><td class="num num">0</td><td></td></tr>` : ""}
         ${items.map(it => { const m = measure(ph, it, H), w = warnings(it, m); return `
           <tr class="${S.sel === it.id ? "sel" : ""}" data-sel="${esc(it.id)}">
-            <td><span class="tag">${esc(it.label)}</span> ${TYPES[it.type].name}${w.map(x => `<br><span class="warnchip">${esc(x)}</span>`).join("")}</td>
+            <td><span class="tag">${esc(it.label)}</span> ${TYPES[it.type].name}${it.tape ? `<br><span class="tapechip">рулетка · по фото было ${esc(it.tape.photo)}</span>` : ""}${w.map(x => `<br><span class="warnchip">${esc(x)}</span>`).join("")}</td>
             <td class="num num">${sizeText(it, m, true)}</td>
             <td class="num num">${m && m.bottom != null ? fmm(m.bottom) : ""}</td>
             <td class="num num">${m && m.left != null ? fmm(m.left) : ""}</td>
@@ -1119,9 +1123,49 @@ function refFormHTML(r) {
     <div class="row"><button class="btn tape" type="button" id="rok">Сохранить эталон</button><button class="btn" type="button" id="rfc">Отмена</button></div>
   </div>`;
 }
+// истинный размер элемента (рулетка): точки переносятся в плоскости стены, левый нижний угол на месте
+function trueHTML(p, ph, H) {
+  const it = (ph.items || []).find(i => i.id === S.sel);
+  if (!it || !H || p.example || S.tool || it.type === "chim") return "";
+  const m = measure(ph, it, H); if (!m) return "";
+  const v = k => it.tape && it.tape[k] != null ? it.tape[k] : "";
+  const f = (id, lab, val) => `<div class="field"><label for="${id}">${lab}</label><input id="${id}" type="number" inputmode="numeric" min="0" value="${val}"></div>`;
+  let fields, now;
+  if (it.type === "ridge") { now = "высота " + fmm(m.z); fields = f("tz", "Высота конька от низа эталона, мм", v("z")); }
+  else if (it.type === "line") { now = fmm(m.len); fields = f("tl", "Длина, мм", v("len")); }
+  else { now = fmm(m.w) + " × " + fmm(m.h) + ", низ " + fmm(m.bottom); fields = `<div class="two3">${f("tw", "Ширина, мм", v("w"))}${f("th", "Высота, мм", v("h"))}${f("ts", "Низ, мм", v("sill"))}</div>`; }
+  return `<div class="panel truef" id="truef">
+    <p class="small"><b>${esc(it.label)} · ${TYPES[it.type].name}</b> — по фото ${now} мм. Если измерили рулеткой, введите истинный размер (пустое поле — оставить как есть).</p>
+    ${fields}
+    <p class="small" id="terr" style="color:var(--danger)" hidden></p>
+    <div class="row"><button class="btn tape" id="tok">Применить истинный размер</button>${it.tape ? `<button class="linkbtn" id="tclr">Вернуть размер по фото</button>` : ""}</div>
+  </div>`;
+}
+function applyTrue(ph, it) {
+  const H = refMatrix(ph); if (!H) return "Нет эталона";
+  const Hi = inv3(H), m = measure(ph, it, H), num = id => { const el = $("#" + id); const v = el && el.value.trim() !== "" ? +el.value : null; return v != null && v >= 0 ? v : null; };
+  const toImg = q => { const r = apply(Hi, q); return [Math.round(r[0] * 10) / 10, Math.round(r[1] * 10) / 10]; };
+  if (it.type === "ridge") {
+    const z = num("tz"); if (z == null) return "Введите высоту";
+    const a = apply(H, it.pts[0]); it.pts = [toImg([a[0], z])]; it.tape = { z, photo: "высота " + fmm(m.z) }; return "";
+  }
+  if (it.type === "line") {
+    const L = num("tl"); if (!(L > 0)) return "Введите длину";
+    const a = apply(H, it.pts[0]), b = apply(H, it.pts[1]), d = dist(a, b) || 1;
+    it.pts = [it.pts[0], toImg([a[0] + (b[0] - a[0]) * L / d, a[1] + (b[1] - a[1]) * L / d])]; it.tape = { len: L, photo: fmm(m.len) }; return "";
+  }
+  const w = num("tw"), h = num("th"), sill = num("ts");
+  if (w == null && h == null && sill == null) return "Введите хотя бы один размер";
+  if ((w != null && w < 100) || (h != null && h < 100)) return "Ширина и высота — не меньше 100 мм";
+  const W = w != null ? w : m.w, Hh = h != null ? h : m.h, x0 = m.left, y0 = sill != null ? sill : m.bottom;
+  it.pts = [[x0, y0 + Hh], [x0 + W, y0 + Hh], [x0 + W, y0], [x0, y0]].map(toImg);
+  it.tape = { w, h, sill, photo: fmm(m.w) + " × " + fmm(m.h) + ", низ " + fmm(m.bottom) }; return "";
+}
 function bindPhoto(ph) {
   const p = S.cur;
   const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on("#tok", () => { const it = (ph.items || []).find(i => i.id === S.sel); if (!it) return; const er = applyTrue(ph, it); if (er) { const t = $("#terr"); t.textContent = er; t.hidden = false; return; } touch(p); render(); });
+  on("#tclr", () => { const it = (ph.items || []).find(i => i.id === S.sel); if (it) { delete it.tape; touch(p); render(); } });
   on("#zin", () => zoomAt(1.4)); on("#zout", () => zoomAt(1 / 1.4)); on("#zfit", () => { fit(ph); draw(); });
   on("#tref", () => {
     if (p.example) { S.sel = "ref"; render(); return; }
@@ -1139,7 +1183,8 @@ function bindPhoto(ph) {
     ph.ref = { kind: $("#rk").value, W, H: Hh, pts };
     S.tool = null; S.draft = []; S.sel = null; touch(p); render();
   };
-  document.querySelectorAll("tr[data-sel]").forEach(tr => tr.onclick = e => { if (e.target.closest("button")) return; S.sel = tr.dataset.sel; S.confirm = null; render(); });
+  document.querySelectorAll("tr[data-sel]").forEach(tr => tr.onclick = e => { if (e.target.closest("button")) return; S.sel = tr.dataset.sel; S.confirm = null; render();
+    const t = $("#truef") || $("#cv"); if (t) t.scrollIntoView({ block: t.id === "cv" ? "start" : "center" }); });
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.confirm = b.dataset.del; render(); });
   document.querySelectorAll("[data-del2]").forEach(b => b.onclick = () => { ph.items = ph.items.filter(i => i.id !== b.dataset.del2); if (S.sel === b.dataset.del2) S.sel = null; S.confirm = null; touch(p); render(); });
   on("#rep", () => { S.confirm = "replace"; render(); });
@@ -1303,7 +1348,7 @@ function bindCanvas(cv, ph) {
   };
   const end = e => {
     if (!V.ptrs.has(e.pointerId)) return; const [x, y] = pos(e); V.ptrs.delete(e.pointerId);
-    if (V.drag) { V.drag = null; V.loupe = null; touch(S.cur); render(); return; }
+    if (V.drag) { const it = (ph.items || []).find(i => i.pts === V.drag.arr); if (it) delete it.tape; V.drag = null; V.loupe = null; touch(S.cur); render(); return; }
     if (V.gest && V.gest.t === "pan" && !V.gest.moved && e.type === "pointerup") { V.gest = null; onTap(x, y, ph); return; }
     if (V.ptrs.size === 1) { const [p] = [...V.ptrs.values()]; V.gest = { t: "pan", x0: p[0], y0: p[1], tx0: V.tx, ty0: V.ty, moved: true }; }
     else if (!V.ptrs.size) V.gest = null;
