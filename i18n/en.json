@@ -3583,5 +3583,8 @@
 "инвертор) и": "inverter) and",
 "Длина вывода панели (+ и": "Module lead length (+ and",
 "каждый), мм — соседние панели соединяются ими без кабеля": "each), mm — neighbouring modules connect with them, no extra cable",
-"петля строки минимальной площади. «Через одну» — строка уходит по нечётным панелям и возвращается по чётным: обратный кабель почти не нужен (если выводов панели хватает на шаг через одну": "string loop of minimum area. \"Every other\" — the string goes out on odd modules and returns on even ones: almost no return cable is needed (if module leads reach every other module"
+"петля строки минимальной площади. «Через одну» — строка уходит по нечётным панелям и возвращается по чётным: обратный кабель почти не нужен (если выводов панели хватает на шаг через одну": "string loop of minimum area. \"Every other\" — the string goes out on odd modules and returns on even ones: almost no return cable is needed (if module leads reach every other module",
+"Соедините DC-кабель с панелями — построятся хвосты строк": "Connect the DC cable to the panels — string tails will be built",
+"Строка ": "String ",
+"панели → точка сбора: + ": "panels → collection point: + "
 }
