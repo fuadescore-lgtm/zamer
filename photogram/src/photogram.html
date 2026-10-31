@@ -1,4 +1,11 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>PHOTOGRAM</title>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.prog { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.prog > div { height: 100%; background: var(--open); width: 0; transition: width .3s; }
+.autoviz { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.autoviz figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.autoviz img, .autoviz canvas { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); background: #1d2126; }
+.autoviz figcaption { font-size: 12px; color: var(--muted); }
+.autoli { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+</style></head><body><title>PHOTOGRAM</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -278,9 +285,11 @@ function warnings(it, m) {
 }
 
 /* ---------- Пример (генерируется на месте) ---------- */
-/* ---------- Виртуальная съёмка: 3D-дом и 12 кадров с телефона ---------- */
+/* ---------- Виртуальная съёмка: 3D-дом с фактурой и 12 кадров с телефона ---------- */
 // Мир в мм: x — вдоль главного фасада (сторона 1), y — вглубь дома, z — вверх.
 // Сторона 1 — y=0 (смотрит на -y), 2 — x=A, 3 — y=B, 4 — x=0. Обход 1→2→3→4 — вправо вокруг дома.
+// Фактура (штукатурка, кирпич, черепица, трава) привязана к поверхностям в 3D: одна и та же точка дома
+// на разных снимках выглядит согласованно — по ней сборка 3D находит общие точки.
 const VHOUSE = {
   A: 9000, B: 7000, H: 3000, ridge: 2200, over: 500, plinth: 450,
   open: {
@@ -291,6 +300,7 @@ const VHOUSE = {
   },
   chimney: { x: 6300, y: 2300, w: 640, d: 520, top: 6100 },
 };
+const VF = 1152;   // фокус виртуальной камеры, px (кадр 1600×1200 ≈ 0,72 × длинная сторона)
 function vSide(s) {
   const { A, B } = VHOUSE;
   return {
@@ -309,69 +319,176 @@ function vCamera(eye, target, W, Hh, f) {
   const fwd = v3norm(v3sub(target, eye)), right = v3norm(v3cross(fwd, [0, 0, 1])), up = v3cross(right, fwd);
   const proj = p => { const d = v3sub(p, eye), zc = v3dot(d, fwd); if (zc < 50) return null; return [W / 2 + f * v3dot(d, right) / zc, Hh / 2 - f * v3dot(d, up) / zc]; };
   const hz = proj([eye[0] + fwd[0] * 1e8, eye[1] + fwd[1] * 1e8, eye[2]]);
-  return { eye, fwd, proj, horizon: hz ? hz[1] : Hh / 2 };
+  return { eye, fwd, right, up, proj, horizon: hz ? hz[1] : Hh / 2 };
 }
 // точки съёмки: «L» — левый угол, «F» — фронтально, «R» — правый угол (как в мастере съёмки)
 function vShot(s, c) {
   const sd = vSide(s), D = sd.len > 8000 ? 9200 : 8200, D2 = 8800, tz = 2400, ez = 1600;
   const n = sd.n, u = sd.u;
   if (c === "F") { const C = vAt(sd, sd.len / 2, 0); return { eye: [C[0] + n[0] * D, C[1] + n[1] * D, ez], target: [C[0], C[1], tz] }; }
-  const k = Math.SQRT1_2;
-  if (c === "L") { const O = vAt(sd, 0, 0); return { eye: [O[0] + (n[0] - u[0]) * k * D2, O[1] + (n[1] - u[1]) * k * D2, ez], target: [O[0] + u[0] * 2200 - n[0] * 2200, O[1] + u[1] * 2200 - n[1] * 2200, tz] }; }
-  const R = vAt(sd, sd.len, 0); return { eye: [R[0] + (n[0] + u[0]) * k * D2, R[1] + (n[1] + u[1]) * k * D2, ez], target: [R[0] - u[0] * 2200 - n[0] * 2200, R[1] - u[1] * 2200 - n[1] * 2200, tz] };
+  // угловые снимки: стоим перед своей стеной под ~33° к ней (не на диагонали угла), поэтому «правый угол»
+  // одной стороны и «левый угол» следующей — разные снимки с разных точек, как при реальной съёмке
+  const cs = 0.839, sn = 0.545;
+  if (c === "L") { const O = vAt(sd, 0, 0); return { eye: [O[0] + (n[0] * cs - u[0] * sn) * D2, O[1] + (n[1] * cs - u[1] * sn) * D2, ez - 60], target: [O[0] + u[0] * 2600 - n[0] * 1800, O[1] + u[1] * 2600 - n[1] * 1800, tz] }; }
+  const R = vAt(sd, sd.len, 0); return { eye: [R[0] + (n[0] * cs + u[0] * sn) * D2, R[1] + (n[1] * cs + u[1] * sn) * D2, ez + 60], target: [R[0] - u[0] * 2600 - n[0] * 1800, R[1] - u[1] * 2600 - n[1] * 1800, tz] };
 }
 const VLIGHT = v3norm([-0.45, -0.7, 0.55]);
-function vShade(rgb, nrm) { const k = 0.62 + 0.38 * Math.max(0, v3dot(nrm, VLIGHT)); return `rgb(${rgb.map(v => Math.round(v * k)).join(",")})`; }
-// снимок 1600×1200 + истинные точки для разметки (эталон-стена и проёмы видимой стороны)
+const vLit = nrm => 0.62 + 0.38 * Math.max(0, v3dot(nrm, VLIGHT));
+// ---- фактура: детерминированный шум ----
+function vRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const VTEX = {};
+const TEXK = 0.14;   // px текстуры на мм
+function vTex(key, wmm, hmm, paint) {
+  if (VTEX[key]) return VTEX[key];
+  const c = document.createElement("canvas"); c.width = Math.max(4, Math.ceil(wmm * TEXK)); c.height = Math.max(4, Math.ceil(hmm * TEXK));
+  const g = c.getContext("2d"); paint(g, c.width, c.height, vRng([...key].reduce((a, ch) => a * 31 + ch.charCodeAt(0) | 0, 7)));
+  return (VTEX[key] = c);
+}
+const P_PLASTER = (base) => (g, w, h, R) => {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < w * h / 55; i++) {        // крупные пятна и выбоины штукатурки — их и находит поиск точек
+    const x = R() * w, y = R() * h, r = 1.2 + R() * 4.5, l = R() < .5 ? 0 : 255;
+    g.fillStyle = `rgba(${l},${l},${l},${.06 + R() * .16})`; g.beginPath(); g.ellipse(x, y, r, r * (.5 + R() * .8), R() * 3, 0, 7); g.fill();
+  }
+  for (let i = 0; i < w * h / 900; i++) { g.fillStyle = `rgba(70,55,40,${.05 + R() * .08})`; g.fillRect(R() * w, R() * h, 2 + R() * 26, 1 + R() * 5); }
+};
+const P_BRICK = (g, w, h, R) => {
+  const bw = 250 * TEXK, bh = 65 * TEXK, m = 10 * TEXK;
+  g.fillStyle = "#8E8A80"; g.fillRect(0, 0, w, h);
+  for (let r = 0, y = 0; y < h; r++, y += bh + m) for (let x = (r % 2) * -bw / 2; x < w; x += bw + m) {
+    const t = 115 + R() * 50; g.fillStyle = `rgb(${t + 25},${t * .62},${t * .48})`; g.fillRect(x, y, bw, bh);
+    g.fillStyle = `rgba(0,0,0,${R() * .18})`; g.fillRect(x + R() * bw * .6, y + R() * bh * .5, 2 + R() * 6, 1 + R() * 3);
+  }
+};
+const P_TILE = (g, w, h, R) => {
+  const rw = 300 * TEXK, rh = 330 * TEXK;
+  g.fillStyle = "#6B3A2E"; g.fillRect(0, 0, w, h);
+  for (let r = 0, y = 0; y < h; r++, y += rh) for (let x = (r % 2) * -rw / 2; x < w; x += rw) {
+    const t = 105 + R() * 45, gr = g.createLinearGradient(0, y, 0, y + rh);
+    gr.addColorStop(0, `rgb(${t + 30},${t * .55},${t * .42})`); gr.addColorStop(1, `rgb(${t * .75},${t * .4},${t * .3})`);
+    g.fillStyle = gr; g.fillRect(x + 1, y + 1, rw - 2, rh - 2);
+    if (R() < .35) { g.fillStyle = `rgba(40,40,30,${.15 + R() * .2})`; g.fillRect(x + R() * rw * .7, y + R() * rh * .7, 3 + R() * 8, 2 + R() * 5); }
+  }
+  // старая черепица: пятна мха, лишайника и потёков — уникальный рисунок для поиска общих точек
+  for (let i = 0; i < w * h / 160; i++) {
+    const x = R() * w, y = R() * h, r = 1.5 + R() * 5, t = R();
+    g.fillStyle = t < .4 ? `rgba(85,95,55,${.25 + R() * .35})` : t < .7 ? `rgba(200,190,160,${.2 + R() * .3})` : `rgba(30,20,15,${.2 + R() * .3})`;
+    g.beginPath(); g.ellipse(x, y, r, r * (.4 + R() * .6), R() * 3, 0, 7); g.fill();
+  }
+};
+const P_GRASS = (g, w, h, R) => {   // трава попиксельно: крупные пятна + мелкий шум (быстро)
+  const id = g.createImageData(w, h), d = id.data, cw = Math.ceil(w / 6) + 2, chh = Math.ceil(h / 6) + 2, cn = new Float32Array(cw * chh);
+  for (let i = 0; i < cn.length; i++) cn[i] = R();
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const fx = x / 6, fy = y / 6, x0 = fx | 0, y0 = fy | 0, ax = fx - x0, ay = fy - y0, q = y0 * cw + x0;
+    const v = (cn[q] * (1 - ax) + cn[q + 1] * ax) * (1 - ay) + (cn[q + cw] * (1 - ax) + cn[q + cw + 1] * ax) * ay, s = (R() - 0.5) * 0.5 + (v - 0.5) * 0.9;
+    const o = (y * w + x) * 4; d[o] = 111 + s * 60; d[o + 1] = 125 + s * 60; d[o + 2] = 82 + s * 40; d[o + 3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+};
+const P_WOOD = (base) => (g, w, h, R) => {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 120 * TEXK) { g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(x, 0, 1.2, h); }
+  for (let i = 0; i < w * h / 80; i++) { g.fillStyle = `rgba(0,0,0,${R() * .12})`; g.fillRect(R() * w, R() * h, 1, 4 + R() * 14); }
+};
+// ---- наложение фактуры на плоский многоугольник с перспективой (ячейки с аффинным приближением) ----
+function vNearClip(cam, pts3, near) {      // отсечь многоугольник плоскостью перед камерой
+  const dz = p => v3dot(v3sub(p, cam.eye), cam.fwd) - near, out = [];
+  for (let i = 0; i < pts3.length; i++) {
+    const a = pts3[i], b = pts3[(i + 1) % pts3.length], da = dz(a), db = dz(b);
+    if (da >= 0) out.push(a);
+    if ((da >= 0) !== (db >= 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]); }
+  }
+  return out;
+}
+function vFace(g, cam, pts3, U, V, tex, key, lit, org) {
+  const O = org || pts3[0];
+  const abOf = pts => pts.map(p => [v3dot(v3sub(p, O), U), v3dot(v3sub(p, O), V)]);
+  const ab0 = abOf(pts3), ta0 = Math.min(...ab0.map(q => q[0])), tb0 = Math.min(...ab0.map(q => q[1]));
+  const T = vTex(key, Math.max(...ab0.map(q => q[0])) - ta0, Math.max(...ab0.map(q => q[1])) - tb0, tex);
+  pts3 = vNearClip(cam, pts3, 300); if (pts3.length < 3) return false;
+  const P = pts3.map(cam.proj); if (P.some(p => !p)) return false;
+  const ab = abOf(pts3);
+  const a0 = Math.min(...ab.map(q => q[0])), a1 = Math.max(...ab.map(q => q[0])), b0 = Math.min(...ab.map(q => q[1])), b1 = Math.max(...ab.map(q => q[1]));
+  const W3 = (a, b) => [O[0] + U[0] * a + V[0] * b, O[1] + U[1] * a + V[1] * b, O[2] + U[2] * a + V[2] * b];
+  const span = Math.max(...P.map(p => p[0])) - Math.min(...P.map(p => p[0])) + Math.max(...P.map(p => p[1])) - Math.min(...P.map(p => p[1]));
+  const CW = g.canvas.width, CH = g.canvas.height;
+  const sx0 = Math.max(0, Math.min(...P.map(p => p[0]))), sx1 = Math.min(CW, Math.max(...P.map(p => p[0]))), sy0 = Math.max(0, Math.min(...P.map(p => p[1]))), sy1 = Math.min(CH, Math.max(...P.map(p => p[1])));
+  if (sx1 <= sx0 || sy1 <= sy0) return false;   // целиком вне кадра
+  const n = Math.max(2, Math.min(40, Math.ceil(Math.min(span, (sx1 - sx0 + sy1 - sy0) * 3) / 40)));
+  g.save(); g.beginPath(); P.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+  const da = (a1 - a0) / n, db = (b1 - b0) / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const A0 = a0 + da * i, B0 = b0 + db * j, p00 = cam.proj(W3(A0, B0)), p10 = cam.proj(W3(A0 + da, B0)), p01 = cam.proj(W3(A0, B0 + db));
+    if (!p00 || !p10 || !p01) continue;
+    if ((p00[0] < -60 && p10[0] < -60) || (p00[0] > CW + 60 && p10[0] > CW + 60) || (p00[1] < -60 && p01[1] < -60) || (p00[1] > CH + 60 && p01[1] > CH + 60)) continue;
+    const tx0 = (A0 - ta0) * TEXK, ty0 = (B0 - tb0) * TEXK, sw = da * TEXK, sh = db * TEXK;
+    const ta = (p10[0] - p00[0]) / sw, tb = (p10[1] - p00[1]) / sw, tc = (p01[0] - p00[0]) / sh, td = (p01[1] - p00[1]) / sh;
+    g.setTransform(ta, tb, tc, td, p00[0] - ta * tx0 - tc * ty0, p00[1] - tb * tx0 - td * ty0);
+    const cw = Math.min(sw + 1.5, T.width - tx0), ch = Math.min(sh + 1.5, T.height - ty0);
+    if (cw > 0 && ch > 0) g.drawImage(T, tx0, ty0, cw, ch, tx0, ty0, cw, ch);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (lit < 1) { g.fillStyle = `rgba(0,0,0,${(1 - lit).toFixed(3)})`; g.fillRect(0, 0, g.canvas.width, g.canvas.height); }
+  g.restore();
+  return true;
+}
+// снимок 1600×1200 + истинные точки для разметки + истинная камера (для проверки сборки 3D)
 function vRender(s, c) {
-  const W = 1600, Hh = 1200, f = 1152, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const W = 1600, Hh = 1200, f = VF, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
   const g = cv.getContext("2d"), sh = vShot(s, c), cam = vCamera(sh.eye, sh.target, W, Hh, f);
   const { A, B, H, ridge, over, plinth } = VHOUSE;
-  // небо и земля
   const hy = Math.max(-200, Math.min(Hh + 200, cam.horizon));
   const sky = g.createLinearGradient(0, 0, 0, Math.max(1, hy)); sky.addColorStop(0, "#8FB0C9"); sky.addColorStop(1, "#DCE6EA");
   g.fillStyle = sky; g.fillRect(0, 0, W, Math.max(0, hy));
-  const gr = g.createLinearGradient(0, hy, 0, Hh); gr.addColorStop(0, "#8C9773"); gr.addColorStop(1, "#5E6A47");
-  g.fillStyle = gr; g.fillRect(0, hy, W, Hh - hy);
+  g.fillStyle = "#66744B"; g.fillRect(0, hy, W, Hh - hy);
+  // земля с травой — участок вокруг дома
+  const GX0 = -24000, GX1 = 33000, GY0 = -24000, GY1 = 31000, gstep = 5700;
+  for (let x = GX0; x < GX1; x += gstep) for (let y = GY0; y < GY1; y += gstep)
+    vFace(g, cam, [[x, y, 0], [x + gstep, y, 0], [x + gstep, y + gstep, 0], [x, y + gstep, 0]], [1, 0, 0], [0, 1, 0], P_GRASS, `grass${x},${y}`, 0.92);
   const poly = (pts3, fill, stroke, lw) => {
     const P = pts3.map(cam.proj); if (P.some(p => !p)) return;
     g.beginPath(); P.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
     if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 1.5; g.stroke(); }
   };
   const faces = (nrm, P) => v3dot(nrm, v3sub(cam.eye, P)) > 0;
-  // стены, видимые камере, — от дальней к ближней
+  const shade = (rgb, nrm) => `rgb(${rgb.map(v => Math.round(v * vLit(nrm))).join(",")})`;
   const walls = [1, 2, 3, 4].map(k => ({ k, sd: vSide(k) })).filter(w => faces([w.sd.n[0], w.sd.n[1], 0], vAt(w.sd, w.sd.len / 2, H / 2)));
   walls.sort((a, b) => Math.hypot(...v3sub(vAt(b.sd, b.sd.len / 2, 0), cam.eye)) - Math.hypot(...v3sub(vAt(a.sd, a.sd.len / 2, 0), cam.eye)));
-  // тень от дома на земле — мягкое пятно
+  const wallFace = (w, withGable) => {
+    const sd = w.sd, nrm = [sd.n[0], sd.n[1], 0], U = [sd.u[0], sd.u[1], 0], V = [0, 0, -1], lit = vLit(nrm), gable = w.k === 2 || w.k === 4;
+    const top = vAt(sd, 0, gable ? H + ridge : H);
+    const outline = gable && withGable ? [vAt(sd, 0, plinth), vAt(sd, sd.len, plinth), vAt(sd, sd.len, H), vAt(sd, sd.len / 2, H + ridge), vAt(sd, 0, H)] : [vAt(sd, 0, plinth), vAt(sd, sd.len, plinth), vAt(sd, sd.len, H), vAt(sd, 0, H)];
+    vFace(g, cam, outline, U, V, P_PLASTER(w.k % 2 ? "#E2D8C6" : "#DDD2BE"), "wall" + w.k, lit, top);
+    vFace(g, cam, [vAt(sd, 0, plinth), vAt(sd, 0, 0), vAt(sd, sd.len, 0), vAt(sd, sd.len, plinth)], U, V, P_BRICK, "plinth" + w.k, lit);
+    poly(outline, null, "rgba(60,50,40,.45)", 1.2);
+  };
   for (const w of walls) {
-    const sd = w.sd, nrm = [sd.n[0], sd.n[1], 0], gable = w.k === 2 || w.k === 4;
-    poly([vAt(sd, 0, 0), vAt(sd, sd.len, 0), vAt(sd, sd.len, H), vAt(sd, 0, H)], vShade([226, 216, 198], nrm), "rgba(60,50,40,.55)");
-    if (gable) poly([vAt(sd, 0, H), vAt(sd, sd.len, H), vAt(sd, sd.len / 2, H + ridge)], vShade([233, 225, 210], nrm), "rgba(60,50,40,.55)");
-    poly([vAt(sd, 0, 0), vAt(sd, sd.len, 0), vAt(sd, sd.len, plinth), vAt(sd, 0, plinth)], vShade([140, 136, 126], nrm));
+    const sd = w.sd, nrm = [sd.n[0], sd.n[1], 0], U = [sd.u[0], sd.u[1], 0], V = [0, 0, -1];
+    wallFace(w, true);
     for (const [t, x, z, w2, h2] of VHOUSE.open[w.k]) {
       const o = 12;
       if (t === "win") {
-        poly([vAt(sd, x - 60, z - 50, 30), vAt(sd, x + w2 + 60, z - 50, 30), vAt(sd, x + w2 + 60, z, 30), vAt(sd, x - 60, z, 30)], vShade([190, 184, 172], nrm));
-        poly([vAt(sd, x, z, o), vAt(sd, x + w2, z, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x, z + h2, o)], vShade([246, 245, 240], nrm), "rgba(90,85,75,.8)");
-        poly([vAt(sd, x + 70, z + 70, o), vAt(sd, x + w2 / 2 - 25, z + 70, o), vAt(sd, x + w2 / 2 - 25, z + h2 - 70, o), vAt(sd, x + 70, z + h2 - 70, o)], vShade([70, 98, 118], nrm));
-        poly([vAt(sd, x + w2 / 2 + 25, z + 70, o), vAt(sd, x + w2 - 70, z + 70, o), vAt(sd, x + w2 - 70, z + h2 - 70, o), vAt(sd, x + w2 / 2 + 25, z + h2 - 70, o)], vShade([80, 108, 128], nrm));
+        poly([vAt(sd, x - 60, z - 50, 30), vAt(sd, x + w2 + 60, z - 50, 30), vAt(sd, x + w2 + 60, z, 30), vAt(sd, x - 60, z, 30)], shade([190, 184, 172], nrm));
+        poly([vAt(sd, x, z, o), vAt(sd, x + w2, z, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x, z + h2, o)], shade([246, 245, 240], nrm), "rgba(90,85,75,.8)");
+        poly([vAt(sd, x + 70, z + 70, o), vAt(sd, x + w2 / 2 - 25, z + 70, o), vAt(sd, x + w2 / 2 - 25, z + h2 - 70, o), vAt(sd, x + 70, z + h2 - 70, o)], shade([70, 98, 118], nrm));
+        poly([vAt(sd, x + w2 / 2 + 25, z + 70, o), vAt(sd, x + w2 - 70, z + 70, o), vAt(sd, x + w2 - 70, z + h2 - 70, o), vAt(sd, x + w2 / 2 + 25, z + h2 - 70, o)], shade([80, 108, 128], nrm));
       } else {
-        poly([vAt(sd, x, z, o), vAt(sd, x + w2, z, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x, z + h2, o)], vShade([96, 62, 42], nrm), "rgba(40,25,15,.9)");
+        vFace(g, cam, [vAt(sd, x, z + h2, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x + w2, z, o), vAt(sd, x, z, o)], U, V, P_WOOD("#603E2C"), `door${w.k}${x}`, vLit(nrm));
+        poly([vAt(sd, x, z, o), vAt(sd, x + w2, z, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x, z + h2, o)], null, "rgba(40,25,15,.9)");
         poly([vAt(sd, x + w2 - 170, z + 980, o + 5), vAt(sd, x + w2 - 100, z + 980, o + 5), vAt(sd, x + w2 - 100, z + 1060, o + 5), vAt(sd, x + w2 - 170, z + 1060, o + 5)], "#C9A65A");
-        poly([vAt(sd, x - 300, z + h2 + 250, 0), vAt(sd, x + w2 + 300, z + h2 + 250, 0), vAt(sd, x + w2 + 300, z + h2 + 250, 900), vAt(sd, x - 300, z + h2 + 250, 900)], vShade([110, 106, 98], [0, 0, 1]), "rgba(40,40,40,.6)");
+        poly([vAt(sd, x - 300, z + h2 + 250, 0), vAt(sd, x + w2 + 300, z + h2 + 250, 0), vAt(sd, x + w2 + 300, z + h2 + 250, 900), vAt(sd, x - 300, z + h2 + 250, 900)], shade([110, 106, 98], [0, 0, 1]), "rgba(40,40,40,.6)");
       }
     }
   }
-  // крыша — плита толщиной th: верх скатов, свесы снизу (карнизные и у фронтонов), лобовые доски по карнизу,
-  // ветровые доски вдоль обоих скатов фронтонов — так край крыши виден с любой стороны дома
+  // крыша — плита с толщиной: скаты (черепица), свесы, лобовые и ветровые доски
   const sl = ridge / (B / 2), zE = H - over * sl, zR = H + ridge, th = 220, X0 = -over, X1 = A + over, Y0 = -over, Y1 = B + over, YM = B / 2;
   const nS = v3norm([0, -sl, 1]), nN = v3norm([0, sl, 1]), uS = v3norm([0, sl, -1]), uN = v3norm([0, -sl, -1]);
-  const TOP = [124, 66, 52], SOFF = [176, 146, 112], BOARD = [92, 58, 44];
+  const dS = v3norm([0, -(B / 2 + over), -(ridge + over * sl)]), dN = v3norm([0, B / 2 + over, -(ridge + over * sl)]);
+  const SOFF = [176, 146, 112], BOARD = [92, 58, 44];
   const R = [
-    { p: [[X0, Y0, zE], [X1, Y0, zE], [X1, YM, zR], [X0, YM, zR]], n: nS, c: TOP, top: "S" },
-    { p: [[X1, Y1, zE], [X0, Y1, zE], [X0, YM, zR], [X1, YM, zR]], n: nN, c: TOP, top: "N" },
-    // свесы снизу: средняя часть карниза видна только со своей стороны дома, углы — с двух соседних сторон,
-    // свес за фронтоном — со стороны фронтона (иначе их закрывают стены)
+    { p: [[X0, YM, zR], [X1, YM, zR], [X1, Y0, zE], [X0, Y0, zE]], n: nS, tile: [[1, 0, 0], dS], top: "S" },
+    { p: [[X1, YM, zR], [X0, YM, zR], [X0, Y1, zE], [X1, Y1, zE]], n: nN, tile: [[-1, 0, 0], dN], top: "N" },
     { p: [[0, Y0, zE - th], [A, Y0, zE - th], [A, 0, H - th], [0, 0, H - th]], n: uS, c: SOFF, soff: [1] },
     { p: [[A, Y1, zE - th], [0, Y1, zE - th], [0, B, H - th], [A, B, H - th]], n: uN, c: SOFF, soff: [3] },
     { p: [[A, Y0, zE - th], [X1, Y0, zE - th], [X1, 0, H - th], [A, 0, H - th]], n: uS, c: SOFF, soff: [1, 2] },
@@ -382,39 +499,40 @@ function vRender(s, c) {
     { p: [[X1, B, H - th], [A, B, H - th], [A, YM, zR - th], [X1, YM, zR - th]], n: uN, c: SOFF, soff: [2] },
     { p: [[X0, 0, H - th], [0, 0, H - th], [0, YM, zR - th], [X0, YM, zR - th]], n: uS, c: SOFF, soff: [4] },
     { p: [[0, B, H - th], [X0, B, H - th], [X0, YM, zR - th], [0, YM, zR - th]], n: uN, c: SOFF, soff: [4] },
-    // лобовые доски по карнизам
     { p: [[X0, Y0, zE], [X1, Y0, zE], [X1, Y0, zE - th], [X0, Y0, zE - th]], n: [0, -1, 0], c: BOARD },
     { p: [[X1, Y1, zE], [X0, Y1, zE], [X0, Y1, zE - th], [X1, Y1, zE - th]], n: [0, 1, 0], c: BOARD },
-    // ветровые доски: оба ската на каждом фронтоне
     { p: [[X1, Y0, zE], [X1, YM, zR], [X1, YM, zR - th], [X1, Y0, zE - th]], n: [1, 0, 0], c: BOARD, side: 2 },
     { p: [[X1, YM, zR], [X1, Y1, zE], [X1, Y1, zE - th], [X1, YM, zR - th]], n: [1, 0, 0], c: BOARD, side: 2 },
     { p: [[X0, YM, zR], [X0, Y0, zE], [X0, Y0, zE - th], [X0, YM, zR - th]], n: [-1, 0, 0], c: BOARD, side: 4 },
     { p: [[X0, Y1, zE], [X0, YM, zR], [X0, YM, zR - th], [X0, Y1, zE - th]], n: [-1, 0, 0], c: BOARD, side: 4 },
   ];
   const C = VHOUSE.chimney, cx0 = C.x, cx1 = C.x + C.w, cy0 = C.y, cy1 = C.y + C.d, cz = C.top;
-  const rz = y => zE + (y + over) * sl;                    // высота южного ската над точкой y
+  const rz = y => zE + (y + over) * sl;
   const chim = [
-    { p: [[cx0, cy0, rz(cy0)], [cx1, cy0, rz(cy0)], [cx1, cy0, cz], [cx0, cy0, cz]], n: [0, -1, 0] },
-    { p: [[cx1, cy0, rz(cy0)], [cx1, cy1, rz(cy1)], [cx1, cy1, cz], [cx1, cy0, cz]], n: [1, 0, 0] },
-    { p: [[cx1, cy1, rz(cy1)], [cx0, cy1, rz(cy1)], [cx0, cy1, cz], [cx1, cy1, cz]], n: [0, 1, 0] },
-    { p: [[cx0, cy1, rz(cy1)], [cx0, cy0, rz(cy0)], [cx0, cy0, cz], [cx0, cy1, cz]], n: [-1, 0, 0] },
-    { p: [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy1, cz], [cx0, cy1, cz]], n: [0, 0, 1] },
+    { p: [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy0, rz(cy0)], [cx0, cy0, rz(cy0)]], n: [0, -1, 0], U: [1, 0, 0] },
+    { p: [[cx1, cy0, cz], [cx1, cy1, cz], [cx1, cy1, rz(cy1)], [cx1, cy0, rz(cy0)]], n: [1, 0, 0], U: [0, 1, 0] },
+    { p: [[cx1, cy1, cz], [cx0, cy1, cz], [cx0, cy1, rz(cy1)], [cx1, cy1, rz(cy1)]], n: [0, 1, 0], U: [-1, 0, 0] },
+    { p: [[cx0, cy1, cz], [cx0, cy0, cz], [cx0, cy0, rz(cy0)], [cx0, cy1, rz(cy1)]], n: [-1, 0, 0], U: [0, -1, 0] },
+    { p: [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy1, cz], [cx0, cy1, cz]], n: [0, 0, 1], top: true },
   ];
   const cen = q => [q.p.reduce((a, p) => a + p[0], 0) / q.p.length, q.p.reduce((a, p) => a + p[1], 0) / q.p.length, q.p.reduce((a, p) => a + p[2], 0) / q.p.length];
   const far = (a, b) => Math.hypot(...v3sub(cen(b), cam.eye)) - Math.hypot(...v3sub(cen(a), cam.eye));
-  const drawFace = q => poly(q.p, vShade(q.c, q.n), "rgba(50,25,18,.55)", 1.1);
+  const drawFace = q => {
+    if (q.tile) { vFace(g, cam, q.p, q.tile[0], q.tile[1], P_TILE, "roof" + q.top, vLit(q.n)); poly(q.p, null, "rgba(50,25,18,.55)", 1.1); return; }
+    if (q.c === BOARD) { const U = v3norm(v3sub(q.p[1], q.p[0])); vFace(g, cam, q.p, U, [0, 0, -1], P_WOOD("#5C3A2C"), "board" + q.p.flat().join(","), vLit(q.n)); poly(q.p, null, "rgba(50,25,18,.55)", 1.1); return; }
+    poly(q.p, shade(q.c, q.n), "rgba(50,25,18,.55)", 1.1);
+  };
   let chimDone = false;
   const drawChim = () => { if (chimDone) return; chimDone = true;
-    chim.filter(q => faces(q.n, cen(q))).sort(far).forEach(q => poly(q.p, vShade([150, 84, 62], q.n), "rgba(60,30,20,.7)", 1.2)); };
-  // труба стоит на южном скате: она поверх южного ската и под северным (вид сзади закрывает её коньком)
+    chim.filter(q => faces(q.n, cen(q))).sort(far).forEach(q => {
+      if (q.top) { poly(q.p, shade([90, 60, 50], q.n), "rgba(40,20,15,.8)", 1.2); return; }
+      vFace(g, cam, q.p, q.U, [0, 0, -1], P_BRICK, "chim" + q.U.join(""), vLit(q.n)); poly(q.p, null, "rgba(60,30,20,.7)", 1.2);
+    }); };
   const wallVis = k => walls.some(w => w.k === k);
   const vis = R.filter(q => faces(q.n, cen(q)) && (!q.soff || q.soff.some(wallVis))).sort(far);
-  // сначала свесы снизу (они под скатами), затем скаты и доски от дальних к ближним
   vis.filter(q => q.soff).forEach(drawFace);
   for (const q of vis) { if (q.soff) continue; if (q.top === "N") drawChim(); drawFace(q); if (q.top === "S") drawChim(); }
   drawChim();
-  // фронтон перед трубой (вид с торца) закрывает её нижнюю часть: дорисовать фронтон и его ветровые доски поверх
-  const bbox = pts => { const P = pts.map(cam.proj); if (P.some(p => !p)) return null; const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
   for (const w of walls) {
     if (w.k !== 2 && w.k !== 4) continue;
     const tri = [vAt(w.sd, 0, H), vAt(w.sd, w.sd.len, H), vAt(w.sd, w.sd.len / 2, H + ridge)], T2 = tri.map(cam.proj);
@@ -422,24 +540,22 @@ function vRender(s, c) {
     const inTri = q => { const sg = (a, b) => (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]); const d1 = sg(T2[0], T2[1]), d2 = sg(T2[1], T2[2]), d3 = sg(T2[2], T2[0]); return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)); };
     const cp = chim.flatMap(q => q.p).map(cam.proj).filter(Boolean);
     if (cp.some(inTri)) {
-      poly(tri, vShade([233, 225, 210], [w.sd.n[0], w.sd.n[1], 0]), "rgba(60,50,40,.55)");
-      // край скатов, нависающий над фронтоном снаружи, — поверх фронтона
+      vFace(g, cam, tri, [w.sd.u[0], w.sd.u[1], 0], [0, 0, -1], P_PLASTER(w.k % 2 ? "#E2D8C6" : "#DDD2BE"), "wall" + w.k, vLit([w.sd.n[0], w.sd.n[1], 0]), vAt(w.sd, 0, H + ridge));
       const xa = w.k === 2 ? A : X0, xb = w.k === 2 ? X1 : 0;
-      [{ p: [[xa, Y0, zE], [xb, Y0, zE], [xb, YM, zR], [xa, YM, zR]], n: nS, c: TOP }, { p: [[xb, Y1, zE], [xa, Y1, zE], [xa, YM, zR], [xb, YM, zR]], n: nN, c: TOP }]
-        .filter(q => faces(q.n, cen(q))).forEach(q => poly(q.p, vShade(q.c, q.n)));
+      [{ p: [[xa, YM, zR], [xb, YM, zR], [xb, Y0, zE], [xa, Y0, zE]], n: nS, tile: [[1, 0, 0], dS], top: "S" }, { p: [[xb, YM, zR], [xa, YM, zR], [xa, Y1, zE], [xb, Y1, zE]], n: nN, tile: [[-1, 0, 0], dN], top: "N" }]
+        .filter(q => faces(q.n, cen(q))).forEach(q => vFace(g, cam, q.p, q.tile[0], q.tile[1], P_TILE, "roof" + q.top, vLit(q.n)));
       vis.filter(q => q.side === w.k || (q.soff && q.soff.length === 1 && q.soff[0] === w.k)).forEach(drawFace);
     }
   }
-  // разметка: только видимая «своя» сторона кадра
   const sd = vSide(s), jit = (p, i) => [Math.round(p[0] + Math.sin(i * 12.9898 + s * 7.1) * 1.3), Math.round(p[1] + Math.cos(i * 4.1414 + s * 3.3) * 1.3)];
   const q4 = (t, z, w2, h2, i) => [[t, z + h2], [t + w2, z + h2], [t + w2, z], [t, z]].map((p, k) => jit(cam.proj(vAt(sd, p[0], p[1])), i * 4 + k));
-  // как разметил бы пользователь: вершина фронтона («Конёк») и видимая грань трубы («Дымоход»)
   const J = (P3, i) => jit(cam.proj(P3), i);
   const ridgePt = (s === 2 || s === 4) ? [J(vAt(sd, sd.len / 2, H + ridge), 90)] : null;
   let chimPts = null;
   if (s === 1) chimPts = [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy0, rz(cy0) + 40], [cx0, cy0, rz(cy0) + 40]].map((P3, i) => J(P3, 100 + i));
   if (s === 2) chimPts = [[cx1, cy0, cz], [cx1, cy1, cz], [cx1, cy1, cz - 450], [cx1, cy0, cz - 450]].map((P3, i) => J(P3, 110 + i));
-  return { src: cv.toDataURL("image/jpeg", .86), w: W, h: Hh, wall: q4(0, 0, sd.len, H, 0), open: VHOUSE.open[s].map((o, i) => ({ type: o[0], pts: q4(o[1], o[2], o[3], o[4], i + 1) })), len: sd.len, ridgePt, chimPts };
+  return { src: cv.toDataURL("image/jpeg", .9), w: W, h: Hh, wall: q4(0, 0, sd.len, H, 0), open: VHOUSE.open[s].map((o, i) => ({ type: o[0], pts: q4(o[1], o[2], o[3], o[4], i + 1) })), len: sd.len, ridgePt, chimPts,
+    cam: { eye: cam.eye, fwd: cam.fwd, right: cam.right, up: cam.up, f } };
 }
 
 /* ---------- Положение камеры по эталону-стене и пересечение лучей (для дымохода) ---------- */
@@ -775,6 +891,7 @@ function renderProject() {
     ${p.example ? `<p class="note">Это пример: 12 виртуальных снимков обхода дома, как их сделали бы вы на объекте. На фронтальных кадрах размечены эталон, окна и двери${CAN_PLAN ? ". Нажмите «Сгенерировать модель» — откроется 3D-модель в редакторе" : ""}.</p>` : ""}
     ${S.confirm === "exslot" ? `<div class="panel"><p>Чтобы снимать свой дом, создайте объект: в нём ячейки открывают камеру.</p><div class="row"><button class="btn primary" id="exslot">Создать объект</button></div></div>` : ""}
     ${pickerHTML()}
+    ${filled ? autoHTML(p) : ""}
     ${CAN_PLAN && filled ? modelHTML(p) : ""}
     <section class="panel">
       <div class="row" style="justify-content:space-between">
@@ -817,6 +934,7 @@ function renderProject() {
     else { pickTarget = k; S.picking = k; render(); }
   });
   const exs = $("#exslot"); if (exs) exs.onclick = () => { S.confirm = null; S.cur = null; go("new"); };
+  bindAuto(p);
   if (CAN_PLAN) bindPlan(p);
   const dm = $("#demo"); if (dm) dm.onclick = () => fillDemo(p);
   bindPicker();
@@ -909,6 +1027,140 @@ function modelHTML(p) {
     <ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">${li.join("")}</ul>
     <p class="small muted">Модель открывается в редакторе в 3D: стены, окна и двери, крыша, дымоход. Повторное «Сгенерировать» заменит модель, «План» вверху откроет её с вашими правками.</p>
   </section>`;
+}
+/* ---------- 3D по фото автоматически: точки → камеры → стены, крыша, проёмы, дымоход ---------- */
+// Единственное, что нужно от пользователя, — эталон «Стена» на одном снимке (лучше «Сторона 1 · фронтально»).
+// Вычисления (recon/*.js) идут в фоновом потоке, если он доступен, иначе — здесь же.
+const AUTO = new Map();   // id объекта → { run, frac, msg, res, err, viz }
+let RECON = null;
+function reconLib() {
+  if (!RECON) { const src = document.getElementById("reconSrc").textContent; RECON = { src, lib: new Function(src + "\nreturn { reconstruct, buildModelFromRecon, skyline, packResult };")() }; }
+  return RECON;
+}
+function autoRef(p) {
+  const c = [];
+  for (const s of SIDES) for (const pos of ["F", "L", "R"]) { const k = "s" + s + pos, ph = p.photos && p.photos[k]; if (ph && ph.ref && ph.ref.kind === "wall" && ph.ref.W > 0 && ph.ref.H > 0 && ph.ref.pts && ph.ref.pts.length === 4) c.push({ k, s, ph }); }
+  return c.find(x => x.k === "s1F") || c.find(x => x.k[2] === "F") || c[0] || null;
+}
+const WORKER_GLUE = `
+self.onmessage = async e => { const d = e.data; try {
+  const R = await reconstruct(d.imgs, d.order, d.ref, Object.assign(d.opt || {}, { progress: (t, f) => self.postMessage({ type: "p", t, f }) }));
+  self.postMessage({ type: "p", t: "Стены, крыша, окна и двери", f: 0.96 });
+  const M = buildModelFromRecon(R, d.imgs, d.ref, d.sky, d.refSide), r = packResult(R, M);
+  self.postMessage({ type: "done", out: r.out }, r.transfer);
+} catch (err) { self.postMessage({ type: "err", msg: String(err && err.message || err) }); } };`;
+function autoProgress(id, t, f) {
+  const st = AUTO.get(id); if (!st) return; st.msg = t; st.frac = f;
+  if (S.cur && S.cur.id === id) { const b = $("#autoBar"), m = $("#autoMsg"); if (b) b.style.width = Math.round(f * 100) + "%"; if (m) m.textContent = t; }
+}
+async function runAuto(p) {
+  const rf = autoRef(p); if (!rf) return;
+  const st = { run: true, frac: 0, msg: "Подготовка снимков", t0: Date.now() }; AUTO.set(p.id, st); render();
+  try {
+    const L = reconLib().lib, imgs = {}, sky = {}, order = [];
+    for (const k of SLOT_ORDER) {
+      order.push(k); const ph = p.photos && p.photos[k]; if (!ph) continue;
+      const img = await loadImg(photoSrc(ph));
+      const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.round(img.naturalWidth * sc), h = Math.round(img.naturalHeight * sc);
+      const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d"); g.drawImage(img, 0, 0, w, h);
+      const d = g.getImageData(0, 0, w, h).data, g8 = new Uint8Array(w * h);
+      for (let i = 0; i < w * h; i++) g8[i] = (d[4 * i] * 77 + d[4 * i + 1] * 150 + d[4 * i + 2] * 29) >> 8;
+      imgs[k] = { g8, w, h, sc: w / (ph.w || w) };
+      if (k[2] === "F" || k === rf.k) imgs[k].rgba = d;   // для развёрток фасадов
+      sky[k] = L.skyline(d, w, h);
+      autoProgress(p.id, "Подготовка снимков", Object.keys(imgs).length / 12 * 0.03);
+    }
+    const sc = imgs[rf.k].sc, ref = { key: rf.k, pts: sortQuad(rf.ph.ref.pts).map(q => [q[0] * sc, q[1] * sc]), W: rf.ph.ref.W, H: rf.ph.ref.H };
+    const job = { imgs, order, ref, sky, refSide: rf.s, opt: { nFeat: 2000, rounds: 10 } };
+    let out = null;
+    try {
+      const wk = new Worker(URL.createObjectURL(new Blob([reconLib().src + WORKER_GLUE], { type: "text/javascript" })));
+      out = await new Promise((res, rej) => {
+        wk.onmessage = e => { const m = e.data; if (m.type === "p") autoProgress(p.id, m.t, 0.03 + m.f * 0.97); else if (m.type === "done") res(m.out); else rej(new Error(m.msg)); };
+        wk.onerror = e => rej(Object.assign(new Error("worker"), { noWorker: true }));
+        wk.postMessage(job);
+      }).finally(() => wk.terminate());
+    } catch (e) {
+      if (!e.noWorker && !(e instanceof DOMException) && e.message !== "worker") throw e;
+      // фоновый поток недоступен — считаем здесь же
+      const R = await L.reconstruct(imgs, order, ref, Object.assign(job.opt, { progress: (t, f) => autoProgress(p.id, t, 0.03 + f * 0.97) }));
+      autoProgress(p.id, "Стены, крыша, окна и двери", 0.97); await new Promise(r => setTimeout(r, 0));
+      out = L.packResult(R, L.buildModelFromRecon(R, imgs, ref, sky, rf.s)).out;
+    }
+    st.res = out; st.viz = autoViz(out);
+    if (out.err) st.err = out.err;
+  } catch (e) { console.warn(e); st.err = "Ошибка расчёта: " + (e && e.message || e); }
+  st.run = false; st.sec = Math.round((Date.now() - st.t0) / 1000); render();
+}
+// картинки: вид сверху (точки и камеры) и развёртки фасадов с найденным
+function autoViz(o) {
+  const viz = [];
+  const P = o.pts, n = P.length / 3, cams = Object.entries(o.cams);
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  const ext = (x, y) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
+  for (const [, c] of cams) ext(c.C[0], c.C[1]); for (let i = 0; i < n; i++) ext(P[3 * i], P[3 * i + 1]);
+  const W = 360, H = 300, k = Math.min((W - 40) / (x1 - x0 || 1), (H - 40) / (y1 - y0 || 1)), X = x => 20 + (x - x0) * k, Y = y => H - 20 - (y - y0) * k;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+  g.fillStyle = "#1d2126"; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < n; i++) { const z = P[3 * i + 2]; g.fillStyle = z > 3200 ? "#F0B72A" : z > 300 ? "#7FC8D6" : "#6E7A55"; g.fillRect(X(P[3 * i]) - 1.5, Y(P[3 * i + 1]) - 1.5, 3, 3); }
+  if (o.model) { g.strokeStyle = "#FF5FA2"; g.lineWidth = 2; for (const w of o.model.walls) { g.beginPath(); g.moveTo(X(w.a[0]), Y(w.a[1])); g.lineTo(X(w.b[0]), Y(w.b[1])); g.stroke(); } }
+  g.font = "11px sans-serif";
+  for (const [key, c] of cams) { const f = [c.R[6], c.R[7]], l = Math.hypot(...f) || 1; g.strokeStyle = g.fillStyle = "#fff"; g.beginPath(); g.arc(X(c.C[0]), Y(c.C[1]), 4, 0, 7); g.fill();
+    g.beginPath(); g.moveTo(X(c.C[0]), Y(c.C[1])); g.lineTo(X(c.C[0] + f[0] / l * 2000), Y(c.C[1] + f[1] / l * 2000)); g.stroke(); g.fillText(key.slice(1), X(c.C[0]) + 6, Y(c.C[1]) - 6); }
+  viz.push({ src: cv.toDataURL("image/png"), cap: "Вид сверху: камеры (белые), точки стен (голубые), контур стен (розовый)" });
+  if (o.model) for (const a of o.model.an) {
+    if (!a) continue;
+    const O = a.ortho, c = document.createElement("canvas"); c.width = O.W; c.height = O.H; const q = c.getContext("2d"), id = new ImageData(new Uint8ClampedArray(O.rgba), O.W, O.H);
+    for (let i = 0; i < O.W * O.H; i++) if (!a.mask[i]) for (let ch = 0; ch < 3; ch++) id.data[4 * i + ch] *= 0.45;
+    q.putImageData(id, 0, 0); const Z = z => (7000 - z) / 10;
+    q.lineWidth = 2; q.strokeStyle = "#FF5FA2"; for (const L of a.lines) { q.beginPath(); q.moveTo(0, Z(L.c)); q.lineTo(O.W, Z(L.k * O.W * 10 + L.c)); q.stroke(); }
+    q.lineWidth = 3; q.strokeStyle = "#FFD400"; for (const op of a.open) q.strokeRect(op.s / 10, Z(op.sill + op.h), op.w / 10, op.h / 10);
+    // обрезать пустое небо сверху
+    let top = 0; for (const L of a.lines) top = Math.max(top, L.c, L.k * O.W * 10 + L.c, a.apex ? a.apex[1] : 0);
+    const y0c = Math.max(0, Math.floor(Z(top + 600))), out = document.createElement("canvas"); out.width = O.W; out.height = O.H - y0c; out.getContext("2d").drawImage(c, 0, -y0c);
+    viz.push({ src: out.toDataURL("image/jpeg", .85), cap: `Сторона ${a.side}: ${a.type === "gable" ? "фронтон, уклон " + a.pitch.map(v => v.toFixed(1).replace(".", ",") + "°").join(" / ") : "карнизная стена"}; проёмов ${a.open.length}` });
+  }
+  return viz;
+}
+function autoSpec(p, o) {
+  const m = o.model, v = planValues(p), r = x => r5(x);
+  const holes = m.holes.map(h => { const len = h.side % 2 ? m.B : m.A, width = r(h.width); return { side: h.side, t: h.t, pos: Math.max(width / 2, Math.min(len - width / 2, r(h.pos))), width, height: r(h.height), sill: h.t === "door" ? 0 : r(h.sill) }; });
+  const A = r(m.A), B = r(m.B);
+  const roof = m.roof ? { ...m.roof, ov: v.ov, rise: r(m.roof.rise), ridgeZ: r(m.roof.ridgeZ) } : null;
+  const chim = m.chim ? { x: r(m.chim.x), y: r(m.chim.y), w: r(m.chim.w), l: r(m.chim.l), top: r(m.chim.top), two: m.chim.two } : null;
+  return { name: p.name + " — 3D по фото", pts: [[0, 0], [A, 0], [A, B], [0, B]], A, B, thick: v.th, ht: r(m.ht), fo: 0, holes, skipped: 0, warn: [], roof, chim, key: p.id + ":auto", force: true, view3d: true };
+}
+function autoHTML(p) {
+  const rf = autoRef(p), st = AUTO.get(p.id), filled = Object.keys(p.photos || {}).length;
+  let body = "";
+  if (!rf) body = `<p class="small muted">Нужен один эталон: откройте снимок «Сторона 1 · фронтально», выберите «Эталон: стена», обведите стену и укажите её длину и высоту. Остальное — камеры, стены, крыша, окна, двери, дымоход — программа найдёт сама.</p>`;
+  else if (st && st.run) body = `<div class="prog"><div id="autoBar" style="width:${Math.round(st.frac * 100)}%"></div></div><p class="small" id="autoMsg">${esc(st.msg)}</p><p class="small muted">Обычно 30–90 секунд. Можно не ждать на этом экране.</p>`;
+  else if (st && st.res) {
+    const o = st.res, m = o.model, nc = Object.keys(o.cams).length, li = [];
+    li.push(`<li><b>Камеры:</b> ${nc} из ${filled} снимков, точек ${o.pts.length / 3}${st.sec ? ` · ${st.sec} с` : ""}</li>`);
+    if (m) {
+      const L = s => { const w = m.walls.find(x => x.side === s); return w ? fmm(w.len) : "—"; };
+      li.push(`<li><b>Стены:</b> ${fmm(m.A)} × ${fmm(m.B)} мм <span class="muted">(стороны 1–4: ${[1, 2, 3, 4].map(L).join(" / ")})</span>, высота ${fmm(m.ht)} — по эталону</li>`);
+      li.push(m.roof ? `<li><b>Крыша:</b> двускатная, уклон ${String(m.roof.ang).replace(".", ",")}°, конёк ${fmm(m.roof.ridgeZ)} мм от земли (по линиям фронтонов)</li>` : `<li class="muted"><b>Крыша:</b> фронтоны не найдены</li>`);
+      const bySide = [1, 2, 3, 4].map(s => m.holes.filter(h => h.side === s - 1).length);
+      li.push(`<li><b>Окна и двери:</b> ${m.holes.length} <span class="muted">(по сторонам: ${bySide.join(" / ")})</span></li>`);
+      li.push(m.chim ? `<li><b>Дымоход:</b> ${fmm(m.chim.w)} × ${fmm(m.chim.l)} мм, верх ${fmm(m.chim.top)} мм от земли</li>` : `<li class="muted"><b>Дымоход:</b> не найден</li>`);
+    }
+    if (st.err) li.push(`<li style="color:var(--danger)">${esc(st.err)}</li>`);
+    body = `<ul class="small autoli">${li.join("")}</ul>
+      <div class="autoviz">${(st.viz || []).map(v => `<figure><img src="${v.src}" alt=""><figcaption>${esc(v.cap)}</figcaption></figure>`).join("")}</div>
+      ${m && CAN_PLAN ? `<div class="row"><button class="btn primary" id="autoOpen">Открыть 3D-модель</button><span class="small muted">в редакторе: стены, окна, двери, крыша и дымоход редактируются</span></div>` : ""}`;
+  } else if (st && st.err) body = `<p class="small" style="color:var(--danger)">${esc(st.err)}</p>`;
+  else body = `<p class="small muted">Эталон: ${esc(slotName(rf.k))}, стена ${fmm(rf.ph.ref.W)} × ${fmm(rf.ph.ref.H)} мм. По нему программа найдёт положение всех снимков, стены, крышу, окна, двери и дымоход.</p>`;
+  return `<section class="panel" id="autop">
+    <div class="row" style="justify-content:space-between"><div><p class="eyebrow">3D по фото · автоматически</p><h2>Модель из снимков обхода</h2></div>
+      <button class="btn ${st && st.res ? "" : "primary"}" id="autoRun" ${!rf || (st && st.run) ? "disabled" : ""}>${st && st.res ? "Собрать заново" : "Собрать 3D"}</button></div>
+    ${body}
+  </section>`;
+}
+function bindAuto(p) {
+  const b = $("#autoRun"); if (b) b.onclick = () => runAuto(p);
+  const o = $("#autoOpen"); if (o) o.onclick = async () => { const st = AUTO.get(p.id); if (!st || !st.res || !st.res.model) return; const res = await enginePlan(autoSpec(p, st.res), p.name); if (!res || !res.ok) setStatus("Не удалось открыть модель: " + ((res && res.msg) || "ошибка"), true); };
 }
 function planHTML(p) {
   const v = planValues(p), nm = ["главный фасад", "справа от главного", "задний фасад", "слева от главного"];

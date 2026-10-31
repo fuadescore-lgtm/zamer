@@ -1,6 +1,7 @@
 # Сборка PHOTOGRAM — отдельное приложение (не входит в BIMsketcher).
 #   python3 tools/build_photogram.py           → photogram/www/index.html + engine.html (для APK, Capacitor)
 #   python3 tools/build_photogram.py --preview → PHOTOGRAM-<версия>.html в корне: один файл для просмотра в Claude
+# Сборка 3D по фото: photogram/src/recon/*.js → <script type="text/plain" id="reconSrc"> (основной поток и фоновый Worker).
 # Редактор плана и 3D = копия движка app3d/www/index.html + мост photogram/bridge.js (вставляется перед «let appView='recent';»).
 import base64, os, sys
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -13,6 +14,9 @@ anchor = "let appView='recent';"
 assert eng.count(anchor) == 1, 'в движке не найдено место для моста'
 eng = eng.replace(anchor, bridge + anchor)
 eng = eng.replace('<title>BIMsketcher</title>', '<title>PHOTOGRAM · план</title>', 1)
+recon = ''.join(open(P('photogram', 'src', 'recon', f), encoding='utf-8').read() + '\n' for f in ['la.js', 'sift.js', 'geom.js', 'sfm.js', 'model.js'])
+assert '</script' not in recon
+src = src.replace('<body>', '<body>\n<script type="text/plain" id="reconSrc">\n' + recon + '</script>', 1)
 i = src.index('<body>') + len('<body>')
 if '--preview' in sys.argv:
     tag = '<script type="text/plain" id="bskInline">' + base64.b64encode(eng.encode('utf-8')).decode() + '</script>\n'
