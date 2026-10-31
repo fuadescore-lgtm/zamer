@@ -173,8 +173,20 @@ const S = {
   tool: null, draft: [], sel: null, confirm: null,
 };
 const $ = s => document.querySelector(s);
-const CAN_PLAN = (() => { try { return window.parent !== window && typeof window.parent.__photoToPlan === "function"; } catch (e) { return false; } })();
-const EMBED = (() => { try { return window.parent !== window && typeof window.parent.__closePhoto === "function"; } catch (e) { return false; } })();
+// Связь с BIMsketcher — только сообщениями (postMessage): работает и в APK, и в изолированном просмотре.
+// Хозяин отвечает на «hello» — до ответа страница работает как самостоятельный фотообмер.
+let EMBED = false, CAN_PLAN = false; const planWait = new Map();
+const toHost = m => { try { window.parent.postMessage(Object.assign({ photo: 1 }, m), "*"); } catch (e) {} };
+window.addEventListener("message", e => {
+  const d = e.data; if (!d || d.bsk !== 1 || e.source !== window.parent) return;
+  if (d.type === "host" && !EMBED) { EMBED = true; CAN_PLAN = true; render(); }
+  if (d.type === "planResult" && planWait.has(d.id)) { planWait.get(d.id)(d.res); planWait.delete(d.id); }
+});
+if (window.parent !== window) toHost({ type: "hello" });
+function hostPlan(spec) {
+  return new Promise(res => { const id = uid(); planWait.set(id, res); toHost({ type: "plan", id, spec });
+    setTimeout(() => { if (planWait.has(id)) { planWait.delete(id); res({ ok: false, msg: "BIMsketcher не ответил" }); } }, 8000); });
+}
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const slotName = k => "Сторона " + k[1] + " · " + POS.find(p => p[0] === k[2])[1].toLowerCase();
@@ -446,7 +458,7 @@ function go(view, opts = {}) {
 $("#back").onclick = () => {
   if (S.view === "photo") go("project");
   else if (S.view === "project") { flush(); S.cur = null; go("list"); }
-  else if (S.view === "list") { flush(); if (EMBED) window.parent.__closePhoto(); }
+  else if (S.view === "list") { flush(); if (EMBED) toHost({ type: "close" }); }
   else go("list");
 };
 // «Назад» Android внутри BIMsketcher: true — шаг назад сделан здесь, false — закрыть фотообмер
@@ -716,11 +728,13 @@ function bindPlan(p) {
   const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
   on("#toplan", () => { S.confirm = "plan"; render(); const f = $("#planf"); if (f) f.scrollIntoView({ block: "start" }); });
   on("#planc", () => { S.confirm = null; render(); });
-  on("#planok", () => {
+  on("#planok", async () => {
     const v = { len: [1, 2, 3, 4].map(s => +$("#pl" + s).value || 0), th: +$("#pth").value || 0, ht: +$("#pht").value || 0, fo: +$("#pfo").value || 0 };
     const spec = buildPlan(p, v), er = $("#perr");
     if (spec.err) { er.textContent = spec.err; er.hidden = false; return; }
-    let res; try { res = window.parent.__photoToPlan(spec); } catch (e) { res = { ok: false, msg: String(e) }; }
+    $("#planok").disabled = true;
+    let res; try { res = await hostPlan(spec); } catch (e) { res = { ok: false, msg: String(e) }; }
+    const ok = $("#planok"); if (ok) ok.disabled = false;
     if (!res || !res.ok) { er.textContent = "Не удалось создать чертёж: " + ((res && res.msg) || "ошибка"); er.hidden = false; return; }
     S.confirm = null;
   });

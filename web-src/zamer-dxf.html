@@ -5062,7 +5062,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.2.6':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.2.7':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 // Фотообмер → новый чертёж: наружный контур по замерам, толщина стен внутрь (side:1 при обходе против часовой), проёмы на стенах
 window.__photoToPlan=spec=>{ try{
   const d=newDoc(spec.name); store.docs[d.id]=d; openDoc(d.id);
@@ -5076,10 +5076,16 @@ window.__photoToPlan=spec=>{ try{
 // Фотообмер (photo.html): обмер фасада по фото — открывается поверх чертежа, проект не закрывается
 function openPhoto(){ let o=document.getElementById('photoOv');
   if(!o){ o=document.createElement('div'); o.id='photoOv'; o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:Canvas';
-    const f=document.createElement('iframe'); f.src='photo.html'; f.title='Фотообмер'; f.setAttribute('allow','camera');
+    const f=document.createElement('iframe'); const inl=document.getElementById('photoInline'); if(inl){ const bin=atob(inl.textContent.trim()), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); f.srcdoc=new TextDecoder().decode(u8); } else f.src='photo.html'; f.title='Фотообмер'; f.setAttribute('allow','camera');
     f.style.cssText='border:0;width:100%;height:100%;display:block'; o.appendChild(f); document.body.appendChild(o); }
   o.hidden=false; }
 window.__closePhoto=()=>{ const o=document.getElementById('photoOv'); if(o) o.hidden=true; };
+// связь с фотообмером сообщениями: «hello» → «host», «plan» → «planResult», «close»
+window.addEventListener('message',e=>{ const d=e.data, o=document.getElementById('photoOv'), f=o&&o.querySelector('iframe');
+  if(!d||d.photo!==1||!f||e.source!==f.contentWindow) return; const reply=m=>{ try{ f.contentWindow.postMessage(Object.assign({bsk:1},m),'*'); }catch(_){} };
+  if(d.type==='hello') reply({type:'host'});
+  else if(d.type==='close') window.__closePhoto();
+  else if(d.type==='plan') reply({type:'planResult',id:d.id,res:window.__photoToPlan(d.spec)}); });
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
