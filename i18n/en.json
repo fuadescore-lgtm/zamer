@@ -1,5 +1,4 @@
 {
-"Фотообмер": "Photo survey",
 "Этот браузер не показывает список приложений для отправки (так на компьютере). Нажмите «Сохранить» — файл попадёт в «Загрузки», потом перетащите его в окно": "This browser can't show the share sheet (desktop). Tap “Save” — the file goes to “Downloads”, then drag it into the window of",
 "Тяните грань — двигается только она, тяните вершину — угол. Всю фигуру целиком двигает «Сдвиг». Синие цифры — расстояния до стен, коснитесь и введите": "Drag an edge to move only it, drag a vertex to move a corner. “Move” moves the whole shape. Blue numbers are distances to walls — tap to enter",
 "идёт через весь лист: поставьте две точки или одну точку и нажмите стрелку. Новые линии и стены привязываются к ней и к её пересечениям. В": "runs across the whole sheet: place two points, or one point and tap an arrow. New lines and walls snap to it and its intersections. In",
@@ -3651,5 +3650,7 @@
 "Орто выключено: свободно": "Ortho off: free",
 "Орто включено: ровно по осям плоскости, пунктир — выравнивание с углами": "Ortho on: straight along plane axes, dashes — alignment with corners",
 "Правка эскиза: тяните вершины; «＋ точка» — касание края; глубина — в меню; ✓ — сохранить": "Edit sketch: drag vertices; “+ point” — tap an edge; depth — in the menu; ✓ — save",
-"Эскиз: в 3D или на фасаде коснитесь стены / грани — это плоскость; рисуйте контур, замкните его, задайте глубину и ✓": "Sketch: in 3D or on an elevation tap a wall / face — that is the plane; draw the contour, close it, set the depth and ✓"
+"Эскиз: в 3D или на фасаде коснитесь стены / грани — это плоскость; рисуйте контур, замкните его, задайте глубину и ✓": "Sketch: in 3D or on an elevation tap a wall / face — that is the plane; draw the contour, close it, set the depth and ✓",
+"Ось глубины смотрит на вас — тяните в 3D или на боковом фасаде": "The depth axis points at you — drag in 3D or on a side elevation",
+"Фотообмер": "Photo survey"
 }
