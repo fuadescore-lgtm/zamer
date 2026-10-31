@@ -5127,49 +5127,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.2.14':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
-// Фотообмер → новый чертёж: наружный контур по замерам, толщина стен внутрь (side:1 при обходе против часовой), проёмы на стенах
-window.__photoToPlan=spec=>{ try{
-  const old=spec.key?Object.values(store.docs).find(x=>x.photoKey===spec.key):null;
-  if(old&&!spec.force){ openDoc(old.id); fitView(); window.__closePhoto(); toast('План «'+old.name+'»',true); return {ok:true,id:old.id,reused:true}; }
-  const d=newDoc(spec.name); if(spec.key) d.photoKey=spec.key; store.docs[d.id]=d; openDoc(d.id); if(old) delete store.docs[old.id];
-  const ids=[], P=spec.pts;
-  for(let i=0;i<4;i++){ const a=P[i], b=P[(i+1)%4];
-    const w={id:uid(),t:'line',a:{x:a[0],y:a[1]},b:{x:b[0],y:b[1]},L:'walls',w:spec.thick,side:1}; if(spec.ht&&!spec.roof) w.ht=spec.ht; doc.items.push(w); ids.push(w.id); }
-  for(const h of spec.holes){ const o={id:uid(),t:h.t,wall:ids[h.side],pos:h.pos,width:h.width,height:h.height,sill:h.sill,hinge:0,swing:-1}; if(h.dk==='gar'){ o.dk='gar'; o.gk='sect'; } doc.items.push(o); }
-  doc.settings.wallW=spec.thick; let nRoof=0, nChim=0;
-  // с крышей высота стен — высота этажа: тогда наружные стены сами доходят до низа крыши (фронтоны закрыты)
-  if(spec.roof&&spec.ht&&Math.abs(lvHeight(doc.curLv)-spec.ht)>1){ try{ setLvHeight(doc.curLv,spec.ht); }catch(e){ console.warn(e); } }
-  // крыша по стенам: двускатная, уклон и направление конька — из фото фронтонов
-  if(spec.roof){ try{ const rs=doc.settings; rs.roof=Object.assign({},roofDef(),{type:'gable',ang:spec.roof.ang,ov:spec.roof.ov,th:spec.roof.th});
-    const r=roofAt({x:(P[0][0]+P[2][0])/2,y:(P[0][1]+P[2][1])/2});
-    if(r){ const n=r.pts.length; r.edges=r.pts.map((A,i)=>{ const B=r.pts[(i+1)%n], along=Math.abs(B.x-A.x)>=Math.abs(B.y-A.y); return {s:spec.roof.along==='x'?along:!along,a:spec.roof.ang}; });
-      doc.items.push(r); nRoof=1;
-      for(const id of ids){ const W=doc.items.find(i=>i.id===id); if(W){ W.ra=true; W.rr=[r.id]; } }   // стены до низа крыши (фронтоны закрыты)
-      persist(); } }catch(e){ console.warn('photo roof',e); } }
-  // дымоход: положение и сечение по двум снимкам, высота над кровлей — от верха трубы
-  if(spec.chim){ try{ const c=spec.chim, o={id:uid(),t:'chim',p:{x:c.x,y:c.y},w:c.w,l:c.l,th:(typeof chimDef==='function'&&chimDef().th)||120,rot:0};
-    doc.items.push(o); const rt=chimRoofTop(o); if(rt!=null) o.hr=Math.max(200,Math.round(c.top-(spec.fo||0)-rt)); nChim=1; }catch(e){ console.warn('photo chim',e); } }
-  persist(); panelKey=''; syncPanel(); redraw(); fitView(); window.__closePhoto();
-  if(spec.view3d) setTimeout(()=>{ const b3=document.getElementById('btn3d'); if(b3&&!b3.classList.contains('on')) b3.click(); },250);
-  toast('Модель из PHOTOGRAM: стен 4, проёмов '+spec.holes.length+(nRoof?', крыша':'')+(nChim?', дымоход':'')+(spec.skipped?', не перенесено '+spec.skipped:'')+(spec.warn&&spec.warn.length?'. Внимание: '+spec.warn.join('; '):''),true);
-  return {ok:true,id:d.id}; }catch(e){ console.warn(e); return {ok:false,msg:String(e&&e.message||e)}; } };
-// Фотообмер (photo.html): обмер фасада по фото — открывается поверх чертежа, проект не закрывается
-function openPhoto(){ let o=document.getElementById('photoOv');
-  if(!o){ o=document.createElement('div'); o.id='photoOv'; o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:Canvas';
-    const f=document.createElement('iframe'); const inl=document.getElementById('photoInline'); if(inl){ const bin=atob(inl.textContent.trim()), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); f.srcdoc=new TextDecoder().decode(u8); } else f.src='photo.html'; f.title='PHOTOGRAM'; f.setAttribute('allow','camera');
-    f.style.cssText='border:0;width:100%;height:100%;display:block'; o.appendChild(f); document.body.appendChild(o); }
-  o.hidden=false; }
-window.__closePhoto=()=>{ const o=document.getElementById('photoOv'); if(o) o.hidden=true; };
-// BIMsketcher внутри фотообмера (редактор плана): принимает план от родителя, свой пункт «Фотообмер» скрыт
-window.addEventListener('message',e=>{ const d=e.data; if(!d||d.photoHost!==1||window.parent===window||e.source!==window.parent) return; window.__bskChild=true;
-  if(d.type==='plan'){ const res=window.__photoToPlan(d.spec); try{ e.source.postMessage({bsk:1,type:'planResult',id:d.id,res},'*'); }catch(_){} } });
-// связь с фотообмером сообщениями: «hello» → «host», «plan» → «planResult», «close»
-window.addEventListener('message',e=>{ const d=e.data, o=document.getElementById('photoOv'), f=o&&o.querySelector('iframe');
-  if(!d||d.photo!==1||!f||e.source!==f.contentWindow) return; const reply=m=>{ try{ f.contentWindow.postMessage(Object.assign({bsk:1},m),'*'); }catch(_){} };
-  if(d.type==='hello') reply({type:'host'});
-  else if(d.type==='close') window.__closePhoto();
-  else if(d.type==='plan') reply({type:'planResult',id:d.id,res:window.__photoToPlan(d.spec)}); });
+const APP_VER=IS3D?'3D 2.2.15':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -5187,7 +5145,6 @@ function renderSheet(view){ if(view) appView=view;
       ${L('cpjson','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="13" rx="1.5"/><path d="M16 8V4H4v13h4"/></svg>','Копировать проект')}
       ${L('export','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h10v16H4z"/><path d="M11 12h10M17 8l4 4-4 4"/></svg>','Экспорт',1)}
       ${L('levels','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 16l9 4 9-4"/></svg>','Уровни',1)}
-      ${window.__bskChild?'':L('photo','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>','PHOTOGRAM')}
       ${L('settings','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>','Параметры',1)}
       <span class="sp"></span>
       ${L('close','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>','Закрыть')}
@@ -5234,7 +5191,6 @@ sheet.addEventListener('click',e=>{
     case 'recent':renderSheet('recent');break;
     case 'settings':renderSheet('settings');break;
     case 'privacy':{ const u='https://fuadhayat10-boop.github.io/bimsketcher-legal/privacy.html'+(EN?'#en':'#ru'); try{ window.open(u,'_blank'); }catch(e){ location.href=u; } }break;
-    case 'photo':sheet.hidden=true; openPhoto(); break;
     case 'save':sheet.hidden=true; saveCurrentFile(); break;
     case 'openf':sheet.hidden=true; openProjectPicker(); break;
     case 'savep':sheet.hidden=true; saveProjectFile(); break;
@@ -11269,7 +11225,6 @@ async function vedOut(bl,name){ if(inClaude()){ toast('В окне Claude фай
 
 $('#btnVed').addEventListener('click',()=>{ if(bsk) bskCancel(true); vedFree(); openVed(); });
 window.__bsBack=()=>{ try{
-  { const po=document.getElementById('photoOv'); if(po&&!po.hidden){ try{ const w=po.querySelector('iframe').contentWindow; if(w.__photoBack&&w.__photoBack()) return true; }catch(e){} po.hidden=true; return true; } }
   const esc=i=>i.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',keyCode:27,which:27,bubbles:true,cancelable:true}));
   if(KP.inp&&KP.el&&!KP.el.hidden){ kpCancel(); return true; }
   const ae=document.activeElement; if(ae&&ae.matches&&ae.matches('input,textarea')){ esc(ae); if(document.activeElement===ae) ae.blur(); return true; }

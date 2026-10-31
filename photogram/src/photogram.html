@@ -182,24 +182,14 @@ const S = {
   tool: null, draft: [], sel: null, confirm: null,
 };
 const $ = s => document.querySelector(s);
-// Связь с BIMsketcher — только сообщениями (postMessage): работает и в APK, и в изолированном просмотре.
-// Хозяин отвечает на «hello» — до ответа страница работает как самостоятельный фотообмер.
-const HAS_ENGINE = !!document.getElementById("bskInline");
-let EMBED = false, CAN_PLAN = HAS_ENGINE; const planWait = new Map(); let ENG = null;
-const toHost = m => { try { window.parent.postMessage(Object.assign({ photo: 1 }, m), "*"); } catch (e) {} };
+// Связь с редактором плана (копия движка во фрейме) — сообщениями postMessage
+const PG_VER = "__PG_VER__";
+const HAS_ENGINE = !!document.getElementById("bskInline") || !!window.__PG_ENGINE;
+const EMBED = false; let CAN_PLAN = HAS_ENGINE; const planWait = new Map(); let ENG = null;
 window.addEventListener("message", e => {
-  const d = e.data; if (!d || d.bsk !== 1) return;
-  const fromHost = window.parent !== window && e.source === window.parent, fromEng = ENG && e.source === ENG.f.contentWindow;
-  if (!fromHost && !fromEng) return;
-  if (d.type === "host" && !fromHost) return;
-  if (d.type === "host" && !EMBED) { EMBED = true; CAN_PLAN = true; render(); }
+  const d = e.data; if (!d || d.bsk !== 1 || !ENG || e.source !== ENG.f.contentWindow) return;
   if (d.type === "planResult" && planWait.has(d.id)) { planWait.get(d.id)(d.res); planWait.delete(d.id); }
 });
-if (window.parent !== window) toHost({ type: "hello" });
-function hostPlan(spec) {
-  return new Promise(res => { const id = uid(); planWait.set(id, res); toHost({ type: "plan", id, spec });
-    setTimeout(() => { if (planWait.has(id)) { planWait.delete(id); res({ ok: false, msg: "BIMsketcher не ответил" }); } }, 8000); });
-}
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const slotName = k => "Сторона " + k[1] + " · " + POS.find(p => p[0] === k[2])[1].toLowerCase();
@@ -671,10 +661,10 @@ function go(view, opts = {}) {
 $("#back").onclick = () => {
   if (S.view === "photo") go("project");
   else if (S.view === "project") { flush(); S.cur = null; go("list"); }
-  else if (S.view === "list") { flush(); if (EMBED) toHost({ type: "close" }); }
+  else if (S.view === "list") { flush(); }
   else go("list");
 };
-// «Назад» Android внутри BIMsketcher: true — шаг назад сделан здесь, false — закрыть фотообмер
+// кнопка «Назад» Android: true — шаг назад сделан здесь, false — свернуть приложение
 window.__photoBack = () => {
   if (ENG && !ENG.o.hidden) { ENG.o.hidden = true; render(); return true; }
   if (S.picking) { S.picking = null; render(); return true; }
@@ -705,6 +695,7 @@ function renderList() {
     ${S.loadErr === "local" ? `<p class="note">В этом браузере сохранение недоступно: фото и замеры останутся только до закрытия страницы.</p>` : ""}
     ${S.loadErr === "slow" ? `<p class="note">Сохранённые объекты пока не загрузились. Проверьте соединение; список обновится сам.</p>` : ""}
     ${!real.length && S.loaded ? `<p class="muted">Создайте объект, добавьте 12 фото дома по схеме и отметьте один контрольный размер. Ниже пример: откройте его, чтобы увидеть, как выглядят замеры.</p>` : ""}
+    <p class="small muted" style="order:9">PHOTOGRAM ${PG_VER}</p>
     <div class="plist">
       ${list.map(p => `
         <button class="pitem" data-id="${esc(p.id)}">
@@ -874,7 +865,7 @@ $("#pickMany").onchange = async e => {
   for (const [k, f] of pairs) await addPhoto(p, k, f);
 };
 
-/* ---------- План в BIMsketcher ---------- */
+/* ---------- План и модель ---------- */
 // Стороны: 1 — главный фасад, 2 — справа от него, 3 — задний, 4 — слева (обход дома вправо).
 // Сверху (ось Y вверх) это обход против часовой: 1 — низ, 2 — правая, 3 — верх, 4 — левая.
 // Фото стороны снято снаружи, поэтому её левый край — начало стены при таком обходе.
@@ -913,7 +904,7 @@ function modelHTML(p) {
     <div class="row" style="justify-content:space-between"><div><p class="eyebrow">Модель дома</p><h2>Что найдено на фото</h2></div>
       <button class="btn primary" id="genModel" ${sp.err ? "disabled" : ""}>Сгенерировать модель</button></div>
     <ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">${li.join("")}</ul>
-    <p class="small muted">Модель открывается в редакторе BIMsketcher в 3D: стены, окна и двери, крыша, дымоход. Повторное «Сгенерировать» заменит модель, «План» вверху откроет её с вашими правками.</p>
+    <p class="small muted">Модель открывается в редакторе в 3D: стены, окна и двери, крыша, дымоход. Повторное «Сгенерировать» заменит модель, «План» вверху откроет её с вашими правками.</p>
   </section>`;
 }
 function planHTML(p) {
@@ -1035,18 +1026,18 @@ async function openPlan(p, force, view3d) {
   const v = planValues(p), spec = buildPlan(p, v);
   if (spec.err) { planErr(spec.err); return; }
   spec.key = p.id; spec.force = !!force; spec.view3d = !!view3d;
-  const res = EMBED ? await hostPlan(spec) : await enginePlan(spec, p.name);
+  const res = await enginePlan(spec, p.name);
   if (!res || !res.ok) planErr("Не удалось открыть план: " + ((res && res.msg) || "ошибка"));
 }
-// встроенный редактор BIMsketcher поверх фотообмера
+// встроенный редактор плана (копия движка BIMsketcher) поверх фото
 function engineOverlay() {
   if (ENG) return ENG;
   const o = document.createElement("div"); o.id = "planOv";
-  o.innerHTML = `<div class="planbar"><button class="back" id="planBack" aria-label="Назад к фото">&#8592;</button><b id="planTitle">План</b><span class="small muted">редактор BIMsketcher</span></div>`;
+  o.innerHTML = `<div class="planbar"><button class="back" id="planBack" aria-label="Назад к фото">&#8592;</button><b id="planTitle">План</b><span class="small muted">редактор</span></div>`;
   const f = document.createElement("iframe"); f.title = "План";
-  const bin = atob(document.getElementById("bskInline").textContent.trim()), u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  f.srcdoc = new TextDecoder().decode(u8);
+  const inl = document.getElementById("bskInline");
+  if (inl) { const bin = atob(inl.textContent.trim()), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); f.srcdoc = new TextDecoder().decode(u8); }
+  else f.src = window.__PG_ENGINE;
   const ready = new Promise(r => f.addEventListener("load", () => setTimeout(r, 400), { once: true }));
   o.appendChild(f); document.body.appendChild(o);
   o.querySelector("#planBack").onclick = () => { o.hidden = true; render(); };

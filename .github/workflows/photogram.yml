@@ -1,0 +1,83 @@
+name: Сборка PHOTOGRAM (APK)
+on:
+  push:
+    branches: [main]
+    paths: ['photogram/**', 'tools/build_photogram.py', '.github/workflows/photogram.yml']
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: photogram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Ключ подписи (секрет UPLOAD_KEYSTORE_PW)
+        env:
+          PW: ${{ secrets.UPLOAD_KEYSTORE_PW }}
+        run: |
+          if [ -z "$PW" ]; then echo "::error::Нет секрета UPLOAD_KEYSTORE_PW"; exit 1; fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in ../keystore/upload.jks.enc -out $RUNNER_TEMP/upload.jks -pass env:PW
+      - name: Веб-часть (PHOTOGRAM + копия редактора с мостом)
+        run: python3 ../tools/build_photogram.py && ls -la www
+      - name: Установка Capacitor 8
+        run: npm install
+      - name: Android-проект
+        run: |
+          npx cap add android
+          npx cap sync android
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q 'xmlns:tools' $M || sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android"#& xmlns:tools="http://schemas.android.com/tools"#' $M
+          grep -q 'permission.AD_ID' $M || sed -i 's#</manifest>#    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />\n</manifest>#' $M
+          # камера для <input capture>: с Android 11 приложение камеры видно только через <queries>
+          grep -q 'media.action.IMAGE_CAPTURE' $M || sed -i 's#</manifest>#    <queries>\n        <intent>\n            <action android:name="android.media.action.IMAGE_CAPTURE" />\n        </intent>\n    </queries>\n</manifest>#' $M
+          grep -c 'media.action.IMAGE_CAPTURE' $M
+          cat $M
+          MA=$(find android/app/src/main/java -name MainActivity.java | head -1)
+          PKG=$(sed -n 's/^package \(.*\);/\1/p' "$MA")
+          sed "s/^package PKG;/package $PKG;/" native/MainActivity.java > "$MA"
+          echo "package: $PKG"
+      - name: Значок
+        run: |
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            for n in ic_launcher ic_launcher_round ic_launcher_foreground; do
+              cp icons/$d.png android/app/src/main/res/mipmap-$d/$n.png
+            done
+          done
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+      - name: Номер версии
+        run: |
+          V=$(tr -d ' \r\n' < VERSION)
+          echo "APP_VER=$V" >> $GITHUB_ENV
+          G=android/app/build.gradle
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"$V\"/" $G
+          grep -E "versionCode|versionName|applicationId" $G
+      - name: Сборка APK
+        env:
+          PW: ${{ secrets.UPLOAD_KEYSTORE_PW }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon -Pandroid.injected.signing.store.file=$RUNNER_TEMP/upload.jks -Pandroid.injected.signing.store.password=$PW -Pandroid.injected.signing.key.alias=upload -Pandroid.injected.signing.key.password=$PW
+          cp app/build/outputs/apk/release/app-release.apk ../PHOTOGRAM-${{ env.APP_VER }}.apk
+          ls -la ..
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PHOTOGRAM
+          path: photogram/PHOTOGRAM-${{ env.APP_VER }}.apk
+      - name: Выпуск для скачивания
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: photogram-${{ env.APP_VER }}
+          name: PHOTOGRAM ${{ env.APP_VER }}
+          files: photogram/PHOTOGRAM-${{ env.APP_VER }}.apk
+          make_latest: false

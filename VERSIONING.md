@@ -15,6 +15,12 @@
 - Всё, что сделано, сначала проверяется самим Claude (сценарий в Chrome с эмуляцией телефона, сборка APK, содержимое APK),
   и только потом считается готовым.
 - После каждого изменения пользователю отправляется HTML-файл для просмотра в Claude (справа в окне чата):
-  `python3 tools/build_photo_preview.py` → `PHOTOGRAM-<версия>.html` (главное — PHOTOGRAM, фотообмер; BIMsketcher встроен как редактор плана).
-  Для BIMsketcher отдельно: `python3 tools/build_preview.py` → `BIMsketcher-<версия>.html`.
+  PHOTOGRAM — `python3 tools/build_photogram.py --preview` → `PHOTOGRAM-<версия>.html`;
+  BIMsketcher — сам файл `app3d/www/index.html`.
 
+## PHOTOGRAM — отдельное приложение (просьба пользователя, 31.10.2026)
+PHOTOGRAM ни в коем случае не связан с BIMsketcher: свой APK (appId com.photogram.app, значок, выпуски photogram-<версия>,
+файл PHOTOGRAM-<версия>.apk), папка photogram/, сборка .github/workflows/photogram.yml. В BIMsketcher нет ни пункта меню,
+ни кода PHOTOGRAM. Для плана и 3D внутри PHOTOGRAM при сборке берётся копия движка app3d/www/index.html
+и к ней добавляется мост photogram/bridge.js (только в эту копию). Версия: photogram/VERSION — 1.0.0, 1.0.1, 1.0.2…
+Исходник страницы: photogram/src/photogram.html. Сборка: python3 tools/build_photogram.py.
