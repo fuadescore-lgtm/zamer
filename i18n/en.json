@@ -3605,5 +3605,12 @@
 "Теперь коснитесь конца этой линии на карте": "Now tap the end of this line on the map",
 "Коснитесь стены на плане — карта встанет вдоль неё": "Tap a wall on the plan — the map will align to it",
 "Север по двум точкам: коснитесь точки, потом точки в сторону севера": "North by two points: tap a point, then a point towards north",
-"Теперь коснитесь точки в сторону севера": "Now tap a point towards north"
+"Теперь коснитесь точки в сторону севера": "Now tap a point towards north",
+"Отметьте категории и нажмите ✓": "Check categories and tap ✓",
+"На каком уровне выделять": "Which level to select on",
+"Перенести": "Move",
+"шт. с разных уровней на": "items from different levels to",
+"на всех уровнях": "on all levels",
+"Выделено на всех уровнях": "Selected on all levels",
+"Таких объектов нет на всех уровнях": "No such objects on any level"
 }
