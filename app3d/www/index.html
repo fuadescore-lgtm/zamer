@@ -5119,10 +5119,12 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.2.8':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.2.9':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 // Фотообмер → новый чертёж: наружный контур по замерам, толщина стен внутрь (side:1 при обходе против часовой), проёмы на стенах
 window.__photoToPlan=spec=>{ try{
-  const d=newDoc(spec.name); store.docs[d.id]=d; openDoc(d.id);
+  const old=spec.key?Object.values(store.docs).find(x=>x.photoKey===spec.key):null;
+  if(old&&!spec.force){ openDoc(old.id); fitView(); window.__closePhoto(); toast('План «'+old.name+'»',true); return {ok:true,id:old.id,reused:true}; }
+  const d=newDoc(spec.name); if(spec.key) d.photoKey=spec.key; store.docs[d.id]=d; openDoc(d.id); if(old) delete store.docs[old.id];
   const ids=[], P=spec.pts;
   for(let i=0;i<4;i++){ const a=P[i], b=P[(i+1)%4];
     const w={id:uid(),t:'line',a:{x:a[0],y:a[1]},b:{x:b[0],y:b[1]},L:'walls',w:spec.thick,side:1}; if(spec.ht) w.ht=spec.ht; doc.items.push(w); ids.push(w.id); }
@@ -5137,6 +5139,9 @@ function openPhoto(){ let o=document.getElementById('photoOv');
     f.style.cssText='border:0;width:100%;height:100%;display:block'; o.appendChild(f); document.body.appendChild(o); }
   o.hidden=false; }
 window.__closePhoto=()=>{ const o=document.getElementById('photoOv'); if(o) o.hidden=true; };
+// BIMsketcher внутри фотообмера (редактор плана): принимает план от родителя, свой пункт «Фотообмер» скрыт
+window.addEventListener('message',e=>{ const d=e.data; if(!d||d.photoHost!==1||window.parent===window||e.source!==window.parent) return; window.__bskChild=true;
+  if(d.type==='plan'){ const res=window.__photoToPlan(d.spec); try{ e.source.postMessage({bsk:1,type:'planResult',id:d.id,res},'*'); }catch(_){} } });
 // связь с фотообмером сообщениями: «hello» → «host», «plan» → «planResult», «close»
 window.addEventListener('message',e=>{ const d=e.data, o=document.getElementById('photoOv'), f=o&&o.querySelector('iframe');
   if(!d||d.photo!==1||!f||e.source!==f.contentWindow) return; const reply=m=>{ try{ f.contentWindow.postMessage(Object.assign({bsk:1},m),'*'); }catch(_){} };
@@ -5160,7 +5165,7 @@ function renderSheet(view){ if(view) appView=view;
       ${L('cpjson','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="13" rx="1.5"/><path d="M16 8V4H4v13h4"/></svg>','Копировать проект')}
       ${L('export','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h10v16H4z"/><path d="M11 12h10M17 8l4 4-4 4"/></svg>','Экспорт',1)}
       ${L('levels','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 16l9 4 9-4"/></svg>','Уровни',1)}
-      ${L('photo','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>','Фотообмер')}
+      ${window.__bskChild?'':L('photo','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>','Фотообмер')}
       ${L('settings','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>','Параметры',1)}
       <span class="sp"></span>
       ${L('close','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>','Закрыть')}

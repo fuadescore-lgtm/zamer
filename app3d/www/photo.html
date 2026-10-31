@@ -47,6 +47,12 @@ button { cursor: pointer; }
 .back:hover { background: var(--sunken); }
 .status { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .status.err { color: var(--danger); }
+.planbtn { min-height: 36px; padding: 6px 14px; }
+#planOv { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; }
+#planOv .planbar { display: flex; align-items: center; gap: 10px; min-height: 50px; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top, 0px); padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#planOv .planbar b { font-family: var(--font-display); font-size: 17px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#planOv iframe { flex: 1; width: 100%; border: 0; display: block; background: #fff; }
 
 main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 .eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--muted); font-weight: 600; margin: 0; }
@@ -137,6 +143,7 @@ label.btn { display: inline-flex; align-items: center; justify-content: center; 
   <button class="back" id="back" aria-label="Назад" hidden>&#8592;</button>
   <h1 id="title">Фотообмер фасада</h1>
   <span class="status" id="status"></span>
+  <button class="btn primary planbtn" id="planBtn" hidden>План</button>
 </header>
 <main id="view"></main>
 <input type="file" id="pickOne" accept="image/*" hidden>
@@ -175,10 +182,14 @@ const S = {
 const $ = s => document.querySelector(s);
 // Связь с BIMsketcher — только сообщениями (postMessage): работает и в APK, и в изолированном просмотре.
 // Хозяин отвечает на «hello» — до ответа страница работает как самостоятельный фотообмер.
-let EMBED = false, CAN_PLAN = false; const planWait = new Map();
+const HAS_ENGINE = !!document.getElementById("bskInline");
+let EMBED = false, CAN_PLAN = HAS_ENGINE; const planWait = new Map(); let ENG = null;
 const toHost = m => { try { window.parent.postMessage(Object.assign({ photo: 1 }, m), "*"); } catch (e) {} };
 window.addEventListener("message", e => {
-  const d = e.data; if (!d || d.bsk !== 1 || e.source !== window.parent) return;
+  const d = e.data; if (!d || d.bsk !== 1) return;
+  const fromHost = window.parent !== window && e.source === window.parent, fromEng = ENG && e.source === ENG.f.contentWindow;
+  if (!fromHost && !fromEng) return;
+  if (d.type === "host" && !fromHost) return;
   if (d.type === "host" && !EMBED) { EMBED = true; CAN_PLAN = true; render(); }
   if (d.type === "planResult" && planWait.has(d.id)) { planWait.get(d.id)(d.res); planWait.delete(d.id); }
 });
@@ -259,49 +270,143 @@ function warnings(it, m) {
 }
 
 /* ---------- Пример (генерируется на месте) ---------- */
-// Дом 9000 × 7000 мм, стены 3000 мм: четыре фасада с известными размерами проёмов.
-const DEMO = {
-  s1F: { W: 9000, H: 3000, gable: true, q: [[250, 470], [1370, 395], [1395, 985], [228, 1040]],
-    items: [["win", 2700, 900, 1400, 1400], ["win", 5600, 900, 1400, 1400], ["door", 1000, 0, 900, 2100]], line: [4100, 5600, 1600] },
-  s2F: { W: 7000, H: 3000, q: [[300, 420], [1330, 450], [1350, 1020], [280, 990]], items: [["win", 2900, 900, 1200, 1400]] },
-  s3F: { W: 9000, H: 3000, gable: true, q: [[210, 430], [1390, 455], [1380, 1000], [225, 975]],
-    items: [["win", 1500, 900, 1200, 1400], ["win", 6300, 900, 1200, 1400], ["door", 4000, 0, 900, 2100]] },
-  s4F: { W: 7000, H: 3000, q: [[330, 450], [1290, 410], [1310, 1010], [310, 1035]], items: [["win", 3000, 1000, 1000, 1200]] },
+/* ---------- Виртуальная съёмка: 3D-дом и 12 кадров с телефона ---------- */
+// Мир в мм: x — вдоль главного фасада (сторона 1), y — вглубь дома, z — вверх.
+// Сторона 1 — y=0 (смотрит на -y), 2 — x=A, 3 — y=B, 4 — x=0. Обход 1→2→3→4 — вправо вокруг дома.
+const VHOUSE = {
+  A: 9000, B: 7000, H: 3000, ridge: 2200, over: 500, plinth: 450,
+  open: {
+    1: [["win", 2700, 900, 1400, 1400], ["win", 5600, 900, 1400, 1400], ["door", 1000, 0, 900, 2100]],
+    2: [["win", 2900, 900, 1200, 1400]],
+    3: [["win", 1500, 900, 1200, 1400], ["win", 6300, 900, 1200, 1400], ["door", 4000, 0, 900, 2100]],
+    4: [["win", 3000, 1000, 1000, 1200]],
+  },
+  chimney: { x: 6300, y: 2300, w: 640, d: 520, top: 6100 },
 };
-function demoFacade(cfg) {
-  const W = 1600, Hh = 1200, c = document.createElement("canvas"); c.width = W; c.height = Hh;
-  const g = c.getContext("2d"), FW = cfg.W, FH = cfg.H;
-  const M = homog([[0, FH], [FW, FH], [FW, 0], [0, 0]], cfg.q);
-  const P = (x, y) => apply(M, [x, y]);
-  const poly = (pts, fill, stroke, lw) => { g.beginPath(); pts.forEach((p, i) => { const q = P(p[0], p[1]); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2; g.stroke(); } };
-  const sky = g.createLinearGradient(0, 0, 0, Hh); sky.addColorStop(0, "#9DB9CF"); sky.addColorStop(.55, "#D8E3E8"); sky.addColorStop(.56, "#7F8C6A"); sky.addColorStop(1, "#5F6B4D");
-  g.fillStyle = sky; g.fillRect(0, 0, W, Hh);
-  if (cfg.gable) { poly([[-600, FH], [FW / 2, FH + 2100], [FW + 600, FH]], "#7B3F33", "#4E2620", 3); poly([[0, FH], [FW / 2, FH + 1850], [FW, FH]], "#E9E1D2", "#B9AE98", 2); }
-  else poly([[-600, FH], [FW + 600, FH], [FW + 400, FH + 700], [-400, FH + 700]], "#7B3F33", "#4E2620", 3);
-  poly([[0, FH], [FW, FH], [FW, 0], [0, 0]], "#E3DACA", "#A99D86", 2);
-  poly([[0, 450], [FW, 450], [FW, 0], [0, 0]], "#8E8A80", null);
-  for (const [t, x, y, w, h] of cfg.items) {
-    if (t === "win") {
-      poly([[x, y + h], [x + w, y + h], [x + w, y], [x, y]], "#F4F3EF", "#6C665B", 2);
-      poly([[x + 70, y + h - 70], [x + w - 70, y + h - 70], [x + w - 70, y + 70], [x + 70, y + 70]], "#4D6475", null);
-      poly([[x + w / 2 - 25, y + h - 70], [x + w / 2 + 25, y + h - 70], [x + w / 2 + 25, y + 70], [x + w / 2 - 25, y + 70]], "#F4F3EF", null);
-      poly([[x - 60, y], [x + w + 60, y], [x + w + 60, y - 50], [x - 60, y - 50]], "#BDB6A8", null);
-    } else {
-      poly([[x, y + h], [x + w, y + h], [x + w, y], [x, y]], "#5A3B2A", "#2E1E15", 2);
-      poly([[x + w - 180, y + 1050], [x + w - 100, y + 1050], [x + w - 100, y + 950], [x + w - 180, y + 950]], "#C9A65A", null);
-      poly([[x - 300, y + h + 400], [x + w + 300, y + h + 400], [x + w + 300, y + h + 250], [x - 300, y + h + 250]], "#6E6A62", null);
+function vSide(s) {
+  const { A, B } = VHOUSE;
+  return {
+    1: { O: [0, 0], u: [1, 0], n: [0, -1], len: A },
+    2: { O: [A, 0], u: [0, 1], n: [1, 0], len: B },
+    3: { O: [A, B], u: [-1, 0], n: [0, 1], len: A },
+    4: { O: [0, B], u: [0, -1], n: [-1, 0], len: B },
+  }[s];
+}
+const vAt = (sd, t, z, out = 0) => [sd.O[0] + sd.u[0] * t + sd.n[0] * out, sd.O[1] + sd.u[1] * t + sd.n[1] * out, z];
+const v3sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const v3dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const v3cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const v3norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+function vCamera(eye, target, W, Hh, f) {
+  const fwd = v3norm(v3sub(target, eye)), right = v3norm(v3cross(fwd, [0, 0, 1])), up = v3cross(right, fwd);
+  const proj = p => { const d = v3sub(p, eye), zc = v3dot(d, fwd); if (zc < 50) return null; return [W / 2 + f * v3dot(d, right) / zc, Hh / 2 - f * v3dot(d, up) / zc]; };
+  const hz = proj([eye[0] + fwd[0] * 1e8, eye[1] + fwd[1] * 1e8, eye[2]]);
+  return { eye, fwd, proj, horizon: hz ? hz[1] : Hh / 2 };
+}
+// точки съёмки: «L» — левый угол, «F» — фронтально, «R» — правый угол (как в мастере съёмки)
+function vShot(s, c) {
+  const sd = vSide(s), D = sd.len > 8000 ? 9200 : 8200, D2 = 8800, tz = 2400, ez = 1600;
+  const n = sd.n, u = sd.u;
+  if (c === "F") { const C = vAt(sd, sd.len / 2, 0); return { eye: [C[0] + n[0] * D, C[1] + n[1] * D, ez], target: [C[0], C[1], tz] }; }
+  const k = Math.SQRT1_2;
+  if (c === "L") { const O = vAt(sd, 0, 0); return { eye: [O[0] + (n[0] - u[0]) * k * D2, O[1] + (n[1] - u[1]) * k * D2, ez], target: [O[0] + u[0] * 2200 - n[0] * 2200, O[1] + u[1] * 2200 - n[1] * 2200, tz] }; }
+  const R = vAt(sd, sd.len, 0); return { eye: [R[0] + (n[0] + u[0]) * k * D2, R[1] + (n[1] + u[1]) * k * D2, ez], target: [R[0] - u[0] * 2200 - n[0] * 2200, R[1] - u[1] * 2200 - n[1] * 2200, tz] };
+}
+const VLIGHT = v3norm([-0.45, -0.7, 0.55]);
+function vShade(rgb, nrm) { const k = 0.62 + 0.38 * Math.max(0, v3dot(nrm, VLIGHT)); return `rgb(${rgb.map(v => Math.round(v * k)).join(",")})`; }
+// снимок 1600×1200 + истинные точки для разметки (эталон-стена и проёмы видимой стороны)
+function vRender(s, c) {
+  const W = 1600, Hh = 1200, f = 1150, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"), sh = vShot(s, c), cam = vCamera(sh.eye, sh.target, W, Hh, f);
+  const { A, B, H, ridge, over, plinth } = VHOUSE;
+  // небо и земля
+  const hy = Math.max(-200, Math.min(Hh + 200, cam.horizon));
+  const sky = g.createLinearGradient(0, 0, 0, Math.max(1, hy)); sky.addColorStop(0, "#8FB0C9"); sky.addColorStop(1, "#DCE6EA");
+  g.fillStyle = sky; g.fillRect(0, 0, W, Math.max(0, hy));
+  const gr = g.createLinearGradient(0, hy, 0, Hh); gr.addColorStop(0, "#8C9773"); gr.addColorStop(1, "#5E6A47");
+  g.fillStyle = gr; g.fillRect(0, hy, W, Hh - hy);
+  const poly = (pts3, fill, stroke, lw) => {
+    const P = pts3.map(cam.proj); if (P.some(p => !p)) return;
+    g.beginPath(); P.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
+    if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 1.5; g.stroke(); }
+  };
+  const faces = (nrm, P) => v3dot(nrm, v3sub(cam.eye, P)) > 0;
+  // стены, видимые камере, — от дальней к ближней
+  const walls = [1, 2, 3, 4].map(k => ({ k, sd: vSide(k) })).filter(w => faces([w.sd.n[0], w.sd.n[1], 0], vAt(w.sd, w.sd.len / 2, H / 2)));
+  walls.sort((a, b) => Math.hypot(...v3sub(vAt(b.sd, b.sd.len / 2, 0), cam.eye)) - Math.hypot(...v3sub(vAt(a.sd, a.sd.len / 2, 0), cam.eye)));
+  // тень от дома на земле — мягкое пятно
+  for (const w of walls) {
+    const sd = w.sd, nrm = [sd.n[0], sd.n[1], 0], gable = w.k === 2 || w.k === 4;
+    poly([vAt(sd, 0, 0), vAt(sd, sd.len, 0), vAt(sd, sd.len, H), vAt(sd, 0, H)], vShade([226, 216, 198], nrm), "rgba(60,50,40,.55)");
+    if (gable) poly([vAt(sd, 0, H), vAt(sd, sd.len, H), vAt(sd, sd.len / 2, H + ridge)], vShade([233, 225, 210], nrm), "rgba(60,50,40,.55)");
+    poly([vAt(sd, 0, 0), vAt(sd, sd.len, 0), vAt(sd, sd.len, plinth), vAt(sd, 0, plinth)], vShade([140, 136, 126], nrm));
+    for (const [t, x, z, w2, h2] of VHOUSE.open[w.k]) {
+      const o = 12;
+      if (t === "win") {
+        poly([vAt(sd, x - 60, z - 50, 30), vAt(sd, x + w2 + 60, z - 50, 30), vAt(sd, x + w2 + 60, z, 30), vAt(sd, x - 60, z, 30)], vShade([190, 184, 172], nrm));
+        poly([vAt(sd, x, z, o), vAt(sd, x + w2, z, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x, z + h2, o)], vShade([246, 245, 240], nrm), "rgba(90,85,75,.8)");
+        poly([vAt(sd, x + 70, z + 70, o), vAt(sd, x + w2 / 2 - 25, z + 70, o), vAt(sd, x + w2 / 2 - 25, z + h2 - 70, o), vAt(sd, x + 70, z + h2 - 70, o)], vShade([70, 98, 118], nrm));
+        poly([vAt(sd, x + w2 / 2 + 25, z + 70, o), vAt(sd, x + w2 - 70, z + 70, o), vAt(sd, x + w2 - 70, z + h2 - 70, o), vAt(sd, x + w2 / 2 + 25, z + h2 - 70, o)], vShade([80, 108, 128], nrm));
+      } else {
+        poly([vAt(sd, x, z, o), vAt(sd, x + w2, z, o), vAt(sd, x + w2, z + h2, o), vAt(sd, x, z + h2, o)], vShade([96, 62, 42], nrm), "rgba(40,25,15,.9)");
+        poly([vAt(sd, x + w2 - 170, z + 980, o + 5), vAt(sd, x + w2 - 100, z + 980, o + 5), vAt(sd, x + w2 - 100, z + 1060, o + 5), vAt(sd, x + w2 - 170, z + 1060, o + 5)], "#C9A65A");
+        poly([vAt(sd, x - 300, z + h2 + 250, 0), vAt(sd, x + w2 + 300, z + h2 + 250, 0), vAt(sd, x + w2 + 300, z + h2 + 250, 900), vAt(sd, x - 300, z + h2 + 250, 900)], vShade([110, 106, 98], [0, 0, 1]), "rgba(40,40,40,.6)");
+      }
     }
   }
-  const j = (x, y) => { const p = P(x, y); return [Math.round(p[0] + Math.sin(x + y) * 1.2), Math.round(p[1] + Math.cos(x - y) * 1.2)]; };
-  const quad = (x, y, w, h) => [j(x, y + h), j(x + w, y + h), j(x + w, y), j(x, y)];
-  const cnt = {};
-  const items = cfg.items.map(([t, x, y, w, h]) => { cnt[t] = (cnt[t] || 0) + 1; return { id: uid(), type: t, label: TYPES[t].pre + cnt[t], pts: quad(x, y, w, h) }; });
-  if (cfg.line) items.push({ id: uid(), type: "line", label: "Л1", pts: [j(cfg.line[0], cfg.line[2]), j(cfg.line[1], cfg.line[2])] });
-  return { src: c.toDataURL("image/jpeg", .86), w: W, h: Hh, ref: { kind: "wall", W: FW, H: FH, pts: quad(0, 0, FW, FH) }, items };
+  // крыша и дымоход: видимые грани от дальних к ближним
+  const sl = ridge / (B / 2), zE = H - over * sl, zR = H + ridge;
+  const roof = [
+    { p: [[-over, -over, zE], [A + over, -over, zE], [A + over, B / 2, zR], [-over, B / 2, zR]], n: v3norm([0, -sl, 1]), c: [124, 66, 52] },
+    { p: [[A + over, B + over, zE], [-over, B + over, zE], [-over, B / 2, zR], [A + over, B / 2, zR]], n: v3norm([0, sl, 1]), c: [124, 66, 52] },
+  ];
+  const C = VHOUSE.chimney, cx0 = C.x, cx1 = C.x + C.w, cy0 = C.y, cy1 = C.y + C.d, cz = C.top;
+  const rz = y => zE + (y + over) * sl;                    // высота южного ската над точкой y
+  const chim = [
+    { p: [[cx0, cy0, rz(cy0)], [cx1, cy0, rz(cy0)], [cx1, cy0, cz], [cx0, cy0, cz]], n: [0, -1, 0] },
+    { p: [[cx1, cy0, rz(cy0)], [cx1, cy1, rz(cy1)], [cx1, cy1, cz], [cx1, cy0, cz]], n: [1, 0, 0] },
+    { p: [[cx1, cy1, rz(cy1)], [cx0, cy1, rz(cy1)], [cx0, cy1, cz], [cx1, cy1, cz]], n: [0, 1, 0] },
+    { p: [[cx0, cy1, rz(cy1)], [cx0, cy0, rz(cy0)], [cx0, cy0, cz], [cx0, cy1, cz]], n: [-1, 0, 0] },
+    { p: [[cx0, cy0, cz], [cx1, cy0, cz], [cx1, cy1, cz], [cx0, cy1, cz]], n: [0, 0, 1] },
+  ];
+  const cen = q => [q.p.reduce((a, p) => a + p[0], 0) / q.p.length, q.p.reduce((a, p) => a + p[1], 0) / q.p.length, q.p.reduce((a, p) => a + p[2], 0) / q.p.length];
+  const drawRoof = q => poly(q.p, vShade(q.c, q.n), "rgba(60,25,18,.6)", 1.2);
+  const drawChim = () => chim.filter(q => faces(q.n, cen(q))).sort((a, b) => Math.hypot(...v3sub(cen(b), cam.eye)) - Math.hypot(...v3sub(cen(a), cam.eye)))
+    .forEach(q => poly(q.p, vShade([150, 84, 62], q.n), "rgba(60,30,20,.7)", 1.2));
+  // труба стоит на южном скате: северный скат (вид сзади) рисуется поверх неё, южный — под ней
+  const southSeen = faces(roof[0].n, cen(roof[0])), northSeen = faces(roof[1].n, cen(roof[1]));
+  if (southSeen) drawRoof(roof[0]);
+  drawChim();
+  if (northSeen) drawRoof(roof[1]);
+  // фронтон перед трубой (вид с торца) закрывает её нижнюю часть: дорисовать треугольник фронтона поверх
+  const bbox = pts => { const P = pts.map(cam.proj); if (P.some(p => !p)) return null; const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+  const cb = bbox(chim.flatMap(q => q.p));
+  for (const w of walls) {
+    if (w.k !== 2 && w.k !== 4) continue;
+    const tri = [vAt(w.sd, 0, H), vAt(w.sd, w.sd.len, H), vAt(w.sd, w.sd.len / 2, H + ridge)], tb = bbox(tri);
+    if (cb && tb && cb[0] < tb[2] && cb[2] > tb[0] && cb[1] < tb[3] && cb[3] > tb[1]) poly(tri, vShade([233, 225, 210], [w.sd.n[0], w.sd.n[1], 0]), "rgba(60,50,40,.55)");
+  }
+  // разметка: только видимая «своя» сторона кадра
+  const sd = vSide(s), jit = (p, i) => [Math.round(p[0] + Math.sin(i * 12.9898 + s * 7.1) * 1.3), Math.round(p[1] + Math.cos(i * 4.1414 + s * 3.3) * 1.3)];
+  const q4 = (t, z, w2, h2, i) => [[t, z + h2], [t + w2, z + h2], [t + w2, z], [t, z]].map((p, k) => jit(cam.proj(vAt(sd, p[0], p[1])), i * 4 + k));
+  return { src: cv.toDataURL("image/jpeg", .86), w: W, h: Hh, wall: q4(0, 0, sd.len, H, 0), open: VHOUSE.open[s].map((o, i) => ({ type: o[0], pts: q4(o[1], o[2], o[3], o[4], i + 1) })), len: sd.len };
 }
+
+// 12 снимков обхода дома; на фронтальных — эталон «Стена» и проёмы (как разметил бы пользователь)
+let EXAMPLE = null;
 function makeExample() {
-  const photos = {}; for (const [k, cfg] of Object.entries(DEMO)) photos[k] = demoFacade(cfg);
-  return { id: "example", example: true, name: "Пример: одноэтажный дом", address: "9000 × 7000 мм, сгенерированные снимки, не сохраняется", photos };
+  if (EXAMPLE) return EXAMPLE;
+  const photos = {};
+  for (const s of [1, 2, 3, 4]) for (const c of ["L", "F", "R"]) {
+    const r = vRender(s, c), ph = { src: r.src, w: r.w, h: r.h, ref: null, items: [] };
+    if (c === "F") {
+      ph.ref = { kind: "wall", W: r.len, H: VHOUSE.H, pts: r.wall };
+      const cnt = {}; ph.items = r.open.map(o => { cnt[o.type] = (cnt[o.type] || 0) + 1; return { id: uid(), type: o.type, label: TYPES[o.type].pre + cnt[o.type], pts: o.pts }; });
+    }
+    photos["s" + s + c] = ph;
+  }
+  EXAMPLE = { id: "example", example: true, name: "Пример: дом 9000 × 7000", address: "12 виртуальных снимков обхода дома, не сохраняется", photos };
+  return EXAMPLE;
 }
 function dataUrlBlob(u) { const [h, b] = u.split(","), bin = atob(b), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: h.slice(5, h.indexOf(";")) }); }
 // заполнить пустой объект демо-фото: копии снимков, эталонов и замеров примера
@@ -311,7 +416,7 @@ async function fillDemo(p) {
   try {
     for (const [k, src] of Object.entries(ex.photos)) {
       const blob = dataUrlBlob(src.src);
-      const ph = { w: src.w, h: src.h, ref: JSON.parse(JSON.stringify(src.ref)), items: src.items.map(it => ({ ...JSON.parse(JSON.stringify(it)), id: uid() })), local: URL.createObjectURL(blob) };
+      const ph = { w: src.w, h: src.h, ref: src.ref ? JSON.parse(JSON.stringify(src.ref)) : null, items: src.items.map(it => ({ ...JSON.parse(JSON.stringify(it)), id: uid() })), local: URL.createObjectURL(blob) };
       if (S.assets) { const r = await S.assets.upload(blob, { type: "image/jpeg" }); ph.asset = r.id; }
       else if (S.localDb) { const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key; }
       p.photos[k] = ph; busySlots.delete(k);
@@ -463,6 +568,7 @@ $("#back").onclick = () => {
 };
 // «Назад» Android внутри BIMsketcher: true — шаг назад сделан здесь, false — закрыть фотообмер
 window.__photoBack = () => {
+  if (ENG && !ENG.o.hidden) { ENG.o.hidden = true; render(); return true; }
   if (S.picking) { S.picking = null; render(); return true; }
   if (S.tool) { S.tool = null; S.draft = []; render(); return true; }
   if (S.view !== "list") { $("#back").onclick(); return true; }
@@ -471,6 +577,7 @@ window.__photoBack = () => {
 
 function render() {
   $("#back").hidden = S.view === "list" && !EMBED;
+  $("#planBtn").hidden = !(S.view === "project" && CAN_PLAN && S.cur);
   if (S.view === "list") renderList(); else if (S.view === "project") renderProject(); else if (S.view === "new") renderNew(); else renderPhoto();
 }
 
@@ -563,7 +670,7 @@ function renderProject() {
   const rows = allRows(p);
   const filled = Object.keys(p.photos || {}).length;
   $("#view").innerHTML = `
-    ${p.example ? `<p class="note">Это пример на сгенерированных снимках: в него нельзя добавить фото. Откройте любой фасад, чтобы посмотреть замер${CAN_PLAN ? ", или нажмите «Создать план» внизу" : ""}.</p>` : ""}
+    ${p.example ? `<p class="note">Это пример: 12 виртуальных снимков обхода дома, как их сделали бы вы на объекте. На фронтальных кадрах размечены эталон, окна и двери${CAN_PLAN ? ". Нажмите «План» вверху — откроется модель в редакторе" : ""}.</p>` : ""}
     ${S.confirm === "exslot" ? `<div class="panel"><p>Чтобы снимать свой дом, создайте объект: в нём ячейки открывают камеру.</p><div class="row"><button class="btn primary" id="exslot">Создать объект</button></div></div>` : ""}
     ${pickerHTML()}
     <section class="panel">
@@ -571,7 +678,7 @@ function renderProject() {
         <div><p class="eyebrow">Съёмка</p><h2>${filled} из 12 фото</h2></div>
         ${p.example ? "" : `<label class="btn filebtn">Добавить несколько фото<input type="file" id="inMany" accept="image/*" multiple aria-label="Добавить несколько фото"></label>`}
       </div>
-      ${!filled && !p.example ? `<div class="row"><button class="btn" id="demo">Заполнить демо-примером</button><span class="small muted">4 фасада дома 9000 × 7000 мм с готовой разметкой — чтобы сразу попробовать «Создать план»</span></div>` : ""}
+      ${!filled && !p.example ? `<div class="row"><button class="btn" id="demo">Заполнить демо-примером</button><span class="small muted">12 виртуальных снимков дома 9000 × 7000 мм, фасады размечены — чтобы сразу открыть «План»</span></div>` : ""}
       ${filled < 12 && !p.example ? SCHEME_SVG + `<p class="small muted">Снимайте основной камерой без зума, держите телефон ровно, дом целиком от земли до конька. «Добавить несколько» заполнит пустые ячейки по порядку.</p>` : ""}
       ${SIDES.map(s => `
         <div class="side"><h3>Сторона ${s}${s === 1 ? ` <span class="small muted">главный фасад</span>` : ""}</h3>
@@ -678,26 +785,25 @@ function planDefaults(p) {
   const hs = info.filter(Boolean).map(i => i.ph.ref.H).sort((a, b) => a - b);
   return { info, len: info.map(i => i ? r5(i.ph.ref.W) : ""), ht: hs.length ? r5(hs[Math.floor(hs.length / 2)]) : 3000 };
 }
+function planValues(p) {
+  const d = planDefaults(p), o = p.planOpts || {};
+  return { len: [0, 1, 2, 3].map(i => +(o.len && o.len[i]) || +d.len[i] || 0), th: +o.th || 400, ht: +o.ht || d.ht, fo: +o.fo || 0, info: d.info };
+}
 function planHTML(p) {
-  const d = planDefaults(p);
-  if (S.confirm !== "plan") return `<section class="panel">
-      <div><p class="eyebrow">План в BIMsketcher</p><h2>Стены и проёмы из замеров</h2></div>
-      <p class="small muted">Создаст новый чертёж: наружные стены по длинам сторон, толщина внутрь, окна и двери на своих местах. Дальше — внутренняя планировка как обычно.</p>
-      <div class="row"><button class="btn primary" id="toplan">Создать план</button></div></section>`;
-  const nm = ["главный фасад", "справа от главного", "задний фасад", "слева от главного"];
+  const v = planValues(p), nm = ["главный фасад", "справа от главного", "задний фасад", "слева от главного"];
   return `<section class="panel form" id="planf">
-    <div><p class="eyebrow">План в BIMsketcher</p><h2>Проверьте размеры</h2></div>
-    <p class="small muted">Дом строится прямоугольником. Длины взяты из эталонов «Стена»; если стороны 1 и 3 (или 2 и 4) различаются, берётся среднее.</p>
-    ${[1, 2, 3, 4].map((s, i) => { const inf = d.info[i]; const n = inf ? (inf.ph.items || []).filter(t => PLAN_T[t.type]).length : 0; return `
+    <div class="row" style="justify-content:space-between"><div><p class="eyebrow">План</p><h2>Модель из замеров</h2></div><button class="btn primary" id="planOpen">Открыть план</button></div>
+    <p class="small muted">Стены по наружному контуру, толщина внутрь, окна и двери на своих местах. Дальше — стены, перегородки и всё остальное инструментами редактора. Дом пока строится прямоугольником.</p>
+    ${[1, 2, 3, 4].map((s, i) => { const inf = v.info[i]; const n = inf ? (inf.ph.items || []).filter(t => PLAN_T[t.type]).length : 0; return `
       <div class="field"><label for="pl${s}">Сторона ${s} · ${nm[i]}, мм ${inf ? `<span class="muted">(фото «${esc(POS.find(x => x[0] === inf.k[2])[1].toLowerCase())}», проёмов: ${n})</span>` : `<span class="muted">(нет эталона «Стена»)</span>`}</label>
-      <input id="pl${s}" type="number" inputmode="numeric" min="0" value="${d.len[i]}"></div>`; }).join("")}
+      <input id="pl${s}" type="number" inputmode="numeric" min="0" value="${v.len[i] || ""}"></div>`; }).join("")}
     <div class="two">
-      <div class="field"><label for="pth">Толщина стен, мм</label><input id="pth" type="number" inputmode="numeric" min="50" value="400"></div>
-      <div class="field"><label for="pht">Высота стен от пола, мм</label><input id="pht" type="number" inputmode="numeric" min="1000" value="${d.ht}"></div>
+      <div class="field"><label for="pth">Толщина стен, мм</label><input id="pth" type="number" inputmode="numeric" min="50" value="${v.th}"></div>
+      <div class="field"><label for="pht">Высота стен от пола, мм</label><input id="pht" type="number" inputmode="numeric" min="1000" value="${v.ht}"></div>
     </div>
-    <div class="field"><label for="pfo">Пол 1 этажа выше низа стены на, мм (цоколь)</label><input id="pfo" type="number" inputmode="numeric" min="0" value="0"></div>
+    <div class="field"><label for="pfo">Пол 1 этажа выше низа стены на, мм (цоколь)</label><input id="pfo" type="number" inputmode="numeric" min="0" value="${v.fo}"></div>
     <p class="small" id="perr" style="color:var(--danger)" hidden></p>
-    <div class="row"><button class="btn primary" id="planok">Создать чертёж</button><button class="btn" id="planc">Отмена</button></div>
+    <div class="row"><button class="linkbtn" id="planRe">Построить план заново по этим размерам</button></div>
   </section>`;
 }
 function buildPlan(p, v) {
@@ -724,21 +830,50 @@ function buildPlan(p, v) {
   });
   return { name: p.name + " — план", pts, thick: v.th, ht: v.ht, holes, skipped, warn };
 }
+function readPlanForm(p) {
+  if (!$("#pth")) return;
+  p.planOpts = { len: [1, 2, 3, 4].map(s => +$("#pl" + s).value || 0), th: +$("#pth").value || 0, ht: +$("#pht").value || 0, fo: +$("#pfo").value || 0 };
+  touch(p);
+}
 function bindPlan(p) {
-  const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
-  on("#toplan", () => { S.confirm = "plan"; render(); const f = $("#planf"); if (f) f.scrollIntoView({ block: "start" }); });
-  on("#planc", () => { S.confirm = null; render(); });
-  on("#planok", async () => {
-    const v = { len: [1, 2, 3, 4].map(s => +$("#pl" + s).value || 0), th: +$("#pth").value || 0, ht: +$("#pht").value || 0, fo: +$("#pfo").value || 0 };
-    const spec = buildPlan(p, v), er = $("#perr");
-    if (spec.err) { er.textContent = spec.err; er.hidden = false; return; }
-    $("#planok").disabled = true;
-    let res; try { res = await hostPlan(spec); } catch (e) { res = { ok: false, msg: String(e) }; }
-    const ok = $("#planok"); if (ok) ok.disabled = false;
-    if (!res || !res.ok) { er.textContent = "Не удалось создать чертёж: " + ((res && res.msg) || "ошибка"); er.hidden = false; return; }
-    S.confirm = null;
+  const form = $("#planf"); if (form) form.onchange = () => readPlanForm(p);
+  const ob = $("#planOpen"); if (ob) ob.onclick = () => openPlan(p, false);
+  const rb = $("#planRe"); if (rb) rb.onclick = () => openPlan(p, true);
+}
+function planErr(t) { const er = $("#perr"); if (er) { er.textContent = t; er.hidden = false; er.scrollIntoView({ block: "center" }); } else setStatus(t, true); }
+async function openPlan(p, force) {
+  readPlanForm(p);
+  const v = planValues(p), spec = buildPlan(p, v);
+  if (spec.err) { planErr(spec.err); return; }
+  spec.key = p.id; spec.force = !!force;
+  const res = EMBED ? await hostPlan(spec) : await enginePlan(spec, p.name);
+  if (!res || !res.ok) planErr("Не удалось открыть план: " + ((res && res.msg) || "ошибка"));
+}
+// встроенный редактор BIMsketcher поверх фотообмера
+function engineOverlay() {
+  if (ENG) return ENG;
+  const o = document.createElement("div"); o.id = "planOv";
+  o.innerHTML = `<div class="planbar"><button class="back" id="planBack" aria-label="Назад к фото">&#8592;</button><b id="planTitle">План</b><span class="small muted">редактор BIMsketcher</span></div>`;
+  const f = document.createElement("iframe"); f.title = "План";
+  const bin = atob(document.getElementById("bskInline").textContent.trim()), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  f.srcdoc = new TextDecoder().decode(u8);
+  const ready = new Promise(r => f.addEventListener("load", () => setTimeout(r, 400), { once: true }));
+  o.appendChild(f); document.body.appendChild(o);
+  o.querySelector("#planBack").onclick = () => { o.hidden = true; render(); };
+  ENG = { o, f, ready }; return ENG;
+}
+async function enginePlan(spec, name) {
+  const E = engineOverlay(); E.o.hidden = false; $("#planTitle").textContent = "План · " + name;
+  await E.ready;
+  return new Promise(res => {
+    const id = uid(); planWait.set(id, res);
+    try { E.f.contentWindow.postMessage({ photoHost: 1, type: "plan", id, spec }, "*"); } catch (e) { planWait.delete(id); res({ ok: false, msg: String(e) }); return; }
+    setTimeout(() => { if (planWait.has(id)) { planWait.delete(id); res({ ok: false, msg: "редактор не ответил" }); } }, 12000);
   });
 }
+$("#planBtn").onclick = () => { if (S.cur) openPlan(S.cur, false); };
+window.__planOpen = () => !!(ENG && !ENG.o.hidden);
 
 /* ---------- Экран: замер на фото ---------- */
 const V = { s: 1, tx: 0, ty: 0, img: null, src: "", cw: 0, ch: 0, drag: null, gest: null, ptrs: new Map(), loupe: null };
