@@ -633,9 +633,9 @@ async function fillDemo(p) {
   try {
     for (const [k, src] of Object.entries(ex.photos)) {
       const blob = dataUrlBlob(src.src);
-      const ph = { w: src.w, h: src.h, ref: src.ref ? JSON.parse(JSON.stringify(src.ref)) : null, items: src.items.map(it => ({ ...JSON.parse(JSON.stringify(it)), id: uid() })), local: URL.createObjectURL(blob) };
+      const ph = { w: src.w, h: src.h, ref: src.ref ? JSON.parse(JSON.stringify(src.ref)) : null, items: src.items.map(it => ({ ...JSON.parse(JSON.stringify(it)), id: uid() })), local: await localUrl(blob) };
       if (S.assets) { const r = await S.assets.upload(blob, { type: "image/jpeg" }); ph.asset = r.id; }
-      else if (S.localDb) { const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key; }
+      else if (S.localDb) { try { const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key; } catch (e) { S.memOnly = true; } }
       p.photos[k] = ph; busySlots.delete(k);
     }
     touch(p);
@@ -700,7 +700,7 @@ async function initLocal() {
     const all = await idbReq("projects", "readonly", st => st.getAll());
     for (const p of all || []) {
       for (const ph of Object.values(p.photos || {})) {
-        if (ph.blobKey) { const b = await idbReq("blobs", "readonly", st => st.get(ph.blobKey)); if (b) ph.local = URL.createObjectURL(b); }
+        if (ph.blobKey) { const b = await idbReq("blobs", "readonly", st => st.get(ph.blobKey)); if (b) ph.local = await localUrl(b); }
       }
       S.projects.set(p.id, p);
     }
@@ -732,17 +732,34 @@ async function initStore() {
 const photoSrc = ph => ph ? (ph.src || ph.local || (ph.asset ? "/_blob/" + ph.asset : "")) : "";
 
 /* ---------- Фото: подготовка и загрузка ---------- */
-function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("картинка не открылась — формат не поддерживается или доступ запрещён")); i.src = src; }); }
+// в некоторых окнах просмотра (песочница) картинки из blob: запрещены — тогда работаем через data:
+let BLOB_IMG = null;
+function blobImgOk() {
+  if (BLOB_IMG !== null) return Promise.resolve(BLOB_IMG);
+  return new Promise(res => {
+    try {
+      const c = document.createElement("canvas"); c.width = c.height = 2;
+      c.toBlob(b => { if (!b) { BLOB_IMG = false; return res(false); } const u = URL.createObjectURL(b);
+        loadImg(u).then(() => { BLOB_IMG = true; res(true); }, () => { BLOB_IMG = false; res(false); }).finally(() => URL.revokeObjectURL(u)); }, "image/png");
+    } catch (e) { BLOB_IMG = false; res(false); }
+  });
+}
+const readDataUrl = blob => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
+const localUrl = async blob => (await blobImgOk()) ? URL.createObjectURL(blob) : await readDataUrl(blob);
 async function prepImage(file) {
-  const url = URL.createObjectURL(file);
+  let img, url = null;
+  if (await blobImgOk()) { url = URL.createObjectURL(file); try { img = await loadImg(url); } catch (e) { img = null; } }
+  if (!img) img = await loadImg(await readDataUrl(file));   // запасной путь
   try {
-    const img = await loadImg(url);
     const k = Math.min(1, 2560 / Math.max(img.naturalWidth, img.naturalHeight));
     const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    if (!w || !h) throw Object.assign(new Error("пустое изображение"), { code: "bad_image" });
     const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
-    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .88));
+    let blob = await new Promise(r => { try { c.toBlob(r, "image/jpeg", .88); } catch (e) { r(null); } });
+    if (!blob) blob = dataUrlBlob(c.toDataURL("image/jpeg", .88));
     return { blob, w, h };
-  } finally { URL.revokeObjectURL(url); }
+  } finally { if (url) URL.revokeObjectURL(url); }
 }
 const busySlots = new Set();
 async function addPhoto(p, slot, file) {
@@ -750,7 +767,7 @@ async function addPhoto(p, slot, file) {
   try {
     const { blob, w, h } = await prepImage(file);
     const old = p.photos[slot];
-    const ph = { w, h, ref: null, items: [], local: URL.createObjectURL(blob) };
+    const ph = { w, h, ref: null, items: [], local: await localUrl(blob) };
     if (S.assets) {
       try { const r = await S.assets.upload(blob, { type: "image/jpeg" }); ph.asset = r.id; }
       catch (e) {
@@ -759,15 +776,19 @@ async function addPhoto(p, slot, file) {
       }
     }
     if (!S.assets && S.localDb) {
-      const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key;
-      if (old && old.blobKey) idbReq("blobs", "readwrite", st => st.delete(old.blobKey)).catch(() => {});
+      try {
+        const key = uid(); await idbReq("blobs", "readwrite", st => st.put(blob, key)); ph.blobKey = key;
+        if (old && old.blobKey) idbReq("blobs", "readwrite", st => st.delete(old.blobKey)).catch(() => {});
+      } catch (e) { console.warn("idb", e); S.memOnly = true; }   // хранилище недоступно — фото остаётся в этой вкладке
     }
-    if (old && old.local) URL.revokeObjectURL(old.local);
+    if (old && old.local && old.local.startsWith("blob:")) URL.revokeObjectURL(old.local);
     p.photos[slot] = ph; touch(p);
   } catch (e) {
-    const msg = e && e.code === "too_large" ? "Фото слишком большое" : e && e.code === "quota_or_state" ? "Место для фото закончилось" : "Не удалось добавить фото";
-    setStatus(msg, true);
-  } finally { busySlots.delete(slot); render(); }
+    console.warn("addPhoto", e);
+    const msg = e && e.code === "too_large" ? "Фото слишком большое" : e && e.code === "quota_or_state" ? "Место для фото закончилось"
+      : "Не удалось добавить фото" + (e && (e.message || e.name || e.type) ? " (" + String(e.message || e.name || e.type).slice(0, 80) + ")" : "");
+    setStatus(msg, true); return;
+  } finally { busySlots.delete(slot); render(); if (S.memOnly) setStatus("Фото добавлены, но здесь не сохраняются после закрытия"); }
 }
 
 /* ---------- Навигация ---------- */
