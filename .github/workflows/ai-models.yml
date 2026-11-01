@@ -48,6 +48,7 @@ jobs:
           gh release upload ai-models-1 windet_mbv2.onnx --clobber
 
   doors:
+    if: contains(github.event.head_commit.message, 'обучение дверей')
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
@@ -74,3 +75,25 @@ jobs:
           ls -la doors_frcnn* || true
           gh release view ai-models-1 >/dev/null 2>&1 || gh release create ai-models-1 --title "Модели ИИ для PHOTOGRAM" --notes "модели" --latest=false
           for f in doors_frcnn.onnx doors_frcnn.onnx.pt doors_frcnn.onnx.names.txt; do [ -f $f ] && gh release upload ai-models-1 $f --clobber; done
+
+  doors-export:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'экспорт дверей')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Зависимости
+        run: |
+          pip install --quiet torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet gdown pillow onnx onnxruntime
+      - name: Данные для проверки и веса
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          mkdir -p data && cd data && gdown 1CBHbUsdOAIOCEYi4oAB03senfi_9-WpP -O dw.zip && unzip -q dw.zip && cd ..
+          gh release download ai-models-1 -p doors_frcnn.onnx.pt
+      - name: Экспорт и проверка
+        run: python tools/ai/export_doors.py doors_frcnn.onnx.pt doors_frcnn.onnx
+      - name: Выпуск
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: gh release upload ai-models-1 doors_frcnn.onnx --clobber
