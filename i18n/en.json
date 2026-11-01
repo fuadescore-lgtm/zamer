@@ -3670,5 +3670,12 @@
 "Массив: копии по скату с шагом": "Array: copies along the slope at a step",
 "Копия не помещается на скат": "The copy does not fit on the slope",
 "налезает на соседнее окно": "overlaps the neighbouring window",
-"Переход на уровень": "Switched to level"
+"Переход на уровень": "Switched to level",
+"Сколько этажей": "How many floors",
+"поднимется над": "will rise above",
+"Создано этажей": "Floors created",
+"Будут созданы": "Will be created",
+"Будет создан": "Will be created",
+"Меньше": "Fewer",
+"Больше": "More"
 }
