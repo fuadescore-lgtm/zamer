@@ -3721,5 +3721,8 @@
 "день": "day",
 "дней": "days",
 "дня": "days",
-"Оформить": "Get"
+"Оформить": "Get",
+"Север по компасу поправлен на": "Compass north corrected by",
+"склонение": "declination",
+"Не удалось определить склонение — введите его вручную: без него север по компасу смещён на величину склонения": "Could not determine the declination — enter it manually: without it, compass north is off by the declination"
 }
