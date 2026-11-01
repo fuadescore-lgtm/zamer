@@ -65,9 +65,12 @@ jobs:
           gdown 1CBHbUsdOAIOCEYi4oAB03senfi_9-WpP -O dw.zip
           unzip -q dw.zip || (pip install --quiet patool rarfile && python -c "import patoolib; patoolib.extract_archive('dw.zip', outdir='.')")
           find . -maxdepth 3 -type d | head -30; find . -name "*.yaml" | head; find . -name "*.txt" | head -3
+      - name: Прошлые веса
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: gh release download ai-models-1 -p doors_frcnn.onnx.pt -O prev.pt || true
       - name: Обучение
-        env: { TRAIN_SECONDS: '15000' }
-        run: python tools/ai/train_doors.py data doors_frcnn.onnx 30
+        env: { TRAIN_SECONDS: '15000', LR: '0.005' }
+        run: python tools/ai/train_doors.py data doors_frcnn.onnx 25
       - name: Выпуск
         if: always()
         env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }

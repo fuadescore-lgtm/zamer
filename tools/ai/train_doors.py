@@ -49,8 +49,14 @@ coll = lambda x: tuple(zip(*x))
 m = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn(weights='DEFAULT', min_size=640, max_size=960)
 inf = m.roi_heads.box_predictor.cls_score.in_features
 m.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(inf, NC + 1)
-dl = torch.utils.data.DataLoader(DS(train, True), batch_size=4, shuffle=True, collate_fn=coll, num_workers=2)
-opt = torch.optim.SGD([p for p in m.parameters() if p.requires_grad], lr=0.01, momentum=0.9, weight_decay=1e-4)
+# двери редки (≈1 на 9 окон): снимки с дверями показываем чаще
+has_door = [any(l.split() and l.split()[0] == '0' for l in open(lab(p))) for p in train]
+wts = [4.0 if h else 1.0 for h in has_door]
+smp = torch.utils.data.WeightedRandomSampler(wts, num_samples=len(train), replacement=True)
+dl = torch.utils.data.DataLoader(DS(train, True), batch_size=4, sampler=smp, collate_fn=coll, num_workers=2)
+# при наличии весов прошлого обучения — продолжаем с них
+if os.path.exists('prev.pt'): m.load_state_dict(torch.load('prev.pt', map_location='cpu')); print('продолжаю с прошлых весов')
+opt = torch.optim.SGD([p for p in m.parameters() if p.requires_grad], lr=float(os.environ.get('LR', 0.01)), momentum=0.9, weight_decay=1e-4)
 sch = torch.optim.lr_scheduler.CosineAnnealingLR(opt, epochs * len(dl))
 t0 = time.time(); limit = float(os.environ.get('TRAIN_SECONDS', 4.5 * 3600))
 for ep in range(epochs):
@@ -82,7 +88,8 @@ for k in sorted(set(TP) | set(FN)):
 class Wrap(torch.nn.Module):
     def __init__(s, m): super().__init__(); s.m = m
     def forward(s, x): r = s.m([x[0]])[0]; return r['boxes'], r['labels'], r['scores']
-torch.onnx.export(Wrap(m), torch.rand(1, 3, 640, 853), out, opset_version=17, input_names=['image'], output_names=['boxes', 'labels', 'scores'],
-                  dynamic_axes={'image': {2: 'h', 3: 'w'}})
+m.eval(); x0 = DS([(val or test)[0]], False)[0][0][None]
+torch.onnx.export(Wrap(m).eval(), x0, out, opset_version=16, input_names=['image'], output_names=['boxes', 'labels', 'scores'],
+                  dynamic_axes={'image': {2: 'h', 3: 'w'}, 'boxes': {0: 'n'}, 'labels': {0: 'n'}, 'scores': {0: 'n'}}, do_constant_folding=False)
 open(out + '.names.txt', 'w').write('\n'.join(map(str, names or [])))
 print('saved', out, os.path.getsize(out))
