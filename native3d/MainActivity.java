@@ -24,6 +24,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(CompassPlugin.class);
+        registerPlugin(BillingPlugin.class);
         super.onCreate(savedInstanceState);
         final View wv = getBridge().getWebView();
         ViewCompat.setOnApplyWindowInsetsListener(wv, (v, insets) -> {
@@ -55,6 +56,16 @@ public class MainActivity extends BridgeActivity {
         getOnBackPressedDispatcher().addCallback(this, back);
         // файл проекта .bimsk: «Открыть в BIMsketcher» / «Поделиться → BIMsketcher»
         if (savedInstanceState == null) handleProjectIntent(getIntent());
+    }
+
+    // Re-check the subscription every time the user returns to the app (e.g. after paying or redeeming a code in Play)
+    @Override
+    public void onResume() {
+        super.onResume();
+        try {
+            final WebView wv = (WebView) getBridge().getWebView();
+            if (wv != null) wv.evaluateJavascript("window.__bsResume&&window.__bsResume()", null);
+        } catch (Exception ignored) { }
     }
 
     @Override
