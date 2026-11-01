@@ -20,5 +20,5 @@ x = torch.zeros(1, 3, cfg.train.patch_height, cfg.train.patch_width)
 with torch.no_grad():
     y = net(x)
 print('outputs', [t.shape for t in (y if isinstance(y, (list, tuple)) else [y])])
-torch.onnx.export(net, x, out, opset_version=13, input_names=['image'], do_constant_folding=True)
+torch.onnx.export(net, x, out, opset_version=11, input_names=['image'], do_constant_folding=True)
 print('saved', out, os.path.getsize(out))
