@@ -8,6 +8,7 @@ permissions:
   contents: write
 jobs:
   windet:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -45,3 +46,31 @@ jobs:
         run: |
           gh release view ai-models-1 >/dev/null 2>&1 || gh release create ai-models-1 --title "Модели ИИ для PHOTOGRAM" --notes "windet_mbv2.onnx — поиск окон по углам (lck1201/win_det_heatmaps, MIT)" --latest=false
           gh release upload ai-models-1 windet_mbv2.onnx --clobber
+
+  doors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Зависимости
+        run: |
+          pip install --quiet torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet gdown pyyaml pillow onnx
+      - name: Данные (двери и окна, 1000 фасадов)
+        run: |
+          mkdir -p data && cd data
+          gdown 1CBHbUsdOAIOCEYi4oAB03senfi_9-WpP -O dw.zip
+          unzip -q dw.zip || (pip install --quiet patool rarfile && python -c "import patoolib; patoolib.extract_archive('dw.zip', outdir='.')")
+          find . -maxdepth 3 -type d | head -30; find . -name "*.yaml" | head; find . -name "*.txt" | head -3
+      - name: Обучение
+        env: { TRAIN_SECONDS: '15000' }
+        run: python tools/ai/train_doors.py data doors_frcnn.onnx 30
+      - name: Выпуск
+        if: always()
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          ls -la doors_frcnn* || true
+          gh release view ai-models-1 >/dev/null 2>&1 || gh release create ai-models-1 --title "Модели ИИ для PHOTOGRAM" --notes "модели" --latest=false
+          for f in doors_frcnn.onnx doors_frcnn.onnx.pt doors_frcnn.onnx.names.txt; do [ -f $f ] && gh release upload ai-models-1 $f --clobber; done
