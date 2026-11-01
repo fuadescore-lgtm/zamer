@@ -16,7 +16,7 @@ jobs:
       - name: Зависимости
         run: |
           pip install --quiet torch==1.4.0+cpu torchvision==0.5.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-          pip install --quiet gdown easydict pyyaml scipy munkres shapely opencv-python-headless "onnx<1.15" "numpy<1.24" "protobuf<4"
+          pip install --quiet matplotlib gdown easydict pyyaml scipy munkres shapely opencv-python-headless "onnx<1.15" "numpy<1.24" "protobuf<4"
       - name: Модель поиска окон (win_det_heatmaps, MobileNetV2)
         run: |
           git clone --depth 1 https://github.com/lck1201/win_det_heatmaps wdh
