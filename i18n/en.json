@@ -3663,5 +3663,12 @@
 "перекрытие": "slab",
 "вершина крыши": "roof vertex",
 "угол стены": "wall corner",
-"угол перекрытия": "slab corner"
+"угол перекрытия": "slab corner",
+"Копия поставлена рядом на скате. Тяните её или «Переместить": "Copy placed next to it on the slope. Drag it or use «Move",
+"Здесь уже стоит окно — коснитесь свободного места": "A window is already here — tap a free spot",
+"На этом скате нет свободного места для копии": "No free space on this slope for a copy",
+"Массив: копии по скату с шагом": "Array: copies along the slope at a step",
+"Копия не помещается на скат": "The copy does not fit on the slope",
+"налезает на соседнее окно": "overlaps the neighbouring window",
+"Переход на уровень": "Switched to level"
 }
