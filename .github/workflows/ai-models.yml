@@ -22,6 +22,7 @@ jobs:
           git clone --depth 1 https://github.com/lck1201/win_det_heatmaps wdh
           mkdir -p dl && cd dl
           sed -i 's/yaml.load(f)/yaml.load(f, Loader=yaml.FullLoader)/' ../wdh/common_pytorch/config_pytorch.py
+          sed -i 's/^from torchvision.models.mobilenet import model_urls/model_urls = {}/' ../wdh/common_pytorch/blocks/mobilenetv2_pose.py
           python - <<'PY'
           import gdown
           try:
