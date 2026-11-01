@@ -1,0 +1,37 @@
+name: Модели ИИ для PHOTOGRAM
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/ai-models.yml', 'tools/ai/**']
+permissions:
+  contents: write
+jobs:
+  windet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.10' }
+      - name: Зависимости
+        run: |
+          pip install --quiet torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet gdown easydict pyyaml scipy munkres shapely opencv-python-headless onnx "numpy<2"
+      - name: Модель поиска окон (win_det_heatmaps, MobileNetV2)
+        run: |
+          git clone --depth 1 https://github.com/lck1201/win_det_heatmaps wdh
+          mkdir -p dl && cd dl
+          gdown --folder "https://drive.google.com/drive/folders/1TfeIcQ8KlEvP1-ewGcTaj3SqU_IpoLUv" --remaining-ok || true
+          find . -maxdepth 4 | head -50
+      - name: Экспорт в ONNX
+        run: |
+          CK=$(find dl -iname "*mobilenet*" -type f | grep -iv "\.zip$" | head -1)
+          [ -z "$CK" ] && CK=$(find dl -type f \( -iname "*.tar" -o -iname "*.pth" \) | head -1)
+          echo "ckpt: $CK"
+          python tools/ai/export_windet.py wdh "$CK" windet_mbv2.onnx
+          ls -la windet_mbv2.onnx
+      - name: Выпуск
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          gh release view ai-models-1 >/dev/null 2>&1 || gh release create ai-models-1 --title "Модели ИИ для PHOTOGRAM" --notes "windet_mbv2.onnx — поиск окон по углам (lck1201/win_det_heatmaps, MIT)" --latest=false
+          gh release upload ai-models-1 windet_mbv2.onnx --clobber
