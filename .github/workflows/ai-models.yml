@@ -126,3 +126,18 @@ jobs:
       - name: Выпуск
         env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
         run: gh release upload ai-models-1 ort-web-1.20.1.tgz windet_int8.onnx --clobber
+
+  map-lib:
+    if: contains(github.event.head_commit.message, 'библиотека карты')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Leaflet 1.9.4 (карта объекта, BSD-2)
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          mkdir lf && cd lf && npm init -y >/dev/null && npm install --silent leaflet@1.9.4
+          cd node_modules/leaflet && tar czf ../../../leaflet-1.9.4.tgz LICENSE dist/leaflet.js dist/leaflet.css dist/images
+          cd ../../.. && ls -la leaflet-1.9.4.tgz
+          gh release upload ai-models-1 leaflet-1.9.4.tgz --clobber
