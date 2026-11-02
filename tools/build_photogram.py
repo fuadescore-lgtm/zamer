@@ -21,6 +21,11 @@ src = src.replace('<body>', '<body>\n<script type="text/plain" id="reconSrc">\n'
 ai = open(P('photogram', 'src', 'recon', 'la.js'), encoding='utf-8').read() + '\n' + open(P('photogram', 'src', 'ai', 'persp.js'), encoding='utf-8').read()
 assert '</script' not in ai
 src = src.replace('<body>', '<body>\n<script>(function(){\n' + ai + '\nwindow.PV = PV;\n})();</script>', 1)
+# карта объекта: Leaflet 1.9.4 (BSD-2, photogram/src/vendor/leaflet) — внутри страницы, без загрузки из сети
+lf = P('photogram', 'src', 'vendor', 'leaflet')
+lcss = open(os.path.join(lf, 'leaflet.css'), encoding='utf-8').read(); ljs = open(os.path.join(lf, 'leaflet.js'), encoding='utf-8').read()
+assert '</script' not in ljs and '</style' not in lcss
+src = src.replace('<body>', '<body>\n<style>' + lcss + '</style>\n<script>' + ljs + '</script>', 1)
 i = src.index('<body>') + len('<body>')
 if '--preview' in sys.argv:
     tag = '<script type="text/plain" id="bskInline">' + base64.b64encode(eng.encode('utf-8')).decode() + '</script>\n'

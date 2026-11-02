@@ -5,6 +5,14 @@
 .autoviz img, .autoviz canvas { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); background: #1d2126; }
 .autoviz figcaption { font-size: 12px; color: var(--muted); }
 .autoli { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.geomap { height: 260px; border-radius: 10px; border: 1px solid var(--line); overflow: hidden; background: var(--sunken); z-index: 0; }
+.geomap .leaflet-control-attribution { font-size: 10px; }
+#geoP a { color: var(--open); }
+.geoaddr { display: flex; gap: 8px; }
+.geoaddr input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 9px 11px; min-height: 42px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 6px 12px; min-height: 36px; font-size: 13px; }
+.seg button.on { background: var(--ink); color: var(--bg); }
 </style></head><body><title>PHOTOGRAM</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -650,7 +658,7 @@ function ser(p) {
     if (!ph.asset) continue;
     photos[k] = { asset: ph.asset, w: ph.w, h: ph.h, ref: ph.ref || null, items: ph.items || [] };
   }
-  return { name: p.name, address: p.address || "", created: p.created || Date.now(), updated: Date.now(), photos };
+  return { name: p.name, address: p.address || "", geo: p.geo || null, created: p.created || Date.now(), updated: Date.now(), photos };
 }
 const dirty = new Set(); let saving = false, saveTimer = null;
 function touch(p) {
@@ -870,6 +878,137 @@ function renderNew() {
   ["#pn", "#pa"].forEach(id => $(id).onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); create(); } });
 }
 
+/* ---------- Адрес и место объекта на карте ----------
+   Точка: GPS (если есть сигнал), касание карты или поиск по адресу. Для размеров дома не используется. */
+const GEO = { map: null, div: null, mk: null, circ: null, tiles: null, layer: "sat", pid: null, msg: "", err: false, busy: "", tileErr: 0 };
+const GEO_LAYERS = {
+  sat: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", "Снимки © Esri, Maxar, Earthstar Geographics", 19],
+  map: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png", "© участники OpenStreetMap", 19],
+};
+const geoFmt = g => g ? g.lat.toFixed(6) + ", " + g.lon.toFixed(6) : "";
+const GEO_SRC = { gps: "по GPS", map: "отмечено на карте", search: "найдено по адресу" };
+function geoHTML(p) {
+  const g = p.geo, open = S.mapOpen === p.id;
+  return `<section class="panel" id="geoP">
+    <div class="row" style="justify-content:space-between">
+      <div><p class="eyebrow">Объект</p><h2 style="margin:0">Адрес и место</h2></div>
+      <button class="btn" id="gtog" aria-expanded="${open}">${open ? "Свернуть карту" : g ? "Карта" : "Указать на карте"}</button>
+    </div>
+    <div class="geoaddr"><input id="gaddr" maxlength="140" value="${esc(p.address || "")}" placeholder="Город, улица, номер" aria-label="Адрес объекта" enterkeyhint="search">
+      ${open ? `<button class="btn" id="gfind" ${GEO.busy ? "disabled" : ""}>Найти</button>` : ""}</div>
+    <p class="small ${g ? "" : "muted"}" style="margin:0">${g ? `<span class="num">${geoFmt(g)}</span> · ${GEO_SRC[g.src] || ""}${g.acc ? ` · точность ±${Math.round(g.acc)} м` : ""}
+      · <a href="https://www.google.com/maps/search/?api=1&query=${g.lat},${g.lon}" target="_blank" rel="noopener">открыть в Картах</a>` : "Место не указано. GPS не обязателен: точку можно поставить касанием карты или найти по адресу."}</p>
+    ${open ? `<div id="mapSlot"></div>
+      <div class="row" style="justify-content:space-between">
+        <div class="seg" role="group" aria-label="Вид карты"><button data-lay="sat" class="${GEO.layer === "sat" ? "on" : ""}">Спутник</button><button data-lay="map" class="${GEO.layer === "map" ? "on" : ""}">Схема</button></div>
+        <div class="row"><button class="btn" id="ggps" ${GEO.busy ? "disabled" : ""}>Моё место (GPS)</button>
+        ${g ? `<button class="btn" id="grev" ${GEO.busy ? "disabled" : ""}>Адрес по точке</button><button class="linkbtn danger" id="gdel">Убрать точку</button>` : ""}</div>
+      </div>
+      <p class="small ${GEO.err ? "" : "muted"}" id="gmsg" style="margin:0;${GEO.err ? "color:var(--danger)" : ""}">${esc(GEO.busy || GEO.msg || "Коснитесь карты, чтобы поставить точку на дом.")}</p>` : ""}
+  </section>`;
+}
+function geoSay(t, err) { GEO.msg = t; GEO.err = !!err; const m = $("#gmsg"); if (m) { m.textContent = GEO.busy || t; m.style.color = err ? "var(--danger)" : ""; m.classList.toggle("muted", !err); } }
+function geoMarker(p) {
+  if (!GEO.map) return;
+  if (GEO.mk) { GEO.mk.remove(); GEO.mk = null; } if (GEO.circ) { GEO.circ.remove(); GEO.circ = null; }
+  const g = p.geo; if (!g) return;
+  if (g.acc && g.acc > 5) GEO.circ = L.circle([g.lat, g.lon], { radius: g.acc, color: "#0A7487", weight: 1, fillOpacity: .12, interactive: false }).addTo(GEO.map);
+  GEO.mk = L.circleMarker([g.lat, g.lon], { radius: 9, color: "#fff", weight: 3, fillColor: "#D99A00", fillOpacity: 1 }).addTo(GEO.map);
+}
+function geoTiles() {
+  if (GEO.tiles) GEO.tiles.remove();
+  const [url, attr, mz] = GEO_LAYERS[GEO.layer]; GEO.tileErr = 0;
+  GEO.tiles = L.tileLayer(url, { attribution: attr, maxZoom: mz, maxNativeZoom: GEO.layer === "sat" ? 19 : 19, crossOrigin: false }).addTo(GEO.map);
+  GEO.tiles.on("tileerror", () => { if (++GEO.tileErr === 3) geoSay("Карта не загружается — нет интернета? Адрес и координаты можно ввести и без неё.", true); });
+  GEO.tiles.on("tileload", () => { if (GEO.tileErr >= 3) { GEO.tileErr = 0; geoSay(""); } });
+}
+function geoSet(p, lat, lon, src, acc) {
+  p.geo = { lat: +lat.toFixed(7), lon: +lon.toFixed(7), src, acc: acc ? Math.round(acc) : 0, t: Date.now() };
+  touch(p); geoMarker(p);
+  const info = $("#geoP"); if (info) render();
+}
+function bindGeo(p) {
+  const ad = $("#gaddr");
+  ad.onchange = () => { p.address = ad.value.trim(); touch(p); };
+  ad.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); p.address = ad.value.trim(); touch(p); if (S.mapOpen === p.id) geoSearch(p); else ad.blur(); } };
+  $("#gtog").onclick = () => { S.mapOpen = S.mapOpen === p.id ? null : p.id; GEO.msg = ""; GEO.err = false; render(); };
+  if (S.mapOpen !== p.id) return;
+  document.querySelectorAll("[data-lay]").forEach(b => b.onclick = () => { GEO.layer = b.dataset.lay; if (GEO.map) geoTiles(); document.querySelectorAll("[data-lay]").forEach(x => x.classList.toggle("on", x === b)); });
+  $("#gfind").onclick = () => { p.address = ad.value.trim(); touch(p); geoSearch(p); };
+  $("#ggps").onclick = () => geoGPS(p);
+  const rv = $("#grev"); if (rv) rv.onclick = () => geoReverse(p, true);
+  const gd = $("#gdel"); if (gd) gd.onclick = () => { p.geo = null; touch(p); geoMarker(p); render(); };
+  if (!window.L || !L.map) { geoSay("Карта недоступна в этой сборке.", true); return; }
+  if (!GEO.div) { GEO.div = document.createElement("div"); GEO.div.className = "geomap"; GEO.div.id = "geomap"; }
+  $("#mapSlot").replaceWith(GEO.div);
+  if (!GEO.map) {
+    GEO.map = L.map(GEO.div, { zoomControl: true, attributionControl: true, tap: true }).setView([49.0, 31.4], 6);   // Украина целиком
+    GEO.map.attributionControl.setPrefix(false);
+    geoTiles();
+    GEO.map.on("click", e => { const cur = S.cur; if (!cur || cur.example) return; geoSet(cur, e.latlng.lat, e.latlng.lng, "map", 0); if (!(cur.address || "").trim()) geoReverse(cur, false); else geoSay("Точка поставлена. «Адрес по точке» — подставить адрес отсюда."); });
+  }
+  GEO.map.invalidateSize();
+  if (GEO.pid !== p.id) { GEO.pid = p.id; if (p.geo) GEO.map.setView([p.geo.lat, p.geo.lon], 18); else GEO.map.setView([49.0, 31.4], 6); }
+  geoMarker(p);
+  setTimeout(() => GEO.map && GEO.map.invalidateSize(), 60);
+}
+function geoBusy(t) { GEO.busy = t; ["#gfind", "#ggps", "#grev"].forEach(id => { const b = $(id); if (b) b.disabled = !!t; }); geoSay(GEO.msg, GEO.err); }
+function geoGPS(p) {
+  if (!navigator.geolocation) { geoSay("Телефон не дал доступ к GPS. Поставьте точку касанием карты.", true); return; }
+  geoBusy("Ищу спутники… (на улице — быстрее)");
+  navigator.geolocation.getCurrentPosition(pos => {
+    geoBusy(""); const c = pos.coords;
+    geoSet(p, c.latitude, c.longitude, "gps", c.accuracy);
+    if (GEO.map) GEO.map.setView([c.latitude, c.longitude], c.accuracy > 200 ? 15 : 18);
+    geoSay(c.accuracy > 100 ? `GPS неточный (±${Math.round(c.accuracy)} м) — подвиньте точку на дом касанием карты.` : "Точка по GPS. Если стоит не на доме — коснитесь дома на карте.");
+    if (!(p.address || "").trim()) geoReverse(p, false);
+  }, e => {
+    geoBusy("");
+    geoSay(e.code === 1 ? "Доступ к местоположению запрещён. Разрешите его в настройках приложения или поставьте точку касанием карты."
+      : e.code === 3 ? "GPS не ответил за 25 секунд (сигнал глушится или вы в помещении). Поставьте точку касанием карты или найдите по адресу."
+      : "GPS сейчас недоступен. Поставьте точку касанием карты или найдите по адресу.", true);
+  }, { enableHighAccuracy: true, timeout: 25000, maximumAge: 120000 });
+}
+const NOMI = "https://nominatim.openstreetmap.org/";
+const geoLang = () => [navigator.language || "", "uk", "ru"].filter(Boolean).join(",");
+async function geoFetch(path) {
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 15000);
+  try { const r = await fetch(NOMI + path + "&format=jsonv2&accept-language=" + encodeURIComponent(geoLang()), { signal: ctl.signal }); if (!r.ok) throw new Error("http " + r.status); return await r.json(); }
+  finally { clearTimeout(tm); }
+}
+function geoAddrText(a, dn) {
+  if (!a) return dn || "";
+  const town = a.city || a.town || a.village || a.hamlet || a.municipality || a.suburb || "";
+  const street = [a.road || a.pedestrian || a.street || "", a.house_number || ""].filter(Boolean).join(", ");
+  const t = [town, street].filter(Boolean).join(", ");
+  return t || (dn || "").split(",").slice(0, 3).join(",").trim();
+}
+async function geoSearch(p) {
+  const q = (p.address || "").trim(); if (!q) { geoSay("Введите адрес, чтобы найти его на карте.", true); $("#gaddr").focus(); return; }
+  geoBusy("Ищу адрес…");
+  try {
+    const r = await geoFetch("search?limit=1&q=" + encodeURIComponent(q));
+    geoBusy("");
+    if (!r.length) { geoSay("Адрес не найден. Уточните (город, улица, номер) или поставьте точку касанием карты.", true); return; }
+    const lat = +r[0].lat, lon = +r[0].lon;
+    geoSet(p, lat, lon, "search", 0);
+    if (GEO.map) GEO.map.setView([lat, lon], r[0].type === "house" || r[0].addresstype === "building" ? 19 : 17);
+    geoSay(r[0].type === "house" || r[0].addresstype === "building" ? "Дом найден. Проверьте точку по снимку." : "Найдено приблизительно (улица или район) — коснитесь вашего дома на карте.");
+  } catch (e) { geoBusy(""); geoSay("Поиск адреса не удался — нет интернета? Точку можно поставить касанием карты.", true); }
+}
+async function geoReverse(p, force) {
+  const g = p.geo; if (!g) return;
+  geoBusy("Определяю адрес…");
+  try {
+    const r = await geoFetch(`reverse?zoom=18&lat=${g.lat}&lon=${g.lon}`);
+    geoBusy("");
+    const t = geoAddrText(r && r.address, r && r.display_name);
+    if (!t) { geoSay("Адрес по этой точке не найден — введите вручную.", true); return; }
+    if (force || !(p.address || "").trim()) { p.address = t; touch(p); const ad = $("#gaddr"); if (ad) ad.value = t; }
+    geoSay("Адрес подставлен: " + t + ". Можно исправить вручную.");
+  } catch (e) { geoBusy(""); geoSay("Адрес не определился — нет интернета? Введите вручную.", true); }
+}
+
 /* ---------- Экран: объект ---------- */
 const SCHEME_SVG = `<svg class="diagram" viewBox="0 0 360 200" role="img" aria-label="Схема съёмки: три кадра на каждую сторону">
   <rect x="120" y="60" width="120" height="80" fill="none" stroke="var(--ink)" stroke-width="2"/>
@@ -912,6 +1051,7 @@ function renderProject() {
     ${p.example ? `<p class="note">Это пример: 12 виртуальных снимков обхода дома, как их сделали бы вы на объекте. На фронтальных кадрах размечены эталон, окна и двери${CAN_PLAN ? ". Нажмите «Сгенерировать модель» — откроется 3D-модель в редакторе" : ""}.</p>` : ""}
     ${S.confirm === "exslot" ? `<div class="panel"><p>Чтобы снимать свой дом, создайте объект: в нём ячейки открывают камеру.</p><div class="row"><button class="btn primary" id="exslot">Создать объект</button></div></div>` : ""}
     ${pickerHTML()}
+    ${p.example ? "" : geoHTML(p)}
     ${filled ? autoHTML(p) : ""}
     ${CAN_PLAN && filled ? modelHTML(p) : ""}
     <section class="panel">
@@ -955,6 +1095,7 @@ function renderProject() {
     else { pickTarget = k; S.picking = k; render(); }
   });
   const exs = $("#exslot"); if (exs) exs.onclick = () => { S.confirm = null; S.cur = null; go("new"); };
+  if (!p.example) bindGeo(p);
   bindAuto(p);
   if (CAN_PLAN) bindPlan(p);
   const dm = $("#demo"); if (dm) dm.onclick = () => fillDemo(p);

@@ -47,6 +47,8 @@ jobs:
           # камера для <input capture>: с Android 11 приложение камеры видно только через <queries>
           grep -q 'media.action.IMAGE_CAPTURE' $M || sed -i 's#</manifest>#    <queries>\n        <intent>\n            <action android:name="android.media.action.IMAGE_CAPTURE" />\n        </intent>\n    </queries>\n</manifest>#' $M
           grep -c 'media.action.IMAGE_CAPTURE' $M
+          # местоположение объекта (GPS по желанию; без него — точка касанием карты)
+          grep -q 'ACCESS_FINE_LOCATION' $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n</manifest>#' $M
           cat $M
           MA=$(find android/app/src/main/java -name MainActivity.java | head -1)
           PKG=$(sed -n 's/^package \(.*\);/\1/p' "$MA")
