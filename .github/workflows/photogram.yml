@@ -29,6 +29,12 @@ jobs:
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in ../keystore/upload.jks.enc -out $RUNNER_TEMP/upload.jks -pass env:PW
       - name: Веб-часть (PHOTOGRAM + копия редактора с мостом)
         run: python3 ../tools/build_photogram.py && ls -la www
+      - name: Нейросеть окон для телефона (onnxruntime-web + модель)
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          mkdir -p www/ai && cd www/ai
+          gh release download ai-models-1 -R ${{ github.repository }} -p ort-web-1.20.1.tgz -p windet_mbv2.onnx
+          tar xzf ort-web-1.20.1.tgz && rm ort-web-1.20.1.tgz && mv windet_mbv2.onnx windet.onnx && ls -la
       - name: Установка Capacitor 8
         run: npm install
       - name: Android-проект

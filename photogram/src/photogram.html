@@ -1360,7 +1360,10 @@ function renderPhoto() {
     ${!S.tool ? `<div class="tools">
       <button class="btn tape" id="tref">${r ? "Эталон" : "Отметить эталон"}</button>
       ${Object.entries(TYPES).map(([k, t]) => `<button class="btn" data-tool="${k}" ${H ? "" : "disabled"}>${t.name}</button>`).join("")}
-    </div>` : ""}
+    </div>
+    <div class="row"><button class="btn primary" id="tauto" ${AI.busy ? "disabled" : ""}>${AI.busy ? esc(AI.msg || "Ищу…") : "Найти окна и двери автоматически"}</button>
+      <span class="small muted">нейросеть + перспектива стены; найденное можно поправить или сменить тип</span></div>` : ""}
+    ${typeHTML(ph)}
     <section class="panel">
       <div><p class="eyebrow">Замеры на этом фото</p>
       ${r ? `<p class="small muted">Эталон: ${esc(kind.name)}, <span class="num">${fmm(r.W)} × ${fmm(r.H)}</span> мм. Высоты считаются ${kind.zero}. Размеры верны для элементов в плоскости той же стены.</p>` : `<p class="small muted">Без эталона размеры не считаются.</p>`}</div>
@@ -1382,6 +1385,56 @@ function renderPhoto() {
     </section>`;
   bindPhoto(ph);
   setupCanvas(ph);
+}
+// смена типа выбранного проёма (окно / дверь / ворота / проём) — на случай ошибки автопоиска
+function typeHTML(ph) {
+  const it = (ph.items || []).find(i => i.id === S.sel);
+  if (!it || S.tool || !["win", "door", "gate", "open"].includes(it.type)) return "";
+  return `<div class="row" id="typef"><span class="small"><b>${esc(it.label)}</b> — это:</span>${["win", "door", "gate", "open"].map(k => `<button class="btn ${it.type === k ? "on" : ""}" data-settype="${k}">${TYPES[k].name}</button>`).join("")}${it.auto ? `<span class="small muted">найдено автоматически</span>` : ""}</div>`;
+}
+/* ---------- Автопоиск окон и дверей на снимке: нейросеть (углы окон) + перспектива стены ---------- */
+const AI = { busy: false, msg: "", sess: null };
+function loadScript(src) { return new Promise((res, rej) => { const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = () => rej(new Error("нет " + src)); document.head.appendChild(el); }); }
+async function aiSession() {
+  if (AI.sess) return AI.sess;
+  if (!window.ort) await loadScript("ai/ort.min.js");
+  ort.env.wasm.wasmPaths = new URL("ai/", location.href).href; ort.env.wasm.numThreads = 1;
+  AI.sess = await ort.InferenceSession.create(new URL("ai/windet.onnx", location.href).href);
+  return AI.sess;
+}
+async function autoDetect(p, ph) {
+  AI.busy = true; AI.msg = "Загружаю нейросеть…"; render();
+  try {
+    let sess;
+    try { sess = await aiSession(); } catch (e) { console.warn("ai", e); throw new Error("Нейросеть недоступна в этом окне просмотра — автопоиск работает в приложении на телефоне" + (location.protocol.startsWith("http") ? " (" + String(e && e.message || e).slice(0, 80) + ")" : "")); }
+    AI.msg = "Ищу линии фасада…"; render(); await new Promise(r => setTimeout(r, 30));
+    const img = await loadImg(photoSrc(ph));
+    const sc = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight)), W = Math.round(img.naturalWidth * sc), H = Math.round(img.naturalHeight * sc);
+    const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d"); g.drawImage(img, 0, 0, W, H);
+    const d = g.getImageData(0, 0, W, H).data, gray = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) gray[i] = 0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2];
+    const A = PV.analyze(gray, W, H); if (!A) throw new Error("Не найдены линии фасада");
+    AI.msg = "Ищу окна…"; render(); await new Promise(r => setTimeout(r, 30));
+    const N = 384, k = N / Math.max(W, H), c2 = document.createElement("canvas"); c2.width = N; c2.height = N; const g2 = c2.getContext("2d");
+    g2.fillStyle = "#000"; g2.fillRect(0, 0, N, N); g2.drawImage(c, 0, 0, W * k, H * k);
+    const dd = g2.getImageData(0, 0, N, N).data, x = new Float32Array(3 * N * N), mean = [0.485, 0.456, 0.406], sd = [0.229, 0.224, 0.225];
+    for (let i = 0; i < N * N; i++) for (let ch = 0; ch < 3; ch++) x[ch * N * N + i] = (dd[4 * i + ch] / 255 - mean[ch]) / sd[ch];
+    const out = await sess.run({ image: new ort.Tensor("float32", x, [1, 3, N, N]) }), names = Object.keys(out);
+    const quads = PV.decodeWindows(out[names[0]].data, out[names[1]].data, W, H, k);
+    const found = PV.placeWindows(A, quads).map(w => ({ ...w, type: "win" })); PV.doorRule(found, H);
+    // в координаты снимка (ph.w × ph.h); прежние автонайденные заменяем, отмеченные вручную не трогаем
+    const back = ph.w / W;
+    ph.items = (ph.items || []).filter(it => !it.auto);
+    for (const f of found) {
+      const pts = f.pts.map(q => [Math.round(q[0] * back * 10) / 10, Math.round(q[1] * back * 10) / 10]);
+      if (pts.some(q => !isFinite(q[0]) || !isFinite(q[1]))) continue;
+      ph.items.push({ id: uid(), type: f.type, label: nextLabel(ph, f.type), pts, auto: true });
+    }
+    ph.persp = { f: A.f / sc, dirs: A.dirs.map(d => d.t) };
+    touch(p);
+    setStatus(found.length ? `Найдено: окон ${found.filter(f => f.type === "win").length}, дверей ${found.filter(f => f.type === "door").length}` : "Окна не найдены");
+  } catch (e) { console.warn(e); setStatus(String(e && e.message || e), true); }
+  finally { AI.busy = false; AI.msg = ""; render(); }
 }
 function refFormHTML(r) {
   const k = (r && r.kind) || "wall";
@@ -1437,6 +1490,8 @@ function applyTrue(ph, it) {
 function bindPhoto(ph) {
   const p = S.cur;
   const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+  on("#tauto", () => autoDetect(p, ph));
+  document.querySelectorAll("[data-settype]").forEach(b => b.onclick = () => { const it = (ph.items || []).find(i => i.id === S.sel); if (!it) return; const t = b.dataset.settype; if (it.type === t) return; it.type = t; it.label = nextLabel(ph, t); touch(p); render(); });
   on("#tok", () => { const it = (ph.items || []).find(i => i.id === S.sel); if (!it) return; const er = applyTrue(ph, it); if (er) { const t = $("#terr"); t.textContent = er; t.hidden = false; return; } touch(p); render(); });
   on("#tclr", () => { const it = (ph.items || []).find(i => i.id === S.sel); if (it) { delete it.tape; touch(p); render(); } });
   on("#zin", () => zoomAt(1.4)); on("#zout", () => zoomAt(1 / 1.4)); on("#zfit", () => { fit(ph); draw(); });

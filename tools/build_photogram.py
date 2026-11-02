@@ -17,6 +17,10 @@ eng = eng.replace('<title>BIMsketcher</title>', '<title>PHOTOGRAM · план</t
 recon = ''.join(open(P('photogram', 'src', 'recon', f), encoding='utf-8').read() + '\n' for f in ['la.js', 'sift.js', 'geom.js', 'sfm.js', 'model.js'])
 assert '</script' not in recon
 src = src.replace('<body>', '<body>\n<script type="text/plain" id="reconSrc">\n' + recon + '</script>', 1)
+# автопоиск окон: линейная алгебра + перспектива — в отдельной области видимости, наружу только PV
+ai = open(P('photogram', 'src', 'recon', 'la.js'), encoding='utf-8').read() + '\n' + open(P('photogram', 'src', 'ai', 'persp.js'), encoding='utf-8').read()
+assert '</script' not in ai
+src = src.replace('<body>', '<body>\n<script>(function(){\n' + ai + '\nwindow.PV = PV;\n})();</script>', 1)
 i = src.index('<body>') + len('<body>')
 if '--preview' in sys.argv:
     tag = '<script type="text/plain" id="bskInline">' + base64.b64encode(eng.encode('utf-8')).decode() + '</script>\n'
