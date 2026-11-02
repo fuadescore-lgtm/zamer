@@ -100,3 +100,29 @@ jobs:
       - name: Выпуск
         env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
         run: gh release upload ai-models-1 doors_frcnn.onnx --clobber
+
+  web-runtime:
+    if: contains(github.event.head_commit.message, 'модель для телефона')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: onnxruntime-web (для запуска нейросети в браузере телефона)
+        run: |
+          mkdir ortw && cd ortw && npm init -y >/dev/null && npm install --silent onnxruntime-web@1.20.1
+          ls node_modules/onnxruntime-web/dist | head -50
+          cd node_modules/onnxruntime-web/dist && tar czf ../../../../ort-web-1.20.1.tgz ort.min.js ort.wasm.min.js ort-wasm-simd-threaded.wasm ort-wasm-simd-threaded.mjs 2>/dev/null || tar czf ../../../../ort-web-1.20.1.tgz *.min.js *.wasm *.mjs
+          ls -la ../../../../ort-web-1.20.1.tgz
+      - name: Сжатие модели окон до int8
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          pip install --quiet onnxruntime==1.20.1 onnx
+          gh release download ai-models-1 -p windet_mbv2.onnx
+          python -c "from onnxruntime.quantization import quantize_dynamic, QuantType; quantize_dynamic('windet_mbv2.onnx','windet_int8.onnx',weight_type=QuantType.QUInt8)"
+          ls -la windet_*.onnx
+      - name: Выпуск
+        env: { GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: gh release upload ai-models-1 ort-web-1.20.1.tgz windet_int8.onnx --clobber
