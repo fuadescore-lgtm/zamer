@@ -3930,5 +3930,6 @@
 "бокс (щит": "box (DC panel",
 "м), всего": "m), total",
 "Траншея": "Trench",
-"стойкая": "resistant"
+"стойкая": "resistant",
+"Север — по карте (верх карты). Поверните карту стрелкой или углом — север повернётся вместе с ней. Без карты север берётся от компаса": "North follows the map (top of the map). Rotate the map with the arrow or the angle — north turns with it. Without a map, north comes from the compass"
 }
