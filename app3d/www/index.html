@@ -5277,7 +5277,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.0':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.1':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9564,6 +9564,7 @@ const D2R=Math.PI/180;
 function vedCfg(){ const s=doc.settings; if(!s.ved) s.ved={}; const v=s.ved; const D={tab:'house',pmode:'mat',paper:'A4',orient:'p',cov:'mt',rstep:600,rw:0,bat:0,city:null,terr:'III',
   h:{op:true,rail:true,walls:true,slabs:true,roof:true,raft:true,el:true},m:{pan:true,rail:true,con:true,att:true,ce:true,cm:true,cap:true,bolt:true,mini:true,bal:true,cab:false},mnt:'auto',railL:4400,pmod:'auto',pw:0,pkg:0,inv:'auto',loss:14,cabL:20,pv:null,invN:0,cb:'',cbN:0,smode:'max',stgt:0,tmin:null,sview:true,rp:{gen:true,strT:true,strI:true,sld:true,eTab:true,eAxo:true,eNode:true,eFac:true,mTab:true,mMark:true,mPlan:true,mAxo:false,mFac:true},rpx:{}};
   for(const k in D) if(v[k]===undefined) v[k]=(typeof D[k]==='object'&&D[k])?JSON.parse(JSON.stringify(D[k])):D[k];
+  if(v.lay&&v.lay.str&&strSortIn(v.lay)){ v.lay._n=(v.lay._n||0)+1; try{ strMapC=null; strTermC=null; strOwnC=null; }catch(_){} }
   for(const k of ['h','m','rp']) for(const q in D[k]) if(v[k][q]===undefined) v[k][q]=D[k][q];
   if(!(v.rpV>=3)){ v.rp.mAxo=false; v.rpV=3; } /* аксонометрия механики — по умолчанию выключена (1.7.1 ошибочно включала) */
   return v; }
@@ -10005,10 +10006,12 @@ function swGeom(){ const AR=vedArrays(), PL=strPlanes(AR), plOf=new Map(), cells
 function swSlotNo(D,s,I){ const MM=Math.max(1,(I&&I.M.length)||8); return (s.inv||0)*MM+(s.m||0); }
 function swColOf(D,si,I){ const s=D.str[si]; if(!s) return '#868e96'; const g=swSlotNo(D,s,I), G=D.str.map((x,i)=>[x,i]).filter(([x])=>swSlotNo(D,x,I)===g), k=G.findIndex(([,i])=>i===si), K=G.length; return hslHex(STRGH[g%STRGH.length],0.72,K>1?0.40+0.22*k/(K-1):0.50); }
 // string numbers S1… in inverter / MPPT order
+/* one numbering everywhere: the strings are stored in inverter → MPPT order, so S-number in the Strings window = «Строка N» / «СN» on the plan, in 3D and in the report */
+function strSortIn(L){ const S=L&&L.str; if(!S||S.length<2) return null; const o=S.map((x,i)=>i).sort((a,b)=>(S[a].inv||0)-(S[b].inv||0)||(S[a].m||0)-(S[b].m||0)||a-b); if(o.every((x,i)=>x===i)) return null; const mp=[]; o.forEach((old,nw)=>{ mp[old]=nw; }); L.str=o.map(i=>S[i]); return mp; }
 function swOrder(D){ return D.str.map((s,i)=>i).sort((a,b)=>(D.str[a].inv||0)-(D.str[b].inv||0)||(D.str[a].m||0)-(D.str[b].m||0)||a-b); }
 function swNo(si){ return SW.ord.indexOf(si)+1; }
 function swCellMap(){ const m=new Map(); SW.D.str.forEach((s,si)=>s.c.forEach((c,ci)=>m.set(c.join(':'),{si,ci}))); return m; }
-function swRefresh(){ const D=SW.D; D.str=D.str.filter(s=>s.c.length); if(SW.act!=null&&(SW.act>=D.str.length||!D.str[SW.act])) SW.act=null; SW.ord=swOrder(D); SW.cm=swCellMap(); swCheck(); D._n=(D._n||0)+1; }
+function swRefresh(){ const D=SW.D; { const keep=SW.act!=null?D.str[SW.act]:null; D.str=D.str.filter(s=>s.c.length); strSortIn(D); SW.act=keep?D.str.indexOf(keep):null; if(SW.act<0) SW.act=null; } if(SW.act!=null&&(SW.act>=D.str.length||!D.str[SW.act])) SW.act=null; SW.ord=swOrder(D); SW.cm=swCellMap(); swCheck(); D._n=(D._n||0)+1; }
 // ---------- undo ----------
 function swSnap(){ return JSON.stringify({D:SW.D,set:SW.set,act:SW.act,pend:SW.pend}); }
 function swPush(){ SW.U.push(swSnap()); if(SW.U.length>SWU) SW.U.shift(); SW.R=[]; SW.dirty=true; }
@@ -10319,7 +10322,7 @@ function swMovePrev(si,n,m){ const D=SW.D, I=swI(), s=D.str[si], S=D.str.filter(
   if(P){ const E=strPV(P,strTemps(),false); if((S.length+1)*E.IscH>M.isc+1e-6){ why.push('Isc '+vr((S.length+1)*E.IscH,1)+' А > '+M.isc+' А'); lv=2; } else if((S.length+1)*P.Imp>M.im+1e-6){ why.push('рабочий ток '+vr((S.length+1)*P.Imp,1)+' А > '+M.im+' А — срезка'); lv=Math.max(lv,1); } }
   return {lv,t:why.join('; ')}; }
 function swMoveTo(si,n,m,force){ const pv=swMovePrev(si,n,m); if(pv.lv>=2&&!force){ swAsk('Не подходит: '+pv.t+'.\nПеренести всё равно?',[['Перенести','y'],['Отмена','']],a=>{ if(a==='y') swMoveTo(si,n,m,true); }); return; }
-  swPush(); const s=SW.D.str[si]; s.inv=n; s.m=m; SW.act=si; swRefresh(); swMsg('S'+swNo(si)+' → И'+(n+1)+' · MPPT'+(m+1)+(pv.t?' · '+pv.t:'')); swRender(); }
+  swPush(); const s=SW.D.str[si]; s.inv=n; s.m=m; SW.act=si; { const so=SW.D.str[si]; swRefresh(); si=SW.D.str.indexOf(so); SW.act=si>=0?si:null; } swMsg('S'+swNo(si)+' → И'+(n+1)+' · MPPT'+(m+1)+(pv.t?' · '+pv.t:'')); swRender(); }
 function swDropOn(si,el){ const D=SW.D, I=swI(); if(!el) return; if(el.dataset.wm!=null){ const [n,m]=el.dataset.wm.split('.').map(Number); swMoveTo(si,n,m); return; }
   if(el.dataset.ws!=null){ const t=D.str[+el.dataset.ws]; if(t&&+el.dataset.ws!==si) swMoveTo(si,t.inv||0,t.m||0); return; }
   if(el.dataset.wi!=null){ const n=+el.dataset.wi, cnt=m=>D.str.filter((x,i)=>i!==si&&(x.inv||0)===n&&(x.m||0)===m).length; let best=0; for(let m=0;m<I.M.length;m++) if(cnt(m)<cnt(best)) best=m; swMoveTo(si,n,best); } }
