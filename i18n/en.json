@@ -4087,5 +4087,21 @@
 "длины снова считаются автоматически": "lengths are calculated automatically again",
 "без второй — она идёт к первой и дальше вместе": "without the second — it runs to the first and on together",
 "(по «−»)": "(along “−”)",
-"(по «+»)": "(along “+”)"
+"(по «+»)": "(along “+”)",
+"не пройти по всем модулям перемычками к соседу или через один. Выберите для концов другие модули (обычно — крайние": "there is no way through all modules with jumpers to a neighbour or over one. Choose other modules for the ends (usually the outer ones",
+"Концы: коснитесь модуля стринга для «+», потом модуля для": "Ends: tap a string module for “+”, then a module for",
+"Это свободный модуль — коснитесь модуля стринга": "This module is free — tap a module of the string",
+"модулях друг от друга — нужен обратный провод": "modules apart — a return wire is needed",
+"на этом модуле. Теперь коснитесь модуля для": "on this module. Now tap the module for",
+"должен быть на другом модуле этого стринга": "must be on another module of this string",
+"коснитесь модуля для «+», потом модуля для": "tap a module for “+”, then a module for",
+"коснитесь модуля для «+», потом для": "tap a module for “+”, then for",
+"так соединить нельзя — от «+» до": "cannot be wired this way — from “+” to",
+"только к соседним модулям": "to neighbouring modules only",
+"концы заданы — перемычки": "ends set — jumpers",
+"к соседу и через один": "to a neighbour and over one",
+"порядок найдётся сам": "the order is found automatically",
+"Указать «+» и": "Set “+” and",
+"Концы в": "Ends",
+"Концы": "Ends"
 }
