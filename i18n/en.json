@@ -4051,5 +4051,9 @@
 "В окне импорта отметьте материал": "In the import window tick the material",
 "полем, север — как в проекте": "PV field, north as in the project",
 "ориентацию модулей": "module orientation",
-"включите": "enable"
+"включите": "enable",
+"Выход": "Exit",
+"Закрыть меню": "Close menu",
+"В этом окне сохранение файлов недоступно — откройте приложение отдельно": "Saving files is not available in this window — open the app separately",
+"Окно сохранения уже открыто": "The save window is already open"
 }
