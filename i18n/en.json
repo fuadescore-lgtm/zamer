@@ -4042,5 +4042,14 @@
 "ош.": "err.",
 "Ошибок нет": "No errors",
 "1 фаза": "1 phase",
-"3 фазы": "3 phases"
+"3 фазы": "3 phases",
+"как на крыше. В файле только видимое на модели: без кабелей, приборов, профилей и шпилек; панели — каждая отдельным": "as on the roof. The file contains only what is visible in the model: no cables, devices, rails or studs; every panel is a separate",
+"нет солнечных панелей (или все скрыты / не подключены к строкам": "no solar panels (or all are hidden / not wired into strings",
+"сцена затенений: панели — материал": "shading scene: panels — material",
+"сцена затенений": "shading scene",
+"крыши, стены; без кабелей, приборов и креплений": "roofs, walls; no cables, devices or mounting",
+"В окне импорта отметьте материал": "In the import window tick the material",
+"полем, север — как в проекте": "PV field, north as in the project",
+"ориентацию модулей": "module orientation",
+"включите": "enable"
 }
