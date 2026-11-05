@@ -5232,7 +5232,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.11':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.12':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -10985,7 +10985,8 @@ function cabDescent(it,li,R,E,role,c,A,cache){ const nd={...(it.nd||{})}, F=devF
   return {pts,tg}; }
 // трасса по вершинам плана: на поверхности — прямо по плоскости ската/перекрытия; на границе поверхностей — излом; ступень (край кровли, переход на нижнюю) — строго вертикально, с выносом 40 мм за край; вершины с ручной высотой — прямыми
 // кабель тянется за устройством: конец трассы (и соседняя вершина — чтобы участок остался под прямым углом) сдвигается вместе с устройством, если трасса на том же этаже; спуск/подход пересчитываются сами
-function cabFollow(it,li){ const P=it.pts; if(!P||P.length<2) return; for(const key of ['a','b']){ const e=it[key]; if(!e) continue; const E=cabEnd(it,key); if(!E||E.it.t!=='dev'||!E.it.p) { delete e.lp; continue; } const p=E.it.p; if(!e.lp){ e.lp={x:p.x,y:p.y}; continue; } const dx=p.x-e.lp.x, dy=p.y-e.lp.y; if(Math.abs(dx)<0.01&&Math.abs(dy)<0.01) continue; e.lp={x:p.x,y:p.y};
+function cabFollow(it,li){ const P=it.pts; if(!P||P.length<2) return;
+  /* tail end follows its string point (box centre / PE washer) when the point moves */ if(isTail(it)){ const k=tailKey(it), tk=it[k]&&it[k].tk; if(tk){ let t=null; try{ t=(/\|pe$/.test(tk)?strPEPts():strTerms()).find(x=>x.tk===tk); }catch(_){} if(t){ const i=k==='a'?0:P.length-1; if(Math.abs(P[i].x-t.x)>1||Math.abs(P[i].y-t.y)>1) P[i]={x:r3(t.x),y:r3(t.y)}; } } } for(const key of ['a','b']){ const e=it[key]; if(!e) continue; const E=cabEnd(it,key); if(!E||E.it.t!=='dev'||!E.it.p) { delete e.lp; continue; } const p=E.it.p; if(!e.lp){ e.lp={x:p.x,y:p.y}; continue; } const dx=p.x-e.lp.x, dy=p.y-e.lp.y; if(Math.abs(dx)<0.01&&Math.abs(dy)<0.01) continue; e.lp={x:p.x,y:p.y};
     if(doc.levels[E.li].elev!==doc.levels[li].elev&&cabMode(it)!=='dev') continue; const i=key==='a'?0:P.length-1, j=key==='a'?1:P.length-2, q=P[i], n=P[j], ax=Math.abs(n.x-q.x)<1, ay=Math.abs(n.y-q.y)<1;
     P[i]={x:q.x+dx,y:q.y+dy}; if(ax&&!ay) P[j]={x:n.x+dx,y:n.y}; else if(ay&&!ax) P[j]={x:n.x,y:n.y+dy}; } }
 function cabRoute(it,li){ cabFollow(it,li); const L=doc.levels[li], P=it.pts||[], cache=new Map(), base=L.elev+(it.z||0), pz=cabPZ(it), mode=cabMode(it), zFix=i=>pz[i]!=null&&isFinite(pz[i])&&pz[i]>-20000&&pz[i]<100000?L.elev+pz[i]:null /* ошибочная высота (сорвался палец) — как авто */;
@@ -11191,18 +11192,23 @@ function cabSideN(Q){
   const VN=Q.map((q,i)=>{ let a=null, b=null; for(let k=i-1;k>=0;k--) if(HZ[k]){ a=N[k]; break; } for(let k=i;k<HZ.length;k++) if(HZ[k]){ b=N[k]; break; } if(!a) return b||N[0]; if(!b) return a; let m=[a[0]+b[0],a[1]+b[1]]; const ml=Math.hypot(...m); if(ml<0.3) return b; m=[m[0]/ml,m[1]/ml]; const c=Math.max(0.5,m[0]*b[0]+m[1]*b[1]); return [m[0]/c,m[1]/c]; });
   return VN; }
 const cabR=(it,li)=>{ const kind=cabKind(it); let S=6; try{ const C=cabCalc(it,li); if(C&&C.S) S=C.S; }catch(_){} return {kind,r:HCAB[kind]?Math.max(4,HCAB[kind].r)*1.6:Math.max(14,Math.sqrt(S/Math.PI)*2.2)*(kind==='ac'?1.6:1)}; };
-function cabMesh(M,it,li){ const Q=cabPath(it,li); if(Q.length<2) return; const kind=cabKind(it), C=cabCalc(it,li), S=C&&C.S||6, r=Math.max(14,Math.sqrt(S/Math.PI)*2.2)*(kind==='ac'?1.6:1);
+function cabMesh(M,it,li){ let Q=cabPath(it,li); if(Q.length<2) return; const kind=cabKind(it), C=cabCalc(it,li), S=C&&C.S||6, r=Math.max(14,Math.sqrt(S/Math.PI)*2.2)*(kind==='ac'?1.6:1);
   const ext=(A,B)=>{ const d=[B[0]-A[0],B[1]-A[1],B[2]-A[2]], L=Math.hypot(...d)||1, e=r*0.98/L; return [[A[0]-d[0]*e,A[1]-d[1]*e,A[2]-d[2]*e],[B[0]+d[0]*e,B[1]+d[1]*e,B[2]+d[2]*e]]; }; /* внахлёст на радиус — без щелей в углах */
   if(HCAB[kind]){ const rh=Math.max(4,HCAB[kind].r)*1.6, cc=rgbOf(HCAB[kind].col); for(let i=0;i<Q.length-1;i++) tube(M,Q[i],Q[i+1],rh,cc,'cab'); for(let i=1;i<Q.length-1;i++) tubeJoint(M,Q[i],rh*1.06,cc,'cab'); return; }
-  if(isTail(it)){ const cc=rgbOf(tailPol(it)==='+'?'#e03131':tailPol(it)==='pe'?'#94d82d':'#212529'); for(let i=0;i<Q.length-1;i++) tube(M,Q[i],Q[i+1],r,cc,'cab'); for(let i=1;i<Q.length-1;i++) tubeJoint(M,Q[i],r*1.06,cc,'cab'); return; }
+  if(isTail(it)){ const cc=rgbOf(tailPol(it)==='+'?'#e03131':tailPol(it)==='pe'?'#94d82d':'#212529'), k=tailKey(it), R=strRiser(it[k].tk); if(R){ const ia=k==='a', E=ia?Q[0]:Q[Q.length-1], add=[R.c,R.o,[R.ox.x,R.ox.y,Math.min(E[2],R.o[2])]]; Q=ia?add.concat(Q.slice(1)):Q.slice(0,-1).concat(add.reverse()); } for(let i=0;i<Q.length-1;i++) tube(M,Q[i],Q[i+1],r,cc,'cab'); for(let i=1;i<Q.length-1;i++) tubeJoint(M,Q[i],r*1.06,cc,'cab'); return; }
   if(kind==='ac'){ const cc=rgbOf('#6c757d'); for(let i=0;i<Q.length-1;i++) tube(M,Q[i],Q[i+1],r,cc,'cab'); for(let i=1;i<Q.length-1;i++) tubeJoint(M,Q[i],r*1.06,cc,'cab'); return; }
   const VN=cabSideN(Q);
   const off=r*1.25; for(const [sg,col] of [[1,'#e03131'],[-1,'#212529']]){ const O=Q.map((q,i)=>[q[0]+VN[i][0]*off*sg,q[1]+VN[i][1]*off*sg,q[2]]); const cc=rgbOf(col); for(let i=0;i<O.length-1;i++) tube(M,O[i],O[i+1],r,cc,'cab'); for(let i=1;i<O.length-1;i++) tubeJoint(M,O[i],r*1.06,cc,'cab'); } try{ strTailMesh(M,it,li,Q,r); }catch(_){} }
 // хвосты строк в 3D: под панелями — вдоль ряда, потом по скату к точке сбора; «+» красный, «−» чёрный (строятся заново при каждом изменении)
+/* 3D riser of a string cable to its point: from the route under the modules straight up into the centre of the «+/−» box / PE washer */
+function strRiser(tk){ const isPE=/\|pe$/.test(tk); let t=null; try{ t=(isPE?strPEPts():strTerms()).find(x=>x.tk===tk); }catch(_){} if(!t) return null; const g=strGeo().m.get(t.cell), f=itemById(t.arr); if(!g||!f) return null; const F=onLv(f.li,()=>insFrame(f.it,f.li)); if(!F||!F.zt) return null;
+  const top=(f.it.off==null?150:f.it.off)+(f.it.th||30)+(isPE?34:28), U=g.F.u, B=g.F.b, du=(t.x-g.x)*U.x+(t.y-g.y)*U.y, db=(t.x-g.x)*B.x+(t.y-g.y)*B.y, eu=(g.hw||560)-Math.abs(du), eb=(g.hh||860)-Math.abs(db);
+  const v=eu<=eb?{x:U.x*(Math.sign(du)||1),y:U.y*(Math.sign(du)||1)}:{x:B.x*(Math.sign(db)||1),y:B.y*(Math.sign(db)||1)}, o={x:t.x,y:t.y}; /* straight down under the box / washer — hidden by the module, no stub past its edge */ void v;
+  return {c:[t.x,t.y,F.zt(t)+top],o:[o.x,o.y,F.zt(o)+top],ox:o}; }
 function strTailPl(F,P){ const pl=F.pl||(F.f&&F.f.pl); if(pl) return pl.nx*P.x+pl.ny*P.y+pl.c; return F.z0||0; }
 function strTailMesh(M,it,li,Q,r){ const S=strTails(it,li); if(!S) return; const ki=[cabEnd(it,'a'),cabEnd(it,'b')].findIndex(x=>x&&x.it.t==='solar'), T3=ki===0?Q[0]:Q[Q.length-1];
-  S.L.forEach((o,n)=>{ const F=o.F; for(const [A,col,sg] of [[o.first,'#e03131',1],[o.last,'#212529',-1]]){ const off=(n*3+(sg>0?1:2))*r*1.3, du=(S.T.x-A.x)*F.u.x+(S.T.y-A.y)*F.u.y; const P=[{x:A.x,y:A.y},{x:A.x+F.u.x*du,y:A.y+F.u.y*du},{x:S.T.x,y:S.T.y}].map(q=>({x:q.x+F.b.x*off,y:q.y+F.b.y*off}));
-      const zT=strTailPl(F,S.T), V=P.map((q,i)=>[q.x,q.y,i===2?T3[2]:T3[2]+(strTailPl(F,q)-zT)+40]); const cc=rgbOf(col); for(let i=0;i<V.length-1;i++) tube(M,V[i],V[i+1],r*0.8,cc,'cab'); for(let i=1;i<V.length-1;i++) tubeJoint(M,V[i],r*0.85,cc,'cab'); } }); }
+  const TM=strTerms(); S.L.forEach((o,n)=>{ const F=o.F; for(const [A0,col,sg] of [[o.first,'#e03131',1],[o.last,'#212529',-1]]){ const tt=TM.find(t=>t.si===o.si&&t.pol===(sg>0?'+':'-')), R=tt?strRiser(tt.tk):null, A=R?R.ox:A0, off=(n*3+(sg>0?1:2))*r*1.3, du=(S.T.x-A.x)*F.u.x+(S.T.y-A.y)*F.u.y; const P=[{x:A.x,y:A.y},{x:A.x+F.u.x*du,y:A.y+F.u.y*du},{x:S.T.x,y:S.T.y}].map(q=>({x:q.x+F.b.x*off,y:q.y+F.b.y*off}));
+      const zT=strTailPl(F,S.T), V=P.map((q,i)=>[q.x,q.y,i===2?T3[2]:T3[2]+(strTailPl(F,q)-zT)+40]); if(R){ V.unshift(R.c,[V[0][0],V[0][1],R.o[2]]); } const cc=rgbOf(col); for(let i=0;i<V.length-1;i++) tube(M,V[i],V[i+1],r*0.8,cc,'cab'); for(let i=1;i<V.length-1;i++) tubeJoint(M,V[i],r*0.85,cc,'cab'); } }); }
 function devMesh(M,it,li){ if(HDEV[it.k]) return devMeshH(M,it,li); const O=devFoot(it), D=devDims(it), z0=devZ(it,li); extrude(M,O,z0,z0+D.h,it.ex&&!it.fc?rgbOf(mixW(DEVCOL[it.k]||'#ced4da',0.55)):rgbOf(it.fc,DEVCOL[it.k]||'#ced4da'),'dev');
   const F=devFrame(it); const fr=[F.P(-D.w/2+15,D.d/2+2),F.P(D.w/2-15,D.d/2+2),F.P(D.w/2-15,D.d/2+6),F.P(-D.w/2+15,D.d/2+6)]; if(it.k==='inv') extrude(M,fr,z0+D.h*0.6,z0+D.h*0.8,rgbOf('#1c7ed6'),'dev'); }
 
@@ -11323,7 +11329,7 @@ function strTerms(){ const v=doc.settings&&doc.settings.ved, L=v&&v.lay; if(!L||
   const G=strGeo().m, out=[]; L.str.forEach((s,si)=>{ let O=s.c; try{ O=strOrd(s); }catch(_){} const C=O.map(c=>({key:c.join(':'),g:G.get(c.join(':')),arr:c[0]})).filter(c=>c.g); if(!C.length) return;
     /* outer short side of the end module, away from the next module; if another module sits there (end in the middle of a field) — the free long side */
     const busy=(q,self)=>{ for(const [k2,g2] of G){ if(k2===self) continue; const dx=q.x-g2.x, dy=q.y-g2.y, F2=g2.F; if(Math.abs(dx*F2.u.x+dy*F2.u.y)<(g2.hw||560)&&Math.abs(dx*F2.b.x+dy*F2.b.y)<(g2.hh||860)) return true; } return false; };
-    const put=(c,nb,pol)=>{ const g=c.g, F=g.F; let d=nb?((g.x-nb.g.x)*F.u.x+(g.y-nb.g.y)*F.u.y):0; let sg=d>1?1:d<-1?-1:(pol==='+'?-1:1); if(!nb) sg=pol==='+'?-1:1; const hw=(g.hw||560)+90, hh=(g.hh||860)+90;
+    const put=(c,nb,pol)=>{ const g=c.g, F=g.F; let d=nb?((g.x-nb.g.x)*F.u.x+(g.y-nb.g.y)*F.u.y):0; let sg=d>1?1:d<-1?-1:(pol==='+'?-1:1); if(!nb) sg=pol==='+'?-1:1; const hw=(g.hw||560)-110, hh=(g.hh||860)-110; /* box centre on the end module, 110 mm in from its edge — cables attach here */
       const C4=[[F.u,hw*sg],[F.u,-hw*sg],[F.b,hh],[F.b,-hh]].map(([v,L])=>({x:g.x+v.x*L,y:g.y+v.y*L})), q=C4.find(p=>!busy(p,c.key))||C4[0]; out.push({tk:c.key+'|'+pol,si,pol,arr:c.arr,cell:c.key,li:g.li,F,x:q.x,y:q.y,cx:g.x,cy:g.y}); };
     put(C[0],C[1],'+'); put(C[C.length-1],C[C.length-2],'-'); });
   strTermC={k,v:out}; return out; }
@@ -11393,10 +11399,9 @@ function strWasher(M,zt,c,r,z0,h,tag){ const n=14, ring=(rr,dz)=>{ const R=[]; f
 function strMarks3D(M){ const TM=strTerms(); if(!TM.length) return; for(const t of TM){ const L=doc.levels[t.li]; if(!L) continue; let z=null; try{ const f=itemById(t.arr), F=f?onLv(f.li,()=>insFrame(f.it,f.li)):null; if(F&&F.zt) z=F.zt({x:t.x,y:t.y})+((f.it.off==null?150:f.it.off)+(f.it.th||30))+70; }catch(_){} if(z==null) continue;
     /* «+» red box with a white plus, «−» black box with a white bar — on the end module at its edge, short lead to the connection point */
     const f=itemById(t.arr), F=onLv(f.li,()=>insFrame(f.it,f.li)), top=(f.it.off==null?150:f.it.off)+(f.it.th||30), zt=q=>F.zt(q)+top;
-    let d={x:t.x-t.cx,y:t.y-t.cy}; const dl=Math.hypot(d.x,d.y)||1; d={x:d.x/dl,y:d.y/dl}; const e={x:-d.y,y:d.x}, c={x:t.x-d.x*190,y:t.y-d.y*190};
+    let d={x:t.x-t.cx,y:t.y-t.cy}; const dl=Math.hypot(d.x,d.y)||1; d={x:d.x/dl,y:d.y/dl}; const e={x:-d.y,y:d.x}, c={x:t.x,y:t.y};
     const man=strTailsOf(t.tk).length>0, plus=t.pol==='+', col=rgbOf(plus?(man?'#e03131':'#f06565'):(man?'#212529':'#495057')), wh=rgbOf('#ffffff');
-    strBoxOn(M,zt,c,d,e,70,105,4,48,col,'strpt'); strBoxOn(M,zt,c,d,e,12,62,52,6,wh,'strpt'); if(plus) strBoxOn(M,zt,c,d,e,52,12,52,6,wh,'strpt');
-    const a=[c.x+d.x*70,c.y+d.y*70,zt({x:c.x+d.x*70,y:c.y+d.y*70})+28], b=[t.x,t.y,zt(t)+28]; tube(M,a,b,11,col,'strpt'); tubeJoint(M,b,13,col,'strpt'); }
+    strBoxOn(M,zt,c,d,e,70,105,4,48,col,'strpt'); strBoxOn(M,zt,c,d,e,12,62,52,6,wh,'strpt'); if(plus) strBoxOn(M,zt,c,d,e,52,12,52,6,wh,'strpt'); }
   const own=strOwner(); for(const {it,li} of strMains()){ if(![...own.values()].includes(it)) continue; let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||!Q.length) continue; const ki=cabEnd(it,'a')&&cabEnd(it,'a').it.t==='solar'?0:Q.length-1, p=Q[ki]; tubeJoint(M,[p[0],p[1],p[2]+40],150,rgbOf('#f2c200'),'strpt'); } }
 // ===== Заземление (PE): точка ⏚ на раме у «+» каждого стринга, PE-провод туда же, куда идёт DC-кабель; проверки приборов =====
 const PE_BR=['ПуГВ (ПВ-3) жёлто-зелёный','H07V-K жёлто-зелёный'], PE_COL='#2f9e44', PE_COL2='#fcc419';
