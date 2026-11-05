@@ -5236,7 +5236,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.22':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.23':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9779,9 +9779,23 @@ function strPlanes(AR){ const site=vedSite(), out=[], HM=strHouseMap(); for(cons
     for(const A of pl.A){ const hid=solHid(A.it), S=A.S; for(const r of solarRects(A.it,A.F)){ if(hid.has(r.i+','+r.j)) continue; const c=A.F.P2((r[0]+r[1])/2,(r[2]+r[3])/2*A.F.ca); pl.cells.push({A,id:A.it.id,i:r.i,j:r.j,k:A.it.id+':'+r.i+':'+r.j,x:c.x*u.x+c.y*u.y,t:c.x*b.x+c.y*b.y,h:S.h*A.F.ca}); } }
     // ряды от карниза (меньше t — ниже? b направлен вверх по скату) — сортируем по t, ряды по высоте панели, внутри ряда змейкой
     const H=Math.max(200,Math.min(...pl.cells.map(c=>c.h),2000)*0.5); pl.cells.sort((a,c)=>a.t-c.t); const rows=[]; for(const c of pl.cells){ const r=rows[rows.length-1]; if(r&&Math.abs(c.t-r.t0)<H) r.c.push(c); else rows.push({t0:c.t,c:[c]}); }
-    pl.cells=[]; rows.forEach((r,ri)=>{ r.c.sort((a,c)=>ri%2?c.x-a.x:a.x-c.x); pl.cells.push(...r.c); }); pl.n=pl.cells.length;
+    pl.cells=[]; rows.forEach((r,ri)=>{ r.c.sort((a,c)=>ri%2?c.x-a.x:a.x-c.x); pl.cells.push(...r.c); }); if(pl.A.length>1) pl.cells=strBlockOrd(pl.cells,H); pl.n=pl.cells.length;
     const P=pl.A[0].P; pl.P=P; const g=vGen({tilt:pl.tilt,az:pl.az,kWp:1,P},site,0); pl.yld=g.E.reduce((s,e)=>s+e,0); pl.name=(HM.n>1?'Д'+(pl.h+1)+' · ':'')+(pl.flat&&pl.tilt<1?'Плоско':vAzName(pl.az))+' · '+vr(pl.tilt,0)+'°'; }
   out.sort((a,c)=>c.yld-a.yld); out.forEach((p,i)=>{ p.col=PLCOL[i%PLCOL.length]; p.no=i+1; }); return out; }
+/* several arrays on one plane (single panels placed anywhere, separate fields): besides the plane-wide snake, try «array by array» —
+   each array keeps its own snake, arrays are chained from an outer one with the shortest jumps; keep whichever wiring path is shorter */
+function strBlockOrd(C,H){ const len=Q=>{ let d=0; for(let i=1;i<Q.length;i++) d+=Math.hypot(Q[i].x-Q[i-1].x,Q[i].t-Q[i-1].t); return d; };
+  const by=new Map(); for(const c of C){ if(!by.has(c.id)) by.set(c.id,[]); by.get(c.id).push(c); }
+  const B=[...by.values()].map(Q=>{ Q=Q.slice().sort((a,c)=>a.t-c.t); const R=[]; for(const c of Q){ const r=R[R.length-1]; if(r&&Math.abs(c.t-r.t0)<H) r.c.push(c); else R.push({t0:c.t,c:[c]}); } const o=[]; R.forEach((r,ri)=>{ r.c.sort((a,c)=>ri%2?c.x-a.x:a.x-c.x); o.push(...r.c); }); return o; });
+  const jl=(P,Q)=>Math.hypot(P.x-Q.x,P.t-Q.t); let best=null, bl=1e18;
+  const tryOrd=seq=>{ const L=len(seq); if(L<bl){ bl=L; best=seq; } };
+  if(B.length<=6){ const n=B.length, used=new Array(n).fill(false), cur=[];
+    const go=(last,acc)=>{ if(acc>=bl) return; if(cur.length===n){ bl=acc; best=cur.flat(); return; }
+      for(let k=0;k<n;k++){ if(used[k]) continue; used[k]=true; for(const q of [B[k],B[k].slice().reverse()]){ if(B[k].length===1&&q!==B[k]) continue; const add=(last?jl(last,q[0]):0)+len(q); cur.push(q); go(q[q.length-1],acc+add); cur.pop(); if(B[k].length===1) break; } used[k]=false; } };
+    go(null,0); }
+  else { for(const st of [0,1]){ const left=B.map(q=>q), seq=[]; left.sort((a,c)=>Math.min(...a.map(z=>z.x))-Math.min(...c.map(z=>z.x))); let q=left.shift(); if(st) q=q.slice().reverse(); seq.push(...q);
+      while(left.length){ const e=seq[seq.length-1]; let bi=0, rv=false, bd=1e18; left.forEach((Q,i)=>{ const d0=jl(e,Q[0]), d1=jl(e,Q[Q.length-1]); if(d0<bd){ bd=d0; bi=i; rv=false; } if(d1<bd){ bd=d1; bi=i; rv=true; } }); const Q=left.splice(bi,1)[0]; seq.push(...(rv?Q.slice().reverse():Q)); } tryOrd(seq); } }
+  return best&&bl<len(C)-300?best:C; }
 // ----- дома и группы (инверторы) -----
 // дом: крыши, которые касаются друг друга (≤ 300 мм на плане, любые этажи); панели без крыши — сами по себе
 function polyGap(A,B){ if(!A.length||!B.length) return 1e18; if(A.some(q=>inPoly(B,q))||B.some(q=>inPoly(A,q))) return 0; let d=1e18; for(const [P,Q] of [[A,B],[B,A]]) for(const p of P) for(let i=0;i<Q.length;i++) d=Math.min(d,segDist(p.x,p.y,Q[i],Q[(i+1)%Q.length])); return d; }
