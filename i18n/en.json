@@ -4449,5 +4449,14 @@
 "массива": "arrays",
 "массивов": "arrays",
 "с разным наклоном": "with different tilt",
-"допустимо до 3°": "allowed up to 3°"
+"допустимо до 3°": "allowed up to 3°",
+"Инвертор на план": "Inverter on the plan",
+"в настройках": "the settings have",
+"инвертора, а на плане": "inverters, the plan has",
+"поставьте ещё: карточка инвертора": "place one more: inverter card",
+"справа, слева или над ним": "right, left or above it",
+"Справа от этого инвертора; если там занято — слева; если и там — над ним": "Right of this inverter; if taken — left; if both — above it",
+"дальше: проведите DC-кабель от нужных панелей к": "next: draw a DC cable from the panels to",
+"затем «Стринги» → «Разложить всё авто» — стринги распределятся по кабелям": "then «Strings» → «Lay out all» — strings follow the cables",
+"зазор 400 мм": "gap 400 mm"
 }
