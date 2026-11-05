@@ -4525,5 +4525,12 @@
 "срок": "term",
 "Снег": "Snow",
 "ПуГВ": "PuGV",
-"лет": "years"
+"лет": "years",
+"А: ограничьте экспорт в настройках инверторов или увеличьте ввод (через сетевую компанию": "A: limit export in the inverter settings or increase the supply (through the grid company",
+"у каждого свой автомат": "each with its own breaker",
+"Инверторов на щите": "Inverters on the panel",
+"больше вводного": "above the main breaker",
+"сумма токов": "total current",
+"вводного": "of the main breaker",
+"и УЗО": "and RCD"
 }
