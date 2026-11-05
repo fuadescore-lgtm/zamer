@@ -5283,7 +5283,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.19':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.20':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -10266,7 +10266,7 @@ function swBuild(){ let el=$('#sw'); if(el) el.remove(); el=document.createEleme
 const SWHINT='Один палец — кисть / рамка · два пальца — двигать и масштаб · двойной тап по скату — во весь экран';
 const swPhone=()=>!!SW&&SW.el&&(SW.el.clientWidth<900||(SW.el.clientHeight>SW.el.clientWidth*1.1&&SW.el.clientWidth<1400)); /* phone, or a tablet held upright: the panel is a bottom sheet */
 function swGrey(){ const by=new Map(); for(const c of SW.G.cells.values()){ if(SW.cm.has(c.k)) continue; by.set(c.pl,(by.get(c.pl)||0)+1); } const out=[]; for(const [pl,n] of by){ const Lm=swLim(pl); if(n>=Lm.Nmin) out.push({pl,n}); } return out; } // свободные поля, из которых можно собрать стринг
-function swRender(){ if(!SW||!SW.el) return; if(SW.tab==='an') return anRender(); SW.el.classList.remove('an'); SW.el.querySelector('.swt').textContent='Стринги'; SW.el.querySelector('.swtabs').innerHTML=anTabs(); SW.el.querySelector('.swhint').textContent=SWHINT; const el=SW.el, D=SW.D, I=swI(), Ck=SW.ck, phone=swPhone(), GR=swGrey(); el.classList.toggle('phone',phone); el.classList.toggle('tabp',phone&&el.clientWidth>=700); el.classList.toggle('sfull',phone&&SW.sheet==='full');
+function swRender(){ if(!SW||!SW.el) return; if(SW.tab==='an') return anRender(); SW.el.classList.remove('an'); SW.el.querySelector('.swt').textContent='Стринги'; SW.el.querySelector('.swtabs').innerHTML=anTabs(); SW.el.querySelector('.swhint').textContent=SWHINT; const el=SW.el, D=SW.D, I=swI(), Ck=SW.ck, phone=swPhone(), GR=swGrey(); el.classList.toggle('phone',phone); el.classList.toggle('tabp',phone&&el.clientWidth>=700); if(phone&&el.clientWidth>=700&&!SW.tabInit){ SW.tabInit=SW.tab; SW.sheet='full'; } else if(phone&&el.clientWidth>=700&&SW.tabInit!==SW.tab){ SW.tabInit=SW.tab; SW.sheet='full'; } /* upright tablet: room for the whole panel — open by default */ el.classList.toggle('sfull',phone&&SW.sheet==='full');
   el.classList.toggle('frm',SW.tool==='frame'); const lvl=Math.max(Ck?Ck.lvl:2,GR.length?1:0); el.querySelector('.swbadge').innerHTML=`<span class="sbadge l${lvl}">${lvl===2?'✖ '+(phone?'Ошибки':'Есть ошибки'):lvl===1?'⚠ '+(phone?'Замечания':'Есть замечания'):'✔ '+(phone?'В норме':'Раскладка в норме')}</span>`;
   el.querySelector('.swsum').textContent=Ck?(vr(Ck.dc,1)+' кВт · '+I.n+(D.N>1?' × '+D.N:'')+(/фаз/.test(I.n)?'':' · '+(I.ph===1?'1 фаза':'3 фазы'))):'';
   // toolbar
@@ -10618,7 +10618,7 @@ function anSide0(M){ const sel=SW.asel, colB=swPhone()?`<button class="btn" data
       ${pa?`<div>Ток инвертора AC ${vr(pa.ac.I,1)} А${pa.ac.ph===3?' на фазу':''} → QF2 ${pa.poles} C${pa.ig}${invHyb(M.I)?', QF3 C'+pa.il:''}</div>`:''}${mlist(ms('pnl'))}</div>${fixB}<div class="anhint">💡 Вводной QF1 «Авто» берёт полюса по фазам инвертора; номинал ввода не меньше QF2 — иначе нарушена селективность. Автомат линии выбирается ≥ 1,25 × тока инвертора, кабель — под него.</div>${sys()}`; }
   return sys(); }
 // ---------- render & actions ----------
-function anRender(){ const el=SW.el, M=SW.am=anModel(), phone=swPhone(); el.classList.add('an'); el.classList.toggle('phone',phone); el.classList.toggle('tabp',phone&&el.clientWidth>=700); el.classList.toggle('sfull',phone&&SW.sheet==='full'); el.classList.remove('frm');
+function anRender(){ const el=SW.el, M=SW.am=anModel(), phone=swPhone(); el.classList.add('an'); el.classList.toggle('phone',phone); el.classList.toggle('tabp',phone&&el.clientWidth>=700); if(phone&&el.clientWidth>=700&&!SW.tabInit){ SW.tabInit=SW.tab; SW.sheet='full'; } else if(phone&&el.clientWidth>=700&&SW.tabInit!==SW.tab){ SW.tabInit=SW.tab; SW.sheet='full'; } /* upright tablet: room for the whole panel — open by default */ el.classList.toggle('sfull',phone&&SW.sheet==='full'); el.classList.remove('frm');
   el.querySelector('.swt').textContent='Анализ'; el.querySelector('.swtabs').innerHTML=anTabs(); const n2=M.msgs.filter(m=>m.l===2).length, n1=M.msgs.filter(m=>m.l===1).length;
   el.querySelector('.swbadge').innerHTML=`<span class="sbadge l${M.all}">${phone?(M.all===2?'✖ '+n2:M.all===1?'⚠ '+n1:'✔'):M.all===2?'✖ Не работает · '+n2+' ош.':M.all===1?'⚠ Работает, '+n1+' замеч.':'✔ Работает'}</span>`;
   el.querySelector('.swsum').textContent=phone?'':M.I?((M.SC?vr(M.SC.dc||0,1)+' кВт панелей · ':'')+M.I.n+(M.bats.length?' · АКБ':'')):'';
