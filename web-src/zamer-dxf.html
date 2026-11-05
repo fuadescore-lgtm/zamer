@@ -5236,7 +5236,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.26':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.27':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9896,7 +9896,7 @@ function strSolve(PL,P,I,N,mode,tgt){ const T=strTemps(), res={PL,I,N,T,err:[]};
   const opts=act.map(pl=>{ const c=cand.get(pl), o=c.slice(0,C); for(const L of tops){ const q=c.find(x=>x.g.length===1&&x.g[0].L===L); if(q&&!o.includes(q)) o.push(q); } return o; });
   /* many fields (industrial roofs, several houses): keep the whole search ≤ 20 000 combinations — trim the extra options of the largest lists first */
   for(let guard=0;guard<500&&opts.reduce((a,o)=>a*Math.max(1,o.length),1)>20000;guard++){ let mi=-1; opts.forEach((o,i)=>{ if(o.length>1&&(mi<0||o.length>opts[mi].length)) mi=i; }); if(mi<0) break; opts[mi].pop(); }
-  let best=null; const ch=new Map(), rec=i=>{ if(i===act.length){ const r=strPack(act,ch,slots,P,I,N,mode,tgt); /* strings below the full-power voltage (Vmp in heat < vf) lose energy in summer: prefer layouts without them when the panels used are the same */ let low=0; for(const [pl,o] of ch) for(const g of o.g) if(pl.lim&&g.L<pl.lim.Nf) low+=g.k; /* evenness: an empty MPPT input on a used inverter, or a string close to the inverter's max voltage, costs a little — among equal layouts the even one wins (e.g. 20+18+18 over 24 + empty input) */ const used=new Set(r.st.filter(q=>q.str.length).map(q=>q.inv)); let empty=0, hot=0; for(const q of r.st){ if(!q.str.length&&used.has(q.inv)) empty++; if(q.str.length&&q.L*E.VocC>0.92*Math.min(I.vdc,P.vs||1500)) hot+=q.str.length; } const sc=r.E*(1-0.01*low-0.005*empty-0.003*hot)-r.un*1e-6; if(!best||sc>best.sc+1e-9) best={sc,r,ch:new Map(ch)}; return; } for(const o of opts[i]){ ch.set(act[i],o); rec(i+1); } };
+  let best=null; const ch=new Map(), rec=i=>{ if(i===act.length){ const r=strPack(act,ch,slots,P,I,N,mode,tgt); /* strings below the full-power voltage (Vmp in heat < vf) lose energy in summer: prefer layouts without them when the panels used are the same */ let low=0; for(const [pl,o] of ch) for(const g of o.g) if(pl.lim&&g.L<pl.lim.Nf) low+=g.k; /* evenness: several inverters loaded unevenly (DC/AC spread) cost a little — among equal layouts the even one wins (e.g. 14+14 | 14+14 over 22 | 17+17) */ const rat=r.kw.filter(x=>x>0).map(x=>x/(I.kw||1)), imb=N>1&&rat.length>1?Math.max(...rat)-Math.min(...rat):0; const sc=r.E*(1-0.01*low-0.01*imb)-r.un*1e-6; if(!best||sc>best.sc+1e-9) best={sc,r,ch:new Map(ch)}; return; } for(const o of opts[i]){ ch.set(act[i],o); rec(i+1); } };
   if(act.length) rec(0); res.best=best; return res; }
 // раскладка из подбора: строки забирают ячейки плоскости подряд (змейкой), остаток — серые
 function strLayout(res,P){ const v=vedCfg(), str=[]; if(!res.best) return null; const pos=new Map();
