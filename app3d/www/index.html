@@ -5280,7 +5280,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.5':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.6':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -12283,9 +12283,9 @@ function cutCfg(){ const v=vedCfg(); if(!v.cut||typeof v.cut!=='object') v.cut={
   for(const k in D) if(c[k]===undefined) c[k]=(D[k]&&typeof D[k]==='object')?JSON.parse(JSON.stringify(D[k])):D[k];
   if(!c.v2){ c.strat='seq'; c.v2=1; } /* 2.9.4: по умолчанию — целые подряд, остаток в конце */
   for(const k in D.ord) if(c.ord[k]===undefined) c.ord[k]=D.ord[k]; if(!c.man||typeof c.man!=='object') c.man={};
-  { const T=CUT_PT[c.ptype]; if(T){ c.pname=T.pname; c.prof=T.prof; c.stocks=T.stocks; c.ord.connector=T.con; } } return c; }
+  { const T=CUT_PT[c.ptype]; if(T){ c.pname=T.pname; c.pshort=T.pshort; c.prof=T.prof; c.stocks=T.stocks; c.ord.connector=T.con; } } return c; }
 /* profile types from the catalog: name + model as in the customer's specification; «своё» — fields filled by hand */
-const CUT_PT={g41:{n:'G-профіль монтажний h41 3d перфорація G41*41*9*8*1,5-3d (3100 / 2060 / 1230)',pname:'G-профіль монтажний h41 3d перфорація G41*41*9*8*1,5-3d',prof:'G41 41×41×1,5, сталь оцинкованная',stocks:'3100, 2060, 1230',con:'Соединитель G-профиля G41'}};
+const CUT_PT={g41:{n:'G-профіль монтажний h41 3d перфорація G41*41*9*8*1,5-3d (3100 / 2060 / 1230)',pname:'G-профіль монтажний h41 3d перфорація G41*41*9*8*1,5-3d',pshort:'G-профіль G41*41*9*8*1,5-3d',prof:'G41 41×41×1,5, сталь оцинкованная',stocks:'3100, 2060, 1230',con:'Соединитель G-профиля G41'}};
 function cutStocks(s){ const a=[...new Set((Array.isArray(s)?s:String(s||'').split(/[^0-9]+/)).map(Number).filter(x=>x>=300&&x<=12000))].sort((a,b)=>b-a); return a.length?a:[3100,2060,1230]; }
 const cutHex=h=>{ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; };
 const cutMix=(a,b,k)=>{ const A=cutHex(a), B=cutHex(b); return '#'+A.map((x,i)=>Math.round(x*k+B[i]*(1-k)).toString(16).padStart(2,'0')).join(''); };
@@ -12409,13 +12409,13 @@ function cutCompute(D,c){ const S=D.stocks||cutStocks(c.stocks), strat=c.strat||
 function cutOrd(D,c){ const o=Object.assign({},c.ord,D.order||{}); if(!o.fixing) o.fixing=D.fixName||'Крепление профиля'; return o; }
 function cutProfTxt(D,c){ const p=D.profile; if(p&&typeof p==='object') return [p.series,p.section,p.material].filter(Boolean).join(' '); return p?String(p):c.prof; }
 // сводная таблица: строки и колонки (числа — по скатам, «Всего», «К заказу», «Примечание»)
-function cutTable(D,R,c){ const SL=D.slopes, rows=[], ord=cutOrd(D,c), pn=c.pname||'G-профиль', cnt=(f)=>SL.map(f), sum=a=>a.reduce((x,y)=>x+(+y||0),0);
+function cutTable(D,R,c){ const SL=D.slopes, rows=[], ord=cutOrd(D,c), pn=(CUT_PT[c.ptype]&&c.pshort)||c.pname||'G-профиль', /* sheet table: short model code; the full catalog name — in the materials list */ cnt=(f)=>SL.map(f), sum=a=>a.reduce((x,y)=>x+(+y||0),0);
   const cutTxt=L=>L&&L.length?L.map(o=>o.n+' × '+cutN(o.len)).join('; '):'—';
   const merge=L=>{ const m=new Map(); for(const o of L||[]){ const k=Math.round(o.len!=null?o.len:o.w); m.set(k,(m.get(k)||0)+o.n); } return [...m.entries()].sort((a,b)=>b[0]-a[0]).map(([len,n])=>({len,n})); };
   for(const st of R.S){ const wh=cnt(s=>s.Q.whole[st]||0), cn=cnt(s=>s.Q.cutN[st]||0), tw=sum(wh), tc=sum(cn);
     if(!tw&&!tc){ rows.push({k:'stk',c:[pn+'-'+st,...SL.map(()=>0),0,'0 шт.','не требуется']}); continue; }
     if(!tc){ rows.push({k:'tot',c:[pn+'-'+st+', целые',...wh,tw,tw+' шт.','']}); continue; }
-    rows.push({c:[pn+'-'+st+', целые',...wh,tw,'','']});
+    if(tw) rows.push({c:[pn+'-'+st+', целые',...wh,tw,'','']});
     rows.push({c:[pn+'-'+st+' → отрезок',...SL.map(s=>cutTxt(merge(s.Q.cut[st]))),tc,'','режутся из хлыста '+st]});
     rows.push({k:'tot',c:[pn+'-'+st+', итого хлыстов',...SL.map((s,i)=>wh[i]+cn[i]),tw+tc,(tw+tc)+' шт.','из них '+tc+' режутся']}); }
   rows.push({c:['Отход, мм',...SL.map(s=>{ const m=merge(s.Q.waste); return m.length?m.map(o=>o.n+' × '+cutN(o.len)).join('; '):'—'; }),'','','обрезки на каждой направляющей']});
@@ -12601,7 +12601,7 @@ function cutUI(){ const c=cutCfg(); let X=null; try{ X=cutData(); }catch(e){ con
   let st=''; if(X&&X.err) st=`<p class="note" style="color:#d33">${esc(tr(X.err))}</p>`; else if(X){ const n=X.D.slopes.reduce((a,s)=>a+s.rails.length,0); st=`<p class="note">${esc(tr(X.D.src==='json'?'Данные из JSON':'Данные модели'))}: ${tr('скатов')} ${X.D.slopes.length}, ${tr('направляющих')} ${n}${X.R.warn.length?' · <b style="color:#a65f00">⚠ '+X.R.warn.length+'</b>':''}</p>`; }
   const man=X&&!X.err?X.D.slopes.map(s=>{ const auto=s.G.map(G=>G.seq.map(q=>q.len+(q.cut?'*':'')).join(' + ')).join(' | '); return `<div class="fld"><label>${tr('Скат')} ${esc(s.letter)} · ${s.G.map(G=>cutN(G.L)).join(' / ')} ${tr('мм')}</label><input class="inp" data-vcm="${esc(s.letter)}" value="${esc(c.man[s.letter]||'')}" placeholder="${esc(auto)}"></div>`; }).join(''):'';
   return `<div class="vrow"><div class="seg" role="group"><button data-vcp="A4" aria-pressed="${c.paper!=='A3'}">А4</button><button data-vcp="A3" aria-pressed="${c.paper==='A3'}">А3</button></div><span class="lbl">${tr('альбомный, 1:1')}</span>
-      <div class="fld"><label>${tr('Раскрой')}</label>${sel('strat',[['seq','подряд: целые, остаток в конце'],['waste','по правилам стыков: мин. отход'],['joints','по правилам стыков: мин. стыков'],['whole','только целые']],c.strat)}</div><div class="fld"><label>${tr('Начало направляющей')}</label>${sel('from',[['inv','торец у инвертора'],['left','левый торец'],['right','правый торец']],c.from)}</div>${txt('stocks',c.stocks,'Хлысты, мм','3100, 2060, 1230')}</div>
+      <div class="fld"><label>${tr('Раскрой')}</label>${sel('strat',[['seq','подряд: целые, остаток в конце'],['waste','по правилам стыков: мин. отход'],['joints','по правилам стыков: мин. стыков'],['whole','только целые']],c.strat)}</div><div class="fld"><label>${tr('Начало направляющей')}</label>${sel('from',[['inv','торец у инвертора'],['left','левый торец'],['right','правый торец']],c.from)}</div>${CUT_PT[c.ptype]?'':txt('stocks',c.stocks,'Хлысты, мм','3100, 2060, 1230')}</div>
     <div class="vrow"><div class="fld"><label>${tr('Тип профиля')}</label>${sel('ptype',[...Object.entries(CUT_PT).map(([k,T])=>[k,T.n]),['own','Свой (название и хлысты вручную)']],c.ptype||'own')}</div></div>
     <div class="vrow">${c.ptype==='own'||!CUT_PT[c.ptype]?txt('pname',c.pname,'Профиль (в таблице)','G-профиль 3d')+txt('prof',c.prof,'Серия, сечение, материал',''):''}<div class="fld"><label>${tr('Соединитель')}</label>${sel('con',[['joint','на каждом стыке'],['weak','где на куске < 2 креплений']],c.con)}</div><div class="fld"><label>${tr('Заземление рамок')}</label>${sel('gnd',[['mod','1 на модуль'],['pair','1 на пару модулей']],c.gnd)}</div></div>
     <div class="lbl">${tr('Наименования в таблице (как в спецификации заказчика)')}</div>
