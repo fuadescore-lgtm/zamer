@@ -4458,5 +4458,22 @@
 "Справа от этого инвертора; если там занято — слева; если и там — над ним": "Right of this inverter; if taken — left; if both — above it",
 "дальше: проведите DC-кабель от нужных панелей к": "next: draw a DC cable from the panels to",
 "затем «Стринги» → «Разложить всё авто» — стринги распределятся по кабелям": "then «Strings» → «Lay out all» — strings follow the cables",
-"зазор 400 мм": "gap 400 mm"
+"зазор 400 мм": "gap 400 mm",
+"Альбом: прижимы на КОРОТКИХ сторонах панелей — проверьте паспорт модуля (обычно запрещено или снижает допустимую нагрузку); надёжнее «Двухслойное» или «Один слой вдоль ската": "Landscape: clamps on the SHORT sides of the modules — check the module datasheet (usually not allowed or lowers the rated load); safer: “Two-layer” or “Single layer up the slope",
+"Альбом, один слой вдоль ската: профиль не ляжет на стропило — шпильки в стропила так не ставятся; нужна несущая обрешётка / прогоны и крюки (шаг": "Landscape, single layer up the slope: the rail cannot sit on a rafter — hanger bolts into rafters will not work here; load-bearing battens / purlins and hooks are needed (spacing",
+"Два слоя: нижние профили вдоль карниза на крышу, верхние — вдоль ската, прижимы на длинных сторонах": "Two layers: lower rails along the eaves on the roof, upper rails up the slope, clamps on the long sides",
+"Один слой вдоль ската: прижимы на длинных сторонах, крепление в обрешётку / прогоны": "Single layer up the slope: clamps on the long sides, fixed to battens / purlins",
+"Альбомная ориентация: как крепить панели — прижимы должны держать длинные стороны": "Landscape orientation: how to mount the modules — clamps must hold the long sides",
+"Альбом, один слой вдоль ската: крепление в обрешётку / прогоны с шагом": "Landscape, single layer up the slope: fixed to battens / purlins at a spacing of",
+"Прижимы на коротких сторонах — проверьте паспорт модуля": "Clamps on the short sides — check the module datasheet",
+"альбом, два слоя: на каждом пересечении": "landscape, two layers: at every crossing",
+"Соединитель крестовой (профиль–профиль": "Cross connector (rail to rail",
+"Кронштейн / крюк в обрешётку (прогон": "Bracket / hook into battens (purlin",
+"мм) или выберите «Двухслойное": "mm) or choose “Two-layer",
+"альбом, один слой вдоль ската": "landscape, single layer up the slope",
+"Однослойное вдоль ската": "Single layer up the slope",
+"По коротким сторонам": "On the short sides",
+"Крепление в альбоме": "Landscape mounting",
+"Двухслойное (крест": "Two-layer (cross",
+"Нижний слой": "Lower layer"
 }
