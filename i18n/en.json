@@ -4434,5 +4434,20 @@
 "Сечение жил — авто": "Core section — auto",
 "провод(а) PE стали жилами и идут по его трассе": "PE wire(s) became cores and follow its route",
 "Жилы — отдельными проводами, каждая по последней трассе": "Cores — separate wires, each on its last route",
-"жила в КБ": "core in КБ"
+"жила в КБ": "core in КБ",
+"дом однофазный: выберите однофазный инвертор (или «Авто» — он подберётся по щиту)": "the house is single-phase: choose a single-phase inverter (or «Auto» — it is matched to the panel)",
+"нарушена селективность: ограничьте ток из сети в настройках инвертора или выберите инвертор меньше; ввод дома увеличивает только сетевая компания": "selectivity is broken: limit the grid current in the inverter settings or choose a smaller inverter; only the grid company can increase the house supply",
+"в нём": "it has",
+"а в стринге нужно не меньше": "but a string needs at least",
+"объедините с массивом той же ориентации или уберите его": "join it with an array of the same orientation or remove it",
+"у инвертора все входы MPPT": "all MPPT inputs of the inverter",
+"заняты — для этой ориентации нужен инвертор с большим числом MPPT или второй инвертор": "are used — this orientation needs an inverter with more MPPT or a second inverter",
+"достигнута наибольшая мощность панелей для инвертора": "the inverter's maximum PV power is reached",
+"нужен инвертор мощнее или второй": "a bigger or a second inverter is needed",
+"стринги из него не собраны — «Разложить всё» или кистью в окне «Стринги": "no strings from it — «Lay out all» or the brush in the «Strings» window",
+"Пока он не подключён, его панели не входят в ведомость и раскрой": "Until it is connected, its panels are not in the BOM or the cutting sheet",
+"массива": "arrays",
+"массивов": "arrays",
+"с разным наклоном": "with different tilt",
+"допустимо до 3°": "allowed up to 3°"
 }
