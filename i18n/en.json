@@ -4431,5 +4431,8 @@
 "чёрная": "black",
 "жёлто-зелёная": "yellow-green",
 "хвосты строк": "string tails",
-"Сечение жил — авто": "Core section — auto"
+"Сечение жил — авто": "Core section — auto",
+"провод(а) PE стали жилами и идут по его трассе": "PE wire(s) became cores and follow its route",
+"Жилы — отдельными проводами, каждая по последней трассе": "Cores — separate wires, each on its last route",
+"жила в КБ": "core in КБ"
 }
