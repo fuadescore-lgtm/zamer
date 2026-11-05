@@ -5284,7 +5284,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.27':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.28':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -11014,7 +11014,7 @@ function cabPen(it,li){ const P=onLv(li,()=>cabPath(it,li)), cache=new Map(), r=
 // участки трассы: кровля / снаружи / внутри / проходка — для способа прокладки и цвета в правке
 const LAYCOL={roof:'rgba(37,99,235,.55)',out:'rgba(18,184,134,.75)',in:'rgba(156,54,181,.75)',pen:'rgba(253,126,20,.9)'};
 const LAYM={clip:'открыто (клипсы)',gofra:'в гофре',chan:'кабель-канал',tray:'лоток'}, LAYD={roof:'clip',out:'chan',in:'gofra'}, LAYC={roof:'Кровля',out:'Снаружи',in:'Внутри'};
-function cabSegCat(it,li){ const P=onLv(li,()=>cabPath(it,li)), cache=new Map(), R=[]; const lvAt=z=>{ let b=0; doc.levels.forEach((L,k)=>{ if(!L.gp&&L.elev<=z+1&&L.elev>=doc.levels[b].elev) b=k; }); return b; };
+function cabSegCat(it,li){ const P=onLv(li,()=>cabPathCalc(it,li)), cache=new Map(), R=[]; const lvAt=z=>{ let b=0; doc.levels.forEach((L,k)=>{ if(!L.gp&&L.elev<=z+1&&L.elev>=doc.levels[b].elev) b=k; }); return b; };
   for(let i=0;i<P.length-1;i++){ const a=P[i], b=P[i+1], dxy=Math.hypot(b[0]-a[0],b[1]-a[1]), dz=Math.abs(b[2]-a[2]), L=Math.hypot(dxy,dz); if(L<0.5) continue; let cat=null; const q={x:(a[0]+b[0])/2,y:(a[1]+b[1])/2}, zm=(a[2]+b[2])/2;
     if(dxy<1){ const lo=Math.min(a[2],b[2]), hi=Math.max(a[2],b[2]); for(const s2 of cabSurfs(q,cache)){ const zt=s2.zf(q)-(s2.kind==='roof'?60:40), zb=zt-(s2.th||200); if(lo<zb-1&&hi>zt+1&&dz<(s2.th||200)+700) cat='pen'; } }
     else if(dz<1&&dxy<900){ const d={x:(b[0]-a[0])/dxy,y:(b[1]-a[1])/dxy}; for(const W of cabWalls(cache)){ if(a[2]<W.z0||a[2]>W.z1) continue; const h=cabRayPoly({x:a[0],y:a[1]},d,W.P); if(h&&h[0]>0.5&&h[1]<dxy-0.5) cat='pen'; } }
@@ -11218,7 +11218,40 @@ function cabPathFree(it,li,role){ if(!it.fv){ it.fv=1; /* было: отвод �
     if(atStart) out.unshift(...add.slice().reverse()); else out.push(...add); };
   endF('a',true); endF('b',false);
   return out.filter((q,i)=>!i||Math.hypot(q[0]-out[i-1][0],q[1]-out[i-1][1],q[2]-out[i-1][2])>1); }
-function cabPath(it,li){ const Q=cabPath0(it,li); if(Q.length<2||!isTail(it)) return Q; const k=tailKey(it), R=strRiser(it[k].tk); if(!R) return Q; const ia=k==='a', E=ia?Q[0]:Q[Q.length-1]; if(Math.hypot(E[0]-R.c[0],E[1]-R.c[1])>5) return Q;
+/* cables from the roof (arrays, mains) running along the same line (same wall, same riser) — side by side, not inside each other:
+   each next cable of a bundle is shifted sideways by one lane on the stretches it shares with earlier ones */
+const CAB_LANE=90;
+function cabRoofLanes(){ const sig=doc.updated+'|'+doc.levels.reduce((a,L)=>a+L.items.length,0); if(cabRoofLanes.sig===sig) return cabRoofLanes.r; const r={}; cabRoofLanes.sig=sig; cabRoofLanes.r=r;
+  const C=[]; doc.levels.forEach((Lv,li)=>{ for(const c of Lv.items){ if(c.t!=='cab'||cabIsH(c)||isTail(c)||cabMode(c)==='dev'||c.lane===false) continue; let Q=null; try{ Q=onLv(li,()=>cabPath0(c,li)); }catch(_){} if(Q&&Q.length>1) C.push({c,Q}); } });
+  if(C.length<2) return r; C.sort((a,b)=>String(a.c.id).localeCompare(String(b.c.id)));
+  const segs=Q=>{ const S=[]; for(let i=0;i<Q.length-1;i++){ const a=Q[i], b=Q[i+1], d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], l=Math.hypot(...d); if(l>50) S.push({i,a,d,l,u:d.map(x=>x/l)}); } return S; };
+  /* the part of s (as 0…1 of its length) that runs together with t, or null */
+  const part=(s,t)=>{ if(Math.abs(s.u[0]*t.u[0]+s.u[1]*t.u[1]+s.u[2]*t.u[2])<0.995) return null; const w=[t.a[0]-s.a[0],t.a[1]-s.a[1],t.a[2]-s.a[2]], p=w[0]*s.u[0]+w[1]*s.u[1]+w[2]*s.u[2]; if(Math.hypot(w[0]-p*s.u[0],w[1]-p*s.u[1],w[2]-p*s.u[2])>CAB_LANE*0.6) return null; const q=p+(t.d[0]*s.u[0]+t.d[1]*s.u[1]+t.d[2]*s.u[2]), lo=Math.max(0,Math.min(p,q)), hi=Math.min(s.l,Math.max(p,q)); return hi-lo>100?[lo/s.l,hi/s.l]:null; };
+  C.forEach(o=>{ o.S=segs(o.Q); o.L=[]; });
+  for(let j=1;j<C.length;j++){ for(const s of C[j].S){ let lane=0, t0=1, t1=0; for(let i=0;i<j;i++) for(const t of C[i].S){ const pr=part(s,t); if(!pr) continue; const own=C[i].L.find(x=>x.i===t.i); lane=Math.max(lane,(own?own.lane:0)+1); t0=Math.min(t0,pr[0]); t1=Math.max(t1,pr[1]); } if(lane) C[j].L.push({i:s.i,t0,t1,lane}); } if(C[j].L.length) r[C[j].c.id]=C[j].L; }
+  return r; }
+function cabLaneShift(it,Q0){ let LS=null; try{ LS=cabRoofLanes()[it.id]; }catch(_){} if(!LS||Q0.length<2) return Q0;
+  /* split the shared segments where running together starts / ends, so only that stretch moves */ const Q=[], M={}; for(let i=0;i<Q0.length;i++){ Q.push(Q0[i]); if(i===Q0.length-1) break; const o=LS.find(x=>x.i===i); if(!o) continue; const a=Q0[i], b=Q0[i+1], at=t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], L=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);
+    if(o.t0*L>60){ Q.push(at(o.t0)); } M[Q.length-1]=Math.max(...LS.map(x=>x.lane)); /* one lane for the whole cable: no slanted pieces between stretches */ if((1-o.t1)*L>60){ Q.push(at(o.t1)); } }
+  if(Q.length<3) return Q0; const VN=cabSideN(Q), off=new Array(Q.length).fill(0);
+  for(const [k,lane] of Object.entries(M)){ const i=+k; for(const v of [i,i+1]) if(v>0&&v<Q.length-1) off[v]=Math.max(off[v],lane*CAB_LANE); }
+  /* a vertex where the shared stretch begins or ends moves square to that stretch only (a mitred shift there would give a slanted piece) */
+  const segN=k=>{ const a=Q[k], b=Q[k+1], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); return l>20?[-dy/l,dx/l]:null; }, NV=VN.map((n,v)=>{ const pS=v>0&&M[v-1]!=null, nS=M[v]!=null; if(pS===nS) return n; const g=segN(pS?v-1:v); if(!g) return n; return g[0]*n[0]+g[1]*n[1]<0?[-g[0],-g[1]]:g; });
+  const sh=i=>off[i]?[NV[i][0]*off[i],NV[i][1]*off[i]]:[0,0], R=[];
+  for(let i=0;i<Q.length;i++){ const q=Q[i], v=sh(i), n=off[i]?[q[0]+v[0],q[1]+v[1],q[2]]:q; if(off[i]) for(const k of Object.keys(q)) if(isNaN(+k)) n[k]=q[k];
+    /* lane starts / ends: a short step across at the corner where the shared stretch begins / ends — the rest of the run stays on its line, no slanted piece */ if(i>0&&!!off[i]!==!!off[i-1]){ const p=Q[i-1], d=[q[0]-p[0],q[1]-p[1]], l=Math.hypot(...d), w=off[i]?v:sh(i-1), lw=Math.hypot(...w); if(l>1&&lw>1&&Math.abs((d[0]*w[0]+d[1]*w[1])/(l*lw))<0.9) R.push(off[i]?[q[0],q[1],q[2]]:[p[0],p[1],p[2]]); }
+    R.push(n); }
+  /* no spikes (there and back) and no crumbs left after the shift */ for(let g=0;g<4;g++){ let ch=false; for(let i=1;i<R.length-1;i++){ const a=R[i-1], b=R[i], c=R[i+1], u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], w=[c[0]-b[0],c[1]-b[1],c[2]-b[2]], lu=Math.hypot(...u), lw=Math.hypot(...w); if(lu<5||(lw>1&&lu>1&&(u[0]*w[0]+u[1]*w[1]+u[2]*w[2])/(lu*lw)<-0.95)){ if(lu<5&&i===1) continue; R.splice(i,1); i--; ch=true; } } if(!ch) break; }
+  /* keep the shift only when it adds no slanted or doubling-back pieces; otherwise the route stays as it was */ const bad=P=>{ let n=0; for(let i=0;i<P.length-1;i++){ const a=P[i], b=P[i+1], dx=Math.abs(b[0]-a[0]), dy=Math.abs(b[1]-a[1]), dz=Math.abs(b[2]-a[2]), dxy=Math.hypot(dx,dy); if(dz>100&&dxy>5&&dxy<0.2*dz) n++; if(dz<5&&dx>5&&dy>5) n++; const c=P[i+2]; if(c){ const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], w=[c[0]-b[0],c[1]-b[1],c[2]-b[2]], lu=Math.hypot(...u), lw=Math.hypot(...w); if(lu>1&&lw>1&&(u[0]*w[0]+u[1]*w[1]+u[2]*w[2])/(lu*lw)<-0.95) n++; } } return n; };
+  return bad(R)>bad(Q0)?Q0:R; }
+/* a stretch hanging in free air between buildings is drawn as the calculation takes it: down the wall, 0,7 m deep in the trench, up again */
+function cabTrench(Q){ if(Q.length<2) return Q; const A=cabAir(Q); if(!A.runs.length) return Q; const zt=(A.g0||0)-700, out=[]; let r=0;
+  for(let i=0;i<Q.length;i++){ out.push(Q[i]); while(A.runs[r]&&A.runs[r].i0===i){ const S=A.runs[r]; out.push(S.p0,[S.p0[0],S.p0[1],zt],[S.p1[0],S.p1[1],zt],S.p1); i=S.i1; r++; } }
+  return out.filter((q,k)=>!k||Math.hypot(q[0]-out[k-1][0],q[1]-out[k-1][1],q[2]-out[k-1][2])>1); }
+/* lengths, laying and the trench are counted on the route itself — the side lanes and the drawn trench are only how it looks */
+function cabPathCalc(it,li){ return !isTail(it)&&!cabIsH(it)&&cabMode(it)!=='dev'?cabPath0(it,li):cabPathA(it,li); }
+function cabPath(it,li){ const Q=cabPathA(it,li); try{ return cabTrench(Q); }catch(_){ return Q; } }
+function cabPathA(it,li){ if(!isTail(it)&&!cabIsH(it)&&cabMode(it)!=='dev') return cabLaneShift(it,cabPath0(it,li)); const Q=cabPath0(it,li); if(Q.length<2||!isTail(it)) return Q; const k=tailKey(it), R=strRiser(it[k].tk); if(!R) return Q; const ia=k==='a', E=ia?Q[0]:Q[Q.length-1]; if(Math.hypot(E[0]-R.c[0],E[1]-R.c[1])>5) return Q;
   /* one segment along Z from the route under the modules up into the centre of the «+/−» box / PE washer */ const top=[R.c[0],R.c[1],Math.max(R.c[2],E[2])]; return ia?[top,...Q]:[...Q,top]; }
 function cabPath0(it,li){ const P=it.pts||[], role=cabKind(it); if(P.length<2) return []; if(HCAB[role]) return cabPathH(it,li); if(cabMode(it)==='free') return cabPathFree(it,li,role); const RT=cabRoute(it,li), OV=(()=>{ const pz=cabPZ(it); return (it.pts||[]).map((p,i)=>pz[i]!=null&&RT.V[i]!=null?[p.x,p.y,RT.V[i]]:null).filter(Boolean); })() /* вершины со своей высотой */, out=RT.Q.map(p=>{ const q=[...p]; if(p.dt) q.dt=1; if((it.pts||[]).some(o=>Math.abs(o.x-q[0])<1&&Math.abs(o.y-q[1])<1)) q.uv=1; /* вершина трассы пользователя (план) */ if(OV.some(o=>Math.abs(o[0]-q[0])<1&&Math.abs(o[1]-q[1])<1&&Math.abs(o[2]-q[2])<1)) q.ov=1; /* своя вершина — не сдвигать чистками */ return q; }), cache=RT.cache, tgAll=(RT.tg||[]).slice(); if(RT.zr!=null){ const pz=it.pz||[]; /* ручные вершины не трогаем */ }
   const end=(key,atStart)=>{ const E=cabEnd(it,key); if(!E) return; const R=atStart?out[0]:out[out.length-1]; let add=[];
@@ -11784,9 +11817,9 @@ function cabAir(Q){ const o={run:0,ext:0,runs:[]}; try{ const cc=new Map(), W=ca
   const free=(q,z)=>{ if(z-g0<400) return false; for(const k of LV) if(cabInside(q,k)) return false; for(const w of W) if(z>w.z0-500&&z<w.z1+800&&segDistPoly(w.P,q)<350) return false; for(const s2 of cabSurfs(q,cc)) if(Math.abs(s2.zf(q)-z)<600) return false; return true; };
   let cur=null; const close=()=>{ if(cur&&cur.L>=1500){ o.runs.push(cur); o.run+=cur.L; o.ext+=2*(cur.z-g0)+2*700; } cur=null; };
   for(let i=0;i<Q.length-1;i++){ const a=Q[i], b=Q[i+1], dxy=Math.hypot(b[0]-a[0],b[1]-a[1]); if(dxy<1){ close(); continue; } const n=Math.max(1,Math.ceil(dxy/250));
-    for(let k=0;k<n;k++){ const f=(k+0.5)/n, q={x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f}, z=a[2]+(b[2]-a[2])*f, d=Math.hypot(dxy,b[2]-a[2])/n; if(free(q,z)){ if(!cur) cur={L:0,z}; cur.L+=d; cur.z=Math.max(cur.z,z); } else close(); } }
-  close(); }catch(e){ console.warn(e); } return o; }
-function cabCalc(it,li){ if(HCAB[cabKind(it)]) return cabCalcH(it,li); if(isTail(it)) return cabCalcTail(it,li); const kind=cabKind(it), Q=cabPath(it,li), AIR=cabAir(Q), Lr=(pathLen(Q)+AIR.ext)/1000, ed=elecDef(), out={kind,Lr,msg:[],lvl:0,air:AIR}, bad=(l,t)=>{ out.msg.push([l,t]); out.lvl=Math.max(out.lvl,l); };
+    for(let k=0;k<n;k++){ const f=(k+0.5)/n, q={x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f}, z=a[2]+(b[2]-a[2])*f, d=Math.hypot(dxy,b[2]-a[2])/n; if(free(q,z)){ const f0=k/n, f1=(k+1)/n, P0=[a[0]+(b[0]-a[0])*f0,a[1]+(b[1]-a[1])*f0,a[2]+(b[2]-a[2])*f0], P1=[a[0]+(b[0]-a[0])*f1,a[1]+(b[1]-a[1])*f1,a[2]+(b[2]-a[2])*f1]; if(!cur) cur={L:0,z,i0:i,p0:P0}; cur.L+=d; cur.z=Math.max(cur.z,z); cur.i1=i; cur.p1=P1; } else close(); } }
+  close(); o.g0=g0; }catch(e){ console.warn(e); } return o; }
+function cabCalc(it,li){ if(HCAB[cabKind(it)]) return cabCalcH(it,li); if(isTail(it)) return cabCalcTail(it,li); const kind=cabKind(it), Q=cabPathCalc(it,li), AIR=cabAir(Q), Lr=(pathLen(Q)+AIR.ext)/1000, ed=elecDef(), out={kind,Lr,msg:[],lvl:0,air:AIR}, bad=(l,t)=>{ out.msg.push([l,t]); out.lvl=Math.max(out.lvl,l); };
   if(AIR.run>0) bad(1,'участок трассы '+vFmt(vr(AIR.run/1000,1),1)+' м висит в воздухе между зданиями — в расчёт принят спуск по стене, траншея 0,7 м в трубе ПНД и подъём (+'+vFmt(vr(AIR.ext/1000,1),1)+' м). Точнее — нарисуйте трассу по земле своими вершинами');
   { const cc=new Map(), HS=cabHoles(cc); let hh=null; for(let i=0;i<Q.length-1&&!hh;i++){ const a=Q[i], b=Q[i+1]; for(const h of HS){ const sA=(a[0]-h.a.x)*h.u.x+(a[1]-h.a.y)*h.u.y, sB=(b[0]-h.a.x)*h.u.x+(b[1]-h.a.y)*h.u.y, nA=(a[0]-h.a.x)*h.n.x+(a[1]-h.a.y)*h.n.y, nB=(b[0]-h.a.x)*h.n.x+(b[1]-h.a.y)*h.n.y; if(Math.max(Math.abs(nA),Math.abs(nB))>h.th+120) continue; if(Math.max(sA,sB)>0&&Math.min(sA,sB)<h.w&&Math.max(a[2],b[2])>h.z0&&Math.min(a[2],b[2])<h.z1){ hh=h; break; } } }
     if(hh&&!(cabNodes(it,li)||[]).some(n=>n.warn)) bad(1,'трасса проходит по '+(hh.t==='door'?'двери':'окну')+' — сдвиньте трассу или устройство'); }
