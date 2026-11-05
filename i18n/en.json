@@ -4532,5 +4532,18 @@
 "больше вводного": "above the main breaker",
 "сумма токов": "total current",
 "вводного": "of the main breaker",
-"и УЗО": "and RCD"
+"и УЗО": "and RCD",
+"трасса от панелей идёт через конёк на другой скат — короче и правильнее к карнизу своего ската и вниз по стене: «Провести к карнизу» в карточке кабеля (окно «Анализ": "the route from the panels goes over the ridge to the other slope — shorter and better to the eave of its own slope and down the wall: “Route to eave” in the cable card (“Analysis” window",
+"От панелей вниз по своему скату к карнизу, по карнизу к стороне прибора, вниз по стене": "From the panels down their own slope to the eave, along the eave to the device side, down the wall",
+"Не получилось перестроить трассу — поправьте вершины на плане": "Could not reroute — adjust the vertices on the plan",
+"Трасса проведена к карнизу своего ската и вниз по стене": "Routed to the eave of its own slope and down the wall",
+"мм) — «Выпрямить трассу» в карточке кабеля": "mm) — “Straighten route” in the cable card",
+"Трасса выпрямлена: убрано ступенек": "Route straightened: steps removed",
+"мм — концы трассы на месте": "mm — route ends stay in place",
+"Убрать ступеньки до": "Remove steps up to",
+"Провести к карнизу": "Route to eave",
+"Выпрямить трассу": "Straighten route",
+"мелкие ступеньки": "small steps",
+"мелкая ступенька": "small step",
+"в трассе": "in the route"
 }
