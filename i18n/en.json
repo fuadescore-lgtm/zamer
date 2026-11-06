@@ -4545,5 +4545,10 @@
 "Выпрямить трассу": "Straighten route",
 "мелкие ступеньки": "small steps",
 "мелкая ступенька": "small step",
-"в трассе": "in the route"
+"в трассе": "in the route",
+"скаты не закрывают всю крышу при таких уклонах и фронтонах — поменяйте уклон или сделайте грань скатом": "the slopes do not cover the whole roof with these pitches and gables — change a pitch or make the edge a slope",
+"конёк со встречным скатом пройдёт ровно по линии уступа": "the ridge with the opposite slope will run exactly along the step line",
+"конёк по линии уступа": "ridge along the step line",
+"Уклон этого ската": "Pitch of this slope",
+"Конёк к уступу": "Ridge to step"
 }
