@@ -2640,6 +2640,13 @@ cv.addEventListener('pointermove',e=>{
           else if(k===j&&jB){ NP.push(R(B2)); NE.push({s:false,ov:0,stp:true}); map[k]=NP.length; NP.push({...P0[k]}); NE.push(E0[k]); }
           else { map[k]=NP.length; NP.push(k===i?R(pa):k===j?R(pb):{...P0[k]}); NE.push(E0[k]); } }
         q.r.pts=NP; q.r.edges=NE; if(polyArea2(NP)===0||roofCheck(q.r)){ q.r.pts=oldP; q.r.edges=oldE; } else q.map=map; q.d=d; redraw(); return; } }
+    if(q.E0){ const E0=JSON.parse(q.E0), tol=Math.max(30,10/view.scale); let dz=null;
+      if(E0[(i+n-1)%n].stp){ const s0=(A.x-P0[(i+n-1)%n].x)*nv.x+(A.y-P0[(i+n-1)%n].y)*nv.y; if(Math.abs(s0+d)<tol) dz=-s0; }
+      if(E0[j].stp){ const s0=(B.x-P0[(j+1)%n].x)*nv.x+(B.y-P0[(j+1)%n].y)*nv.y; if(Math.abs(s0+d)<tol) dz=-s0; }
+      if(dz!=null){ const oldP=q.r.pts, oldE=q.r.edges; const A3={x:A.x+nv.x*dz,y:A.y+nv.y*dz}, B3={x:B.x+nv.x*dz,y:B.y+nv.y*dz}, qa=cut(P0[(i+n-1)%n],A,A3)||A3, qb=cut(P0[(j+1)%n],B,B3)||B3;
+        q.r.pts=P0.map(o=>({...o})); q.r.pts[i]={x:r3(qa.x),y:r3(qa.y)}; q.r.pts[j]={x:r3(qb.x),y:r3(qb.y)}; q.r.edges=E0; const mp=roofNorm(q.r);
+        if(polyArea2(q.r.pts)===0||roofCheck(q.r)){ q.r.pts=oldP; q.r.edges=oldE; } else { q.map=mp; q.d=dz; } redraw(); return; }
+      q.r.edges=E0; q.map=null; }
     const old=q.r.pts; q.r.pts=P0.map(o=>({...o})); q.r.pts[i]={x:r3(pa.x),y:r3(pa.y)}; q.r.pts[j]={x:r3(pb.x),y:r3(pb.y)};
     if(polyArea2(q.r.pts)===0||roofCheck(q.r)) q.r.pts=old; q.d=d; redraw(); return; }
   if(press.ridgeMv){ const q=press.ridgeMv, H=q.H, w=toW(p.x,p.y); if(!press.moved) return; if(!q.started){ q.started=true; pushUndo(); q.E0=JSON.stringify(q.r.edges); }
@@ -5334,7 +5341,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.39':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.40':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -5918,10 +5925,23 @@ function roofGeom0(r,li){ if(isExt(r)) return extGeom(r,li); if(r&&r.type==='prc
   else if(!isConvexPoly(P)&&r.dec===true&&(()=>{ try{ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U){ roofGeom._u=U; return true; } }catch(e){} return false; })()){ const U=roofGeom._u; roofGeom._u=null; return U; } // разбивка на объём+крылья — только по выбору (r.dec)
   else if(!isConvexPoly(P)){ // Г, Т, П-образный дом: прямой скелет (ендовы и коньки как в Revit)
     const O2=offsetConvex(P,P.map((_,i)=>roofOv(r,i))), rev=polyArea2(P)<0, orig=j=>rev?((n-2-j)%n+n)%n:j, plOf={}; for(const p of pl) plOf[p.i]=p;
-    let sk; const skTry=lg=>{ const s0=roofSkeleton(O2,O2.map((_,j)=>E[orig(j)].s?kOf(orig(j)):0),lg); /* the slopes must cover the whole outline — otherwise treat it as not built */ const A0=Math.abs(polyArea2(O2)), Af=s0.faces.reduce((a,f)=>a+(f.P?Math.abs(polyArea2(f.P)):0),0); if(A0>0&&Math.abs(Af-A0)>0.01*A0) throw new Error('skeleton'); return s0; };
+    /* a vertex in the middle of a straight gable (halves of a gable) is not a corner for the skeleton: the two gable edges go as one; K maps back */
+    const m2=O2.length, K=[], O2s=[]; for(let j=0;j<m2;j++){ const a=O2[(j-1+m2)%m2], q=O2[j], b=O2[(j+1)%m2], ax=q.x-a.x, ay=q.y-a.y, bx=b.x-q.x, by=b.y-q.y, la=Math.hypot(ax,ay), lb=Math.hypot(bx,by);
+      if(m2-(j-K.length)>3&&la>1&&lb>1&&Math.abs(ax*by-ay*bx)<1e-6*la*lb&&ax*bx+ay*by>0&&!E[orig((j-1+m2)%m2)].s&&!E[orig(j)].s) continue; K.push(j); O2s.push(q); }
+    const oK=t=>orig(K[t]);
+    let sk; const skTry=lg=>{ const s0=roofSkeleton(O2s,O2s.map((_,t)=>E[oK(t)].s?kOf(oK(t)):0),lg); /* the slopes must cover the whole outline — otherwise treat it as not built */ const A0=Math.abs(polyArea2(O2)), Af=s0.faces.reduce((a,f)=>a+(f.P?Math.abs(polyArea2(f.P)):0),0); if(A0>0&&Math.abs(Af-A0)>0.01*A0) throw new Error('skeleton'); return s0; };
     try{ try{ sk=skTry(false); }catch(e0){ sk=skTry(true); } }catch(e){ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U) return U; throw e; } // скелет не сошёлся (фронтон у уступа) — объём + крылья
-    for(const f of sk.faces){ const p=plOf[orig(f.i)]; if(!f.P||!p) continue; const F=cleanPoly(f.P); if(F.length>=3&&Math.abs(polyArea2(F))>1) faces.push({P:F,pl:p}); }
+    for(const f of sk.faces){ const p=plOf[oK(f.i)]; if(!f.P||!p) continue; const F=cleanPoly(f.P); if(F.length>=3&&Math.abs(polyArea2(F))>1) faces.push({P:F,pl:p}); }
     { const M=roofMergeNodes(faces,O2); if(M!==faces){ faces.length=0; faces.push(...M); } }
+    /* a slope running on past its ridge (e.g. over the overhang of a gable on the ridge line — a step between moved halves) rises above the ridge as an «ear»;
+       that part belongs to the slope on the other side of the ridge: it goes down by that slope's pitch */
+    { const share=(a,b)=>{ const Fa=faces.filter(f=>f.pl===a), Fb=faces.filter(f=>f.pl===b); let c=0; for(const f of Fa) for(const q of f.P){ if(Math.abs(a.nx*q.x+a.ny*q.y+a.c-(b.nx*q.x+b.ny*q.y+b.c))<150&&Fb.some(h=>h.P.some(v=>Math.hypot(v.x-q.x,v.y-q.y)<5))) c++; } return c>=2; };
+      for(const a of pl) for(const b of pl){ if(a===b) continue; const ka=Math.hypot(a.nx,a.ny), kb=Math.hypot(b.nx,b.ny); if(ka<1e-6||kb<1e-6||(a.nx*b.nx+a.ny*b.ny)/(ka*kb)>-0.9995||!share(a,b)) continue;
+        const gx=a.nx-b.nx, gy=a.ny-b.ny, gc=a.c-b.c, onL=q=>Math.abs(gx*q.x+gy*q.y+gc)<5; /* only where a gable of the contour lies on this ridge line (its overhang is what runs past the ridge) */
+        let gl=false; for(let k=0;k<n&&!gl;k++) if(!E[k].s&&onL(P[k])&&onL(P[(k+1)%n])&&Math.hypot(P[(k+1)%n].x-P[k].x,P[(k+1)%n].y-P[k].y)>100) gl=true; if(!gl) continue;
+        for(const f of faces.slice()){ if(f.pl!==a) continue; const up=Math.max(...f.P.map(q=>gx*q.x+gy*q.y+gc)); if(up<60) continue;
+          const B=cleanPoly(clipHalf(f.P,gx,gy,gc)), K=cleanPoly(clipHalf(f.P,-gx,-gy,-gc)); if(B.length<3||Math.abs(polyArea2(B))<1e4) continue;
+          faces.splice(faces.indexOf(f),1); if(K.length>=3&&Math.abs(polyArea2(K))>1) faces.push({P:K,pl:a}); faces.push({P:B,pl:b}); } } }
     const segD=(q,a,b)=>{ const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.y-a.y)*dy)/l)); return Math.hypot(q.x-a.x-dx*t,q.y-a.y-dy*t); };
     H=q=>{ let bf=null,bd=Infinity; for(const f of faces){ if(inPoly(f.P,q)) return f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c;
         for(let i=0;i<f.P.length;i++){ const d=segD(q,f.P[i],f.P[(i+1)%f.P.length]); if(d<bd){ bd=d; bf=f; } } }
@@ -7064,9 +7084,16 @@ function roofReidx(r,map){ const M=k=>map[k]!=null?map[k]:-1;
   if(r.rg) r.rg=r.rg.map(G=>G.map(k=>{ const [a,b]=k.split('-').map(Number), x=M(a), y=M(b); return x<0||y<0?null:Math.min(x,y)+'-'+Math.max(x,y); }).filter(Boolean)).filter(G=>G.length>1);
   if(r.meas) r.meas=r.meas.map(M).filter(k=>k>=0);
   for(const L of doc.levels) for(const o of L.items){ if(o.t!=='roof'||o===r||!o.edges) continue; for(const e of o.edges) if(e&&e.lk&&e.lk.id===r.id&&e.lk.i!=null){ const k=M(e.lk.i); if(k<0) delete e.lk; else e.lk.i=k; } } }
-/* zero-length edges (a half moved back in line) are dropped */
-function roofDropZero(r){ const P=r.pts, n=P.length; if(n<=3||!r.edges||r.edges.length!==n) return; const keep=[]; for(let k=0;k<n;k++){ const B=P[(k+1)%n]; if(Math.hypot(B.x-P[k].x,B.y-P[k].y)>=1) keep.push(k); } if(keep.length===n||keep.length<3) return;
-  const map=[]; keep.forEach((k,j)=>map[k]=j); r.pts=keep.map(k=>P[k]); r.edges=keep.map(k=>r.edges[k]); roofReidx(r,map); }
+/* zero-length edges (a half moved back in line) are dropped; the two gable halves around a dropped step become one edge again. Returns map old→new edge (or null) */
+function roofNorm(r){ let P=r.pts, E=r.edges; if(!E||E.length!==P.length) return null; let map=P.map((_,k)=>k), ch=false;
+  for(let guard=0;guard<20;guard++){ const n=P.length; if(n<=3) break; let hit=-1; for(let k=0;k<n;k++){ const B=P[(k+1)%n]; if(Math.hypot(B.x-P[k].x,B.y-P[k].y)<1){ hit=k; break; } } if(hit<0) break;
+    const wasStp=!!(E[hit]&&E[hit].stp), rm=hit; /* drop edge hit and its start vertex (same point as its end) */ const NP=P.filter((_,k)=>k!==rm), NE=E.filter((_,k)=>k!==hit), idx=k=>k===hit?-1:(k>hit?k-1:k);
+    P=NP; E=NE; map=map.map(v=>v<0?-1:idx(v)); ch=true;
+    if(wasStp){ /* halves on one line again → one edge */ const m=P.length, j=hit%m, a=(j-1+m)%m, ua=unit(P[a],P[j]), ub=unit(P[j],P[(j+1)%m]);
+      const same=(x,y)=>(x==null?null:x)===(y==null?null:y); if(m>3&&!E[a].s&&!E[j].s&&!E[a].lk&&!E[j].lk&&!E[a].stp&&!E[j].stp&&Math.abs(ua.x*ub.y-ua.y*ub.x)<1e-6&&ua.x*ub.x+ua.y*ub.y>0&&same(E[a].ov,E[j].ov)){
+        P=P.filter((_,k)=>k!==j); const keepA=a<j?a:a-1; E=E.filter((_,k)=>k!==j); map=map.map(v=>v<0?-1:(v===j?keepA:(v>j?v-1:v))); } } }
+  if(!ch) return null; r.pts=P; r.edges=E; return map; }
+function roofDropZero(r){ const m=roofNorm(r); if(m) roofReidx(r,m); }
 /* a gable edge split into halves (collinear) or with a half-step (edge marked stp): the edges moved together by the vertex between them */
 /* gable edges that a ridge reaches in their middle: a virtual split point there (handles for each half and for both) */
 function roofVSplits(r){ if(!r||r.t!=='roof'||isExt(r)||!r.edges||r.edges.length!==r.pts.length) return []; const P=r.pts, n=P.length, out=[]; let RL=[]; try{ RL=ridgeList(r); }catch(e){ return []; }
