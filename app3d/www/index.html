@@ -2271,7 +2271,7 @@ function render0(){ queueMicrotask(placePanel);
   if(tool==='text'&&ldPick){ marker(ldPick,null); if(pendingText){ const g=leaderGeom({p:pendingText,s:textGhostS()||tr('Текст'),h:textGhostH(),ld:{pt:ldPick,end:doc.settings.ldEnd||'arrow'}}); ctx.save(); ctx.setLineDash([5,4]); ctx.strokeStyle=C.sel; line(toS(g.E),toS(g.P)); ctx.restore(); ctx.setLineDash([]); } }
   if(tool==='hole'&&chimPrev){ const g={...chDef(),p:chimPrev,rot:0}, O=chimOut(g).map(toS);
     ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=C.ink; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); poly(O); ctx.stroke(); ctx.restore(); ctx.setLineDash([]); }
-  if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd)))){ marker(snapMark.p,snapMark.k); if(snapLvTag){ const q=toS(snapMark.p); ctx.save(); ctx.font='600 11px '+FNUM; ctx.textAlign='left'; ctx.textBaseline='middle'; haloText('⇅ '+snapLvTag,q.x+10,q.y-12,C.sel); ctx.restore(); } }
+  if(snapMark&&(moveDelta||chimDrag||chimPrev||(press&&(press.mv||press.sd||press.wit||press.tdh||press.dimEnd||press.ridgeMv)))){ marker(snapMark.p,snapMark.k); if(snapLvTag){ const q=toS(snapMark.p); ctx.save(); ctx.font='600 11px '+FNUM; ctx.textAlign='left'; ctx.textBaseline='middle'; haloText('⇅ '+snapLvTag,q.x+10,q.y-12,C.sel); ctx.restore(); } }
   if(stvorGuide&&moveDelta&&press&&press.sd){ const [Q,A,B]=stvorGuide, dA=Math.hypot(A.x-Q.x,A.y-Q.y), dB=Math.hypot(B.x-Q.x,B.y-Q.y), F=dA>dB?A:B; ctx.save(); ctx.strokeStyle=C.tape; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); line(toS(Q),toS(F)); ctx.restore(); ctx.setLineDash([]);
     if(snapLvTag){ const q=toS(Q); ctx.save(); ctx.font='600 11px '+FNUM; ctx.textAlign='left'; ctx.textBaseline='middle'; haloText('⇅ '+snapLvTag,q.x+8,q.y-12,C.sel); ctx.restore(); } }
   try{ drawStrTails(); }catch(_){} try{ drawStrPts(); }catch(e){ console.warn(e); } try{ drawPE(); }catch(e){ console.warn(e); } try{ imgAlDraw(); }catch(_){}
@@ -2622,7 +2622,9 @@ cv.addEventListener('pointermove',e=>{
     let sft=(w.x-H.m.x)*H.dir.x+(w.y-H.m.y)*H.dir.y; snapMark=null; if(!liveSnap) sft=Math.round(sft/10)*10;
     /* the ridge snaps onto the corners of the roof (contour and eaves): e.g. in line with the gable wall of a step — the break point then lands exactly on the corner */
     if(osnapOn){ if(!q.vx){ q.vx=q.r.pts.map(v=>({...v})); try{ const g0=roofGeom(q.r,roofLi(q.r)); for(const v of g0.O||[]) q.vx.push({...v}); }catch(e){} }
-      const raw=(w.x-H.m.x)*H.dir.x+(w.y-H.m.y)*H.dir.y; let bd=14/view.scale, bv=null; for(const v of q.vx){ const t=(v.x-H.m.x)*H.dir.x+(v.y-H.m.y)*H.dir.y; if(Math.abs(t-raw)<bd){ bd=Math.abs(t-raw); bv={v,t}; } }
+      const raw=(w.x-H.m.x)*H.dir.x+(w.y-H.m.y)*H.dir.y, ax={x:-H.dir.y,y:H.dir.x}, R=18/view.scale; let bv=null;
+      /* of the corners within reach, the one at the ridge's end wins (the break point at the step corner), not a far corner on the same line of a slightly skewed contour */
+      for(const v of q.vx){ const t=(v.x-H.m.x)*H.dir.x+(v.y-H.m.y)*H.dir.y, d=Math.abs(t-raw); if(d>=R) continue; const out=Math.max(0,Math.abs((v.x-H.m.x)*ax.x+(v.y-H.m.y)*ax.y)-H.L/2), sc=out+d*0.01; if(!bv||sc<bv.sc) bv={v,t,sc}; }
       if(bv){ sft=bv.t; snapMark={p:bv.v,k:'corner'}; } } const o=JSON.stringify(q.r.edges); q.r.edges=JSON.parse(q.E0); const er=ridgeMoveG(q.r,H,sft,q.L0); if(er){ q.r.edges=JSON.parse(o); if(!q.warn){ q.warn=1; toast('Не соответствует: '+er,true); } } redraw(); return; }
   if(press.roofOv){ const q=press.roofOv, w=toW(p.x,p.y); if(!press.moved) return;
     if(!q.started){ q.started=true; pushUndo(); q.r.edges=q.r.edges&&q.r.edges.length===q.r.pts.length?q.r.edges:(roofPreset(q.r,q.r.type||'gable'),q.r.edges); roofUnlinkFor(q.r,[q.i]); }
@@ -5306,7 +5308,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.37':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.38':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
