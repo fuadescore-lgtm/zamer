@@ -76,14 +76,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #gpMap .v3bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--rule)}#gpMap .v3bar .sp{flex:1}
 #gpMap [data-g][aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 #btnMe[aria-pressed="true"]{color:var(--sel)}
-#kp{position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--surface);border-top:1px solid var(--rule);box-shadow:0 -6px 20px var(--shadow);padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);gap:6px;touch-action:manipulation;user-select:none}
+#kp{position:fixed;left:50%;transform:translateX(-50%);width:min(100%,420px);box-sizing:border-box;bottom:0;z-index:310;background:var(--surface);border:1px solid var(--rule);border-bottom:0;border-radius:12px 12px 0 0;box-shadow:0 -6px 20px var(--shadow);padding:4px 4px calc(4px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);gap:4px;pointer-events:auto;touch-action:manipulation;user-select:none}
 #kp[hidden]{display:none}
-#kp button{height:46px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font:600 21px var(--f-num);display:grid;place-items:center}
+#kp button{height:38px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:600 19px var(--f-num);display:grid;place-items:center}
 #kp button:active,#kp button.dn{background:var(--sel);color:#fff;border-color:var(--sel)}
 #kp .ok{background:var(--sel);color:#fff;border-color:var(--sel);grid-column:span 2}#kp .z{grid-column:span 2}
-#kp .fn{font-size:18px;color:var(--muted)}
+#kp .fn{font-size:17px;color:var(--muted)}
 .solp{display:grid;gap:8px;margin:8px 0 10px}.solp .btn{text-align:left;height:auto;padding:9px 12px;line-height:1.35;white-space:normal}.solp .btn[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--sel)}.sheet-body .pkrow{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:6px 0}
-#kp .kph{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;padding:0 4px 2px;min-height:22px;font:600 14px/1.3 system-ui,sans-serif;color:var(--muted);overflow:hidden;white-space:nowrap}#kp .kph .kpv{margin-left:auto;font:600 17px var(--f-num);color:var(--ink)}
+#kp .kph{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;padding:0 4px 2px;min-height:18px;font:600 13px/1.3 system-ui,sans-serif;color:var(--muted);overflow:hidden;white-space:nowrap}#kp .kph .kpv{margin-left:auto;font:600 17px var(--f-num);color:var(--ink)}
 #kp .cx{color:#d64545;font-size:20px}
 /* отклик кнопок: лёгкая подсветка при нажатии, без тяжёлых анимаций */
 button{-webkit-tap-highlight-color:transparent}
@@ -5285,7 +5285,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.31':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.32':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9553,6 +9553,7 @@ function kpMark(root){ if(!KP.touch) return; (root.querySelectorAll?root:documen
 function kpEl(){ if(KP.el) return KP.el; const el=document.createElement('div'); el.id='kp'; el.hidden=true;
   el.innerHTML='<div class="kph"><span class="kpl"></span><span class="kpv"></span></div>'+['7','8','9','⌫','4','5','6','−','1','2','3','.'].map(k=>`<button type="button" data-k="${k}"${/[⌫−.]/.test(k)?' class="fn"':''}>${k}</button>`).join('')+'<button type="button" data-k="cx" class="cx" title="Отмена: оставить как было" aria-label="Отмена">✕</button><button type="button" data-k="0">0</button><button type="button" data-k="ok" class="ok" aria-label="Готово">✓</button>';
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); const b=e.target.closest('[data-k]'); if(!b) return; b.classList.add('dn'); setTimeout(()=>b.classList.remove('dn'),120); kpKey(b.dataset.k); });
+  /* the keypad is solid: no touch, click or release goes through to buttons of panels underneath */ for(const ev of ['pointerup','pointermove','click','dblclick','touchstart','touchend','mousedown','mouseup','contextmenu']) el.addEventListener(ev,e=>{ e.stopPropagation(); if(ev!=='touchstart'&&ev!=='pointermove') e.preventDefault(); },{passive:false});
   document.body.appendChild(el); KP.el=el; return el; }
 function kpKey(k){ const i=KP.inp; if(!i||document.activeElement!==i) return;
   if(k==='cx'){ kpCancel(); return; }
