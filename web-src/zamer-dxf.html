@@ -4675,7 +4675,7 @@ panel.addEventListener('click',e=>{ { const rk=e.target.closest('[data-rlk]'), s
     case 'rfJoinOk':if(linkPick&&linkPick.kind==='jp'&&linkPick.tgt){ const t=linkPick.tgt; let B=null; doc.levels.forEach(L=>{ const x=L.items.find(i=>i.id===t.id); if(x) B=x; }); linkPick={...linkPick,go:true}; roofLinkPick(B,t.li,t.i); linkPick=null; panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} }break;
     case 'rfJoinNo':linkPick=null; panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} break;
     case 'rfUnjoinP':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ pushUndo(); delete sel.edges[roofEdge.i].jp; persist(); panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} toast('Край отсоединён от плоскости соседа',true); }break;
-    case 'rfStep':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ const sa=roofStepAngle(sel,roofEdge.i); if(sa){ pushUndo(); sel.edges[roofEdge.i].a=sa.a; sel.type='custom'; persist(); panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} toast('Уклон ската '+(roofEdge.i+1)+' — '+vFmt(sa.a,1)+'°: конёк по линии уступа',true); } } break;
+    case 'rfStep':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ const sa=roofStepAngle(sel,roofEdge.i); if(sa){ pushUndo(); for(const q of sa.flush||[]) sel.edges[q].ov=0; sel.edges[roofEdge.i].a=sa.a; sel.type='custom'; persist(); panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} toast('Уклон ската '+(roofEdge.i+1)+' — '+vFmt(sa.a,1)+'°: конёк по линии уступа',true); } } break;
     case 'rfUnlink':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ pushUndo(); delete sel.edges[roofEdge.i].lk; persist(); panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} toast('Скат отвязан: уклон и положение остались, дальше — как обычный скат',true); }break;
     case 'rfFix':if(sel&&sel.t==='roof'){ editBegin(); pushUndo(); if(sel.fixT!=null){ delete sel.fixT; toast('Высота конька — по уклонам',true); } else { sel.fixT=r1(roofTop(sel)); toast('Высота конька зафиксирована: '+fmtElev(sel.fixT)+'. Смена уклона двигает низ крыши',true); } persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); }break;
     case 'rfJ':if(sel&&sel.t==='roof'&&roofEdge&&sel.edges&&sel.edges[roofEdge.i]){ editBegin(); const k=b.dataset.j; roofChange(sel,r=>{ const e=r.edges[roofEdge.i]; if(k==='auto') delete e.j; else e.j=k; }); toast(ROOFJ[k][1],true); viewRefresh&&viewRefresh(); }break;
@@ -5237,7 +5237,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.30':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.31':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6571,7 +6571,7 @@ function roofMeshTagged(M,r,li){ const t0=M.tri.length, l0=M.lines.length;
   roofMesh(M,roofExtended(r,li),li); roofCheeks(M,r,li); try{ roofStepFace(M,r,li); }catch(e){} for(let k=t0;k<M.tri.length;k++) M.tri[k].rid=r.id; for(let k=l0;k<M.lines.length;k++) M.lines[k].rid=r.id; }
 function roofMesh(M,r,li){ const g=roofGeom(r,li), col=rgbOf(r.fc,'#b5533c'), zt=q=>g.T(q), zl=q=>g.H(q);
   const HO=insHoles(r.id,li);
-  for(const f of g.faces){ const zf=f.pl?(q=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c):zl, zft=q=>Math.min(zf(q)+g.tvF(f),g.T(q));
+  for(const f of g.faces){ const zf=f.pl?(q=>f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c):zl, zft=q=>{ const a=zf(q)+g.tvF(f), b=g.T(q); return b<a&&(g.prc||a-b<60)?b:a; }; /* at a step (gable over a lower slope) the higher face keeps its own plane — not pulled down to the lower one */
     const hs=HO.filter(H=>H.some(q=>inPoly(f.P,q))||inPoly(H,f.P[0]));
     for(const H of hs) for(let i=0;i<H.length;i++){ const A=H[i],B=H[(i+1)%H.length], m={x:(A.x+B.x)/2,y:(A.y+B.y)/2}; if(!inPoly(f.P,m)) continue; // откос проёма в кровле
       addQuad(M,[A.x,A.y,zf(A)],[B.x,B.y,zf(B)],[B.x,B.y,zft(B)],[A.x,A.y,zft(A)],col,'roof'); M.lines.push([[A.x,A.y,zft(A)],[B.x,B.y,zft(B)]]); }
@@ -6952,7 +6952,8 @@ function roofLinkTarget(lk){ for(let lj=0;lj<doc.levels.length;lj++){ const B=do
 function roofStepAngle(r,i){ try{ const li=roofLi(r), g=onLvG(li,()=>roofGeom(r,li)), Pn=roofPartner(r,i,g); if(!Pn) return null; const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, U=k=>unit(P[k],P[(k+1)%n]), inN=k=>{ const u=U(k); return {x:-u.y*sg,y:u.x*sg}; };
   const j=Pn.j, ei=r.edges[i], ej=r.edges[j]; if(!ei||!ej||!ei.s||!ej.s) return null; const ni=inN(i), nj=inN(j), oi=roofOv(r,i), oj=roofOv(r,j), D=(k,nk,o,V)=>(V.x-P[k].x)*nk.x+(V.y-P[k].y)*nk.y+o;
   const ti=Math.tan(ei.a*D2R), tj=Math.tan(ej.a*D2R), W=D(i,ni,oi,P[j]), r0=W>0?(oi+oj+Pn.d)*tj/(ti+tj):0; let best=null;
-  for(let k=0;k<n;k++){ const a=U((k-1+n)%n), b=U(k), cr=(a.x*b.y-a.y*b.x)*sg; if(cr>=-1e-9) continue; /* inner (reflex) corners only */ const V=P[k], di=D(i,ni,oi,V), dj=D(j,nj,oj,V); if(di<200||dj<200) continue; const ang=Math.atan(tj*dj/di)/D2R; if(!(ang>=1&&ang<=75)) continue; if(!best||Math.abs(di-r0)<Math.abs(best.di-r0)) best={a:Math.round(ang*10)/10,di,V}; }
+  for(let k=0;k<n;k++){ const a=U((k-1+n)%n), b=U(k), cr=(a.x*b.y-a.y*b.x)*sg; if(cr>=-1e-9) continue; /* inner (reflex) corners only */ const V=P[k], di=D(i,ni,oi,V), dj=D(j,nj,oj,V); if(di<200||dj<200) continue; const ang=Math.atan(tj*dj/di)/D2R; if(!(ang>=1&&ang<=75)) continue; if(!best||Math.abs(di-r0)<Math.abs(best.di-r0)) best={a:Math.round(ang*100)/100,di,V,k}; }
+  /* the gable along the step, parallel to the ridge: without overhang — otherwise its eave sticks up above the ridge as an «ear» */ if(best){ const ui=U(i); best.flush=[(best.k-1+n)%n,best.k].filter(q=>r.edges[q]&&!r.edges[q].s&&Math.abs(U(q).x*ui.y-U(q).y*ui.x)<0.01); }
   return best; }catch(e){ return null; } }
 function roofPartner(r,i,g){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1, U=k=>unit(P[k],P[(k+1)%n]), u=U(i), ni={x:-u.y*sg,y:u.x*sg}, Fi=g.faces.filter(f=>f.pl&&f.pl.i===i); let j=-1, bd=1e18;
   for(let k=0;k<n;k++){ if(k===i||!r.edges[k].s) continue; const b=U(k); if(u.x*b.x+u.y*b.y>-0.999) continue; const Fk=g.faces.filter(f=>f.pl&&f.pl.i===k);
