@@ -2571,7 +2571,11 @@ cv.addEventListener('pointermove',e=>{
     const pa=cut(P0[(i+n-1)%n],A,A2)||A2, pb=cut(P0[(j+1)%n],B,B2)||B2; const old=q.r.pts; q.r.pts=P0.map(o=>({...o})); q.r.pts[i]={x:r3(pa.x),y:r3(pa.y)}; q.r.pts[j]={x:r3(pb.x),y:r3(pb.y)};
     if(polyArea2(q.r.pts)===0||roofCheck(q.r)) q.r.pts=old; q.d=d; redraw(); return; }
   if(press.ridgeMv){ const q=press.ridgeMv, H=q.H, w=toW(p.x,p.y); if(!press.moved) return; if(!q.started){ q.started=true; pushUndo(); q.E0=JSON.stringify(q.r.edges); }
-    let sft=(w.x-H.m.x)*H.dir.x+(w.y-H.m.y)*H.dir.y; if(!liveSnap) sft=Math.round(sft/10)*10; const o=JSON.stringify(q.r.edges); q.r.edges=JSON.parse(q.E0); const er=ridgeMoveG(q.r,H,sft,q.L0); if(er){ q.r.edges=JSON.parse(o); if(!q.warn){ q.warn=1; toast('Не соответствует: '+er,true); } } redraw(); return; }
+    let sft=(w.x-H.m.x)*H.dir.x+(w.y-H.m.y)*H.dir.y; snapMark=null; if(!liveSnap) sft=Math.round(sft/10)*10;
+    /* the ridge snaps onto the corners of the roof (contour and eaves): e.g. in line with the gable wall of a step — the break point then lands exactly on the corner */
+    if(osnapOn){ if(!q.vx){ q.vx=q.r.pts.map(v=>({...v})); try{ const g0=roofGeom(q.r,roofLi(q.r)); for(const v of g0.O||[]) q.vx.push({...v}); }catch(e){} }
+      const raw=(w.x-H.m.x)*H.dir.x+(w.y-H.m.y)*H.dir.y; let bd=14/view.scale, bv=null; for(const v of q.vx){ const t=(v.x-H.m.x)*H.dir.x+(v.y-H.m.y)*H.dir.y; if(Math.abs(t-raw)<bd){ bd=Math.abs(t-raw); bv={v,t}; } }
+      if(bv){ sft=bv.t; snapMark={p:bv.v,k:'corner'}; } } const o=JSON.stringify(q.r.edges); q.r.edges=JSON.parse(q.E0); const er=ridgeMoveG(q.r,H,sft,q.L0); if(er){ q.r.edges=JSON.parse(o); if(!q.warn){ q.warn=1; toast('Не соответствует: '+er,true); } } redraw(); return; }
   if(press.roofOv){ const q=press.roofOv, w=toW(p.x,p.y); if(!press.moved) return;
     if(!q.started){ q.started=true; pushUndo(); q.r.edges=q.r.edges&&q.r.edges.length===q.r.pts.length?q.r.edges:(roofPreset(q.r,q.r.type||'gable'),q.r.edges); roofUnlinkFor(q.r,[q.i]); }
     let ov=(w.x-q.A.x)*q.out.x+(w.y-q.A.y)*q.out.y; ov=Math.round(ov/10)*10;
@@ -2699,7 +2703,7 @@ function endPtr(e,cancel){ if(copyHi&&press&&press.moved&&(press.sd||press.mv||p
   if(pr.extEg){ if(pr.extEg.started){ persist(); viewRefresh(); toast(pr.extEg.i===0?'Отступ от фасада: '+fmt(extOff(pr.extEg.r))+' мм':pr.extEg.i===2?'Глубина: '+fmt(extFrame(pr.extEg.r).dep)+' мм':'Свес '+(pr.extEg.i===1?'справа':'слева')+': '+fmt(pr.extEg.ov||0)+' мм',true); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.roofPt){ liveSnap=null; if(pr.roofPt.started){ pr.roofPt.r.src='manual'; roofDragConstrain(pr.roofPt.r); persist(); toast('Контур крыши изменён'); roofJoinAsk(pr.roofPt.r,pr.roofPt.jb); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.roofEg){ liveSnap=null; if(pr.roofEg.started){ const sl=pr.roofEg.r.t==='slab'; if(!sl){ pr.roofEg.r.src='manual'; roofDragConstrain(pr.roofEg.r); } persist(); toast((sl?'Край перекрытия':'Край крыши')+' сдвинут на '+fmtU(Math.abs(pr.roofEg.d||0))); if(!sl) roofJoinAsk(pr.roofEg.r,pr.roofEg.jb); } panelKey=''; syncPanel(); redraw(); return; }
-  if(pr.ridgeMv){ liveSnap=null; if(pr.ridgeMv.started){ roofDragConstrain(pr.ridgeMv.r); persist(); const H=ridgeHandle(pr.ridgeMv.r); toast('Конёк сдвинут: уклоны '+(H?H.angs.map(a=>Math.round(a*10)/10+'°').join(' / '):'')); } else { roofFacePick(pr.ridgeMv.r,pr.sx,pr.sy); return; } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.ridgeMv){ liveSnap=null; snapMark=null; if(pr.ridgeMv.started){ roofDragConstrain(pr.ridgeMv.r); persist(); const H=ridgeHandle(pr.ridgeMv.r); toast('Конёк сдвинут: уклоны '+(H?H.angs.map(a=>Math.round(a*10)/10+'°').join(' / '):'')); } else { roofFacePick(pr.ridgeMv.r,pr.sx,pr.sy); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.roofOv){ liveSnap=null; trackGuide=null; if(pr.roofOv.started){ persist(); toast('Свес грани '+(pr.roofOv.i+1)+': '+fmt(roofOv(pr.roofOv.r,pr.roofOv.i))+' мм'); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.bmEnd){ const D=pr.bmEnd, it=doc.items.find(i=>i.id===D.id); snapMark=null; if(D.started&&it){ if(D.col){ it[D.k]=D.col; toast('Конец балки соединён с колонной',true); } persist(); viewRefresh(); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.mvb){ mvGuide=null; moveDelta=null; if(pr.mvb.started){ selJoint=null; colReattach(pr.mvb.ids); persist(); viewRefresh(); } panelKey=''; syncPanel(); redraw(); return; }
@@ -5254,7 +5258,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.34':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.35':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -5686,7 +5690,7 @@ function roofPreset(r,type){ if(isExt(r)&&type==='ext') return; if(isExt(r)){ de
     const H=Math.tan(a*Math.PI/180)*Math.min(...ds); r.edges=ds.map(d=>({s:true,a:Math.atan(H/d)*180/Math.PI})); } }
 // взвешенный прямой скелет: многоугольник O (против часовой), k[i] — тангенс уклона ребра (0 — фронтон, ребро стоит)
 // возвращает грани: для каждого ребра i многоугольник грани (точки в плане)
-function roofSkeleton(O,K){ const n=O.length, eps=1e-7;
+function roofSkeleton(O,K,lg){ const n=O.length, eps=1e-7; /* lg: legacy pass without the step rules below (fallback when they do not converge on a slightly skewed contour) */
   const ed=O.map((A,i)=>{ const B=O[(i+1)%n], u=unit(A,B); return {A,B,u,n:{x:-u.y,y:u.x},s:K[i]>0?1/K[i]:0}; });
   const vf=(a,b)=>{ const A=ed[a],B=ed[b], det=A.n.x*B.n.y-A.n.y*B.n.x;
     const c1=A.n.x*A.A.x+A.n.y*A.A.y, c2=B.n.x*B.A.x+B.n.y*B.A.y;
@@ -5699,11 +5703,11 @@ function roofSkeleton(O,K){ const n=O.length, eps=1e-7;
     for(const L of loops){ const m=L.E.length;
       for(let j=0;j<m;j++){ const e=L.E[j], f0=vf(L.E[(j-1+m)%m],e), f1=vf(e,L.E[(j+1)%m]); if(!f0||!f1) continue; const u=ed[e].u;
         /* a gable edge ending in a fixed inner corner of two gables (a step): the slope front slides along its line past that corner — the gable goes on as the boundary, no collapse */
-        if(!ed[e].s){ const fx=(f,nb)=>Math.hypot(f.V.x,f.V.y)<1e-12&&!ed[nb].s&&(()=>{ const a=nb===L.E[(j+1)%m]?ed[e].u:ed[nb].u, b=nb===L.E[(j+1)%m]?ed[nb].u:ed[e].u; return a.x*b.y-a.y*b.x<-1e-9; })(); if(fx(f1,L.E[(j+1)%m])||fx(f0,L.E[(j-1+m)%m])) continue; }
+        if(!ed[e].s){ const fx=(f,nb)=>Math.hypot(f.V.x,f.V.y)<1e-12&&!ed[nb].s&&(()=>{ const a=nb===L.E[(j+1)%m]?ed[e].u:ed[nb].u, b=nb===L.E[(j+1)%m]?ed[nb].u:ed[e].u; return a.x*b.y-a.y*b.x<-1e-9; })(); if(!lg&&(fx(f1,L.E[(j+1)%m])||fx(f0,L.E[(j-1+m)%m]))) continue; }
         const l0=u.x*(f1.X0.x-f0.X0.x)+u.y*(f1.X0.y-f0.X0.y), l1=u.x*(f1.V.x-f0.V.x)+u.y*(f1.V.y-f0.V.y);
         if(l1<-1e-12){ const t=-l0/l1; if(t>=tNow-1e-6&&(!best||t<best.t)) best={t,type:'e',L,j}; } }
       for(let j=0;j<m;j++){ const a=L.E[(j-1+m)%m], b=L.E[j], ua=ed[a].u, ub=ed[b].u; if(ua.x*ub.y-ua.y*ub.x>-1e-9) continue; const f=vf(a,b); if(!f) continue;
-        for(let k=0;k<m;k++){ const mm=L.E[k]; if(mm===a||mm===b) continue; if(!ed[a].s&&!ed[b].s&&(mm===L.E[(j-2+m)%m]||mm===L.E[(j+1)%m])) continue; const M=ed[mm];
+        for(let k=0;k<m;k++){ const mm=L.E[k]; if(mm===a||mm===b) continue; if(!lg&&!ed[a].s&&!ed[b].s&&(mm===L.E[(j-2+m)%m]||mm===L.E[(j+1)%m])) continue; const M=ed[mm];
           const fp=M.n.x*f.V.x+M.n.y*f.V.y-M.s; if(fp>=-1e-12) continue; const f0=M.n.x*(f.X0.x-M.A.x)+M.n.y*(f.X0.y-M.A.y); const t=-f0/fp;
           if(t<tNow-1e-6||(best&&t>=best.t)) continue; const Q=at(f,t);
           const p0=pos(L,k,t), p1=pos(L,(k+1)%m,t), s=M.u.x*(Q.x-p0.x)+M.u.y*(Q.y-p0.y), len=M.u.x*(p1.x-p0.x)+M.u.y*(p1.y-p0.y);
@@ -5720,7 +5724,7 @@ function roofSkeleton(O,K){ const n=O.length, eps=1e-7;
       loops.splice(loops.indexOf(L),1,{E:E1,S:S1},{E:E2,S:S2}); }
     /* a slope's wavefront running into a parallel, opposite edge on the same line (e.g. a slope reaching the gable wall of an inner step):
        the zero-width spike between them is cut off — the shorter of the two fronts ends there, the overlap becomes the ridge line between them */
-    for(let g2=0;g2<50;g2++){ let hit=false;
+    for(let g2=0;g2<(lg?0:50);g2++){ let hit=false;
       for(const L of loops){ const m=L.E.length; if(m<3) continue;
         for(let i=0;i<m&&!hit;i++){ const a=L.E[(i-1+m)%m], b=L.E[i], A=ed[a], B=ed[b]; if(A.u.x*B.u.x+A.u.y*B.u.y>-0.9999) continue; const Q=L.S[i];
           const onA=Math.abs(A.n.x*(Q.x-A.A.x)+A.n.y*(Q.y-A.A.y)-A.s*tNow)<1, onB=Math.abs(B.n.x*(Q.x-B.A.x)+B.n.y*(Q.y-B.A.y)-B.s*tNow)<1; if(!onA||!onB) continue;
@@ -5838,7 +5842,8 @@ function roofGeom0(r,li){ if(isExt(r)) return extGeom(r,li); if(r&&r.type==='prc
   else if(!isConvexPoly(P)&&r.dec===true&&(()=>{ try{ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U){ roofGeom._u=U; return true; } }catch(e){} return false; })()){ const U=roofGeom._u; roofGeom._u=null; return U; } // разбивка на объём+крылья — только по выбору (r.dec)
   else if(!isConvexPoly(P)){ // Г, Т, П-образный дом: прямой скелет (ендовы и коньки как в Revit)
     const O2=offsetConvex(P,P.map((_,i)=>roofOv(r,i))), rev=polyArea2(P)<0, orig=j=>rev?((n-2-j)%n+n)%n:j, plOf={}; for(const p of pl) plOf[p.i]=p;
-    let sk; try{ sk=roofSkeleton(O2,O2.map((_,j)=>E[orig(j)].s?kOf(orig(j)):0)); /* the slopes must cover the whole outline — otherwise treat it as not built */ const A0=Math.abs(polyArea2(O2)), Af=sk.faces.reduce((a,f)=>a+(f.P?Math.abs(polyArea2(f.P)):0),0); if(A0>0&&Math.abs(Af-A0)>0.01*A0) throw new Error('skeleton'); }catch(e){ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U) return U; throw e; } // скелет не сошёлся (фронтон у уступа) — объём + крылья
+    let sk; const skTry=lg=>{ const s0=roofSkeleton(O2,O2.map((_,j)=>E[orig(j)].s?kOf(orig(j)):0),lg); /* the slopes must cover the whole outline — otherwise treat it as not built */ const A0=Math.abs(polyArea2(O2)), Af=s0.faces.reduce((a,f)=>a+(f.P?Math.abs(polyArea2(f.P)):0),0); if(A0>0&&Math.abs(Af-A0)>0.01*A0) throw new Error('skeleton'); return s0; };
+    try{ try{ sk=skTry(false); }catch(e0){ sk=skTry(true); } }catch(e){ const U=roofDecomp(r,P,E,zE,kOf,th,zb); if(U) return U; throw e; } // скелет не сошёлся (фронтон у уступа) — объём + крылья
     for(const f of sk.faces){ const p=plOf[orig(f.i)]; if(!f.P||!p) continue; const F=cleanPoly(f.P); if(F.length>=3&&Math.abs(polyArea2(F))>1) faces.push({P:F,pl:p}); }
     { const M=roofMergeNodes(faces,O2); if(M!==faces){ faces.length=0; faces.push(...M); } }
     const segD=(q,a,b)=>{ const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.y-a.y)*dy)/l)); return Math.hypot(q.x-a.x-dx*t,q.y-a.y-dy*t); };
@@ -6519,7 +6524,7 @@ function roofJoinSpots(r,li){ const L=doc.levels[li]; if(!L) return []; const ou
 function ridgeList(r){ if(r&&r.type==='prc') return [];  if(!r||r.t!=='roof'||isExt(r)||r.plate||!r.edges||r.edges.length!==r.pts.length) return []; const li=roofLi(r); let g; try{ g=onLvG(li,()=>roofGeom(r,li)); }catch(e){ return []; }
   const out=[], zb=onLvG(li,()=>roofBase(r,li));
   for(const a of g.pl) for(const b of g.pl){ if(a.i>=b.i) continue; const ka=Math.hypot(a.nx,a.ny), kb=Math.hypot(b.nx,b.ny); if(ka<1e-6||kb<1e-6) continue; if((a.nx*b.nx+a.ny*b.ny)/(ka*kb)>-0.9995) continue;
-    const Fa=g.faces.filter(f=>f.pl===a), Fb=g.faces.filter(f=>f.pl===b); const on=[]; for(const f of Fa) for(const q of f.P){ if(Math.abs(a.nx*q.x+a.ny*q.y+a.c-(b.nx*q.x+b.ny*q.y+b.c))<1&&Fb.some(h=>h.P.some(v=>Math.hypot(v.x-q.x,v.y-q.y)<2))) on.push(q); }
+    const Fa=g.faces.filter(f=>f.pl===a), Fb=g.faces.filter(f=>f.pl===b); const on=[]; for(const f of Fa) for(const q of f.P){ if(Math.abs(a.nx*q.x+a.ny*q.y+a.c-(b.nx*q.x+b.ny*q.y+b.c))<150&&Fb.some(h=>h.P.some(v=>Math.hypot(v.x-q.x,v.y-q.y)<5))) on.push(q); } /* tolerant: a hand-drawn contour (edges off parallel by hundredths of a degree) puts skeleton ridge points a few mm off both planes */
     if(on.length<2) continue; const d={x:-a.dn.y,y:a.dn.x}; let lo=null,hi=null; for(const q of on){ const t=q.x*d.x+q.y*d.y; if(!lo||t<lo.t) lo={q,t}; if(!hi||t>hi.t) hi={q,t}; } const L=hi.t-lo.t; if(L<1) continue;
     const m={x:(lo.q.x+hi.q.x)/2,y:(lo.q.y+hi.q.y)/2}, ZT=a.nx*m.x+a.ny*m.y+a.c, zwOf=(p,i)=>{ const e=r.edges[i]; return zb+Math.hypot(p.nx,p.ny)*(e.zo!=null?e.zo:roofOv(r,i)); }, za=zwOf(a,a.i), zbb=zwOf(b,b.i);
     out.push({key:a.i+'-'+b.i,L,seg:[lo.q,hi.q],m,dir:{x:a.dn.x,y:a.dn.y},i:a.i,j:b.i,ZT,zwa:za,zwb:zbb,Da:(ZT-za)/ka,Db:(ZT-zbb)/kb,zb,angs:[r.edges[a.i].a,r.edges[b.i].a]}); }
