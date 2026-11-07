@@ -4811,5 +4811,6 @@
 "выводы панелей": "panel terminals",
 "одна незамкнутая линия — ось марша, ступени по ней": "one open line — the flight axis, steps along it",
 "Нарисуйте траекторию": "Draw the path",
-"Траектория лестницы": "Stair path"
+"Траектория лестницы": "Stair path",
+"Не соответствует: траектория лестницы — незамкнутая линия": "Not valid: a stair path is an open line"
 }
