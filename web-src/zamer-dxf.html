@@ -5392,7 +5392,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.70':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.71':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -8748,7 +8748,7 @@ function open3D(){ linkPick=null; ridgePick=null; let M=bmLive(); if(!M.tri.leng
         const o0=[-1,-1,-1], g0=pr(o0); x.lineWidth=2; for(const [a,col,lab] of AX){ const e=pr(o0.map((v,i)=>v+a[i]*2.9)), t=pr(o0.map((v,i)=>v+a[i]*3.45)); x.strokeStyle=col; x.fillStyle=col; x.globalAlpha=.85; x.beginPath(); x.moveTo(g0.x,g0.y); x.lineTo(e.x,e.y); x.stroke(); x.globalAlpha=1; x.font='700 11px '+FNUM; x.fillText(lab,t.x,t.y); } }
       const O=ORG(), L0=Math.max(600,R*0.12), p0=doc.settings.noAx3?null:proj([O.x,O.y,0]); if(p0) for(const [a,col,lab] of AX){ const p1=proj([O.x+a[0]*L0,O.y+a[1]*L0,a[2]*L0]); if(!p1) continue; x.strokeStyle=col; x.fillStyle=col; x.lineWidth=2; x.beginPath(); x.moveTo(p0.x,p0.y); x.lineTo(p1.x,p1.y); x.stroke(); x.fillText(lab,p1.x+(p1.x-p0.x)*0.12,p1.y+(p1.y-p0.y)*0.12); } }catch(_){}
     if(planEd&&planEd.skv&&planEd.skv.vk==='v3'){ extSkGhost(); sweepSkLive(); }
-    try{ RFLK.v3=planEd?[]:rfLkView(x,M.tri||[],proj,v3.sel&&v3.sel.id); }catch(_){ RFLK.v3=[]; }
+    try{ RFLK.v3=planEd&&planEd.skv?[]:rfLkView(x,M.tri||[],proj,(v3.sel&&v3.sel.id)||selId); }catch(_){ RFLK.v3=[]; }
     if(PDS&&PDS.vk==='v3') pdDraw(x,proj);
     if(planEd&&planEd.skv&&planEd.skv.vk==='v3') skvDrawOn(x);
     if(v3.box) boxDraw(x,v3.box);
@@ -9063,7 +9063,9 @@ function rfLkIcon(x,X,Y,R,on,faint){ x.save(); x.globalAlpha=faint?.85:1; x.begi
   const k=R/14, c=on&&!faint?'#fff':faint?'#6b7280':'#1f2933'; x.strokeStyle=c; x.lineWidth=1.8*k; x.lineJoin='round'; x.lineCap='round'; const bw=11*k, bh=8*k, bx=X-bw/2, by=Y-1*k; x.beginPath(); if(x.roundRect) x.roundRect(bx,by,bw,bh,1.6*k); else x.rect(bx,by,bw,bh); x.stroke();
   x.beginPath(); if(on){ x.moveTo(X-3.3*k,by); x.lineTo(X-3.3*k,by-2.4*k); x.arc(X,by-2.4*k,3.3*k,Math.PI,0); x.lineTo(X+3.3*k,by); } else { x.moveTo(X-3.3*k,by); x.lineTo(X-3.3*k,by-2.4*k); x.arc(X,by-2.4*k,3.3*k,Math.PI,-0.35); } x.stroke(); x.restore(); }
 /* the roofs to mark in a view: the selected one (button) and the locked ones (faint) */
-function rfLkDrawList(x,L,sid){ const out=[]; for(const o of L){ if(!o.S) continue; const sel=o.id===sid; if(!sel&&!o.lock) continue; rfLkIcon(x,o.S.x,o.S.y,sel?14:11,!!o.lock,!sel); out.push({id:o.id,x:o.S.x,y:o.S.y,sel}); } return out; }
+function rfLkDrawList(x,L,sid){ const out=[], cw=x.canvas.width/(x.getTransform?x.getTransform().a||1:1), ch=x.canvas.height/(x.getTransform?x.getTransform().d||1:1);
+  for(const o of L){ if(!o.S) continue; const sel=o.id===sid; if(!sel&&!o.lock) continue; /* kept on screen: a roof larger than the view (zoomed in) still shows its padlock at the edge; not under the view cube / compass corner */ let X=Math.max(22,Math.min(cw-84,o.S.x)), Y=Math.max(22,Math.min(ch-22,o.S.y)); if(X<160&&Y<175) Y=175;
+    rfLkIcon(x,X,Y,sel?14:11,!!o.lock,!sel); out.push({id:o.id,x:X,y:Y,sel}); } return out; }
 function rfLkPlan(){ const L=[]; for(const it of doc.items){ if(!rfIs(it)) continue; if(it.id!==selId&&!it.lock) continue; let P=[]; try{ if(it.t==='roof'){ const g=roofGeom(it,doc.curLv); P=(g&&g.O&&g.O.length?g.O:it.pts); } else { const G=primPlan(it,doc.curLv); P=G.base&&G.base.length?G.base:[it.p]; } }catch(_){ P=it.pts||[]; } L.push({id:it.id,lock:it.lock,S:rfLkSpot(P.map(toS))}); }
   RFLK.plan=rfLkDrawList(ctx,L,tool==='select'?selId:null); }
 /* 3D / facade: the roof's own triangles, projected */
@@ -9492,7 +9494,7 @@ function elevDraw(){ if(!elevDraw.sb){ elevDraw.sb=1; setTimeout(()=>{ elevDraw.
         if(area<2e5){ // скат виден ребром (торцевой фасад): цифра на середине его линии, чуть снаружи
           let lo=fc.P[0],hi=fc.P[0]; for(const p of fc.P){ if(p.z<lo.z) lo=p; if(p.z>hi.z) hi=p; } const a1=evS(lo.u,lo.z), b1=evS(hi.u,hi.z), mx=(a1.x+b1.x)/2, my=(a1.y+b1.y)/2, dx=b1.x-a1.x, dy=b1.y-a1.y, l=Math.hypot(dx,dy)||1; let nx=dy/l, ny=-dx/l; if(ny>0){ nx=-nx; ny=-ny; } c={x:mx+nx*18,y:my+ny*18}; }
         if(EV.hits.some(h=>h.kind==='rA'&&Math.hypot(h.x-c.x,h.y-c.y)<26)) continue; tag(Math.round(a*10)/10+'°',c.x,c.y,'rA',{i,val:a}); } } }
-  try{ RFLK.ev=planEd?[]:rfLkView(x,EV.M?EV.M.tri:[],q=>evS(evU({x:q[0],y:q[1]}),q[2]),EV.sel&&EV.sel.it&&EV.sel.it.id); }catch(_){ RFLK.ev=[]; }
+  try{ RFLK.ev=planEd&&planEd.skv?[]:rfLkView(x,EV.M?EV.M.tri:[],q=>evS(evU({x:q[0],y:q[1]}),q[2]),(EV.sel&&EV.sel.it&&EV.sel.it.id)||selId); }catch(_){ RFLK.ev=[]; }
   if(planEd&&planEd.skv&&planEd.skv.vk==='ev'){ extSkGhost(); sweepSkLive(); }
   if(PDS&&PDS.vk==='ev') pdDraw(x,q=>evS(evU({x:q[0],y:q[1]}),q[2]));
   if(EV.box) boxDraw(x,EV.box);
@@ -11854,7 +11856,7 @@ function cabZMenu(cur,dh,dv){ const it=(k,t,on,extra)=>`<button class="btn" ${k}
 function cabZMenuBind(on){ const m=document.getElementById('popMenu'); if(!m) return; m.oninput=e=>{ const t=e.target; if(t&&t.dataset&&t.dataset.cbdv){ const v=Math.abs(parseNum(String(t.value).replace('−','-'))); if(isFinite(v)) on(t.dataset.cbdv,v); } }; }
 const CABZN={roof:'По кровле',lv:'На высоте',dev:'Между устр.',free:'Свободный'}, CABZT={roof:'По скатам кровли и по перекрытиям; у края — ровный спуск',lv:'На высоте h от уровня',dev:'Между устройствами: от верхнего вниз на вынос, горизонтально, к нижнему — сверху',free:'Ровно по вашим вершинам — без обходов и автоматики, как пластилин'};
 function cabZSet(sel,m,dh){ if(!sel) return; if(m==='dev'&&dh){ if(sel.zm==='dev'&&cabDH(sel)===dh) return; pushUndo(); sel.zm='dev'; sel.dh=dh; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); try{ const V=cabEdView(); if(V) cabRedrawV(V); }catch(_){} return; } if(cabMode(sel)===m&&sel.zm===m) return; pushUndo(); const li=doc.levels.findIndex(L=>L.items.includes(sel)); if(m==='free'&&cabMode(sel)!=='free'&&li>=0){ try{ onLv(li,()=>{ const P3=cabColDrop(cabPath(sel,li).slice()), L=doc.levels[li], s0=cabEnd(sel,'a')?1:0, s1=cabEnd(sel,'b')?1:0, Q=P3.slice(s0,P3.length-s1); if(Q.length>=2){ if(!sel.fx) sel.fx=cabSnap(sel); sel.pts=Q.map(q=>({x:r3(q[0]),y:r3(q[1])})); cabSetPZ(sel,Q.map(q=>Math.round(q[2]-L.elev))); delete sel.byp; delete sel.nd; } }); }catch(e){ console.warn(e); } sel.fv=1; /* текущая трасса — стартовые вершины (кроме самой точки подключения) */ } sel.zm=m; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); try{ const V=cabEdView(); if(V) cabRedrawV(V); }catch(_){} if(m==='free') toast('Свободный: вершины встают куда поставите — без обходов и автоматики',true); }
-function cabMode(it){ const m=it.zm||'auto'; if(m==='lv'||m==='dev'||m==='roof'||m==='free') return m; const A=cabEnd(it,'a'), B=cabEnd(it,'b'); return A&&B&&A.it.t==='dev'&&B.it.t==='dev'?'dev':'roof'; }
+function cabMode(it){ const m=it.zm||'auto'; if(m==='dev'&&['a','b'].some(k=>{ const E=cabEnd(it,k); return E&&E.it.t==='solar'; })) return 'roof'; /* «between devices» means nothing for a cable from the panels: it goes over the roof, not through it */ if(m==='lv'||m==='dev'||m==='roof'||m==='free') return m; const A=cabEnd(it,'a'), B=cabEnd(it,'b'); return A&&B&&A.it.t==='dev'&&B.it.t==='dev'?'dev':'roof'; }
 // поверхности под точкой: скаты кровель (любой этаж) +60 мм, верх перекрытий +40 мм; ключ поверхности — чтобы найти её границу
 function cabSurfs(q,cache,nd){ const out=[]; let inO=false; doc.levels.forEach((L,lj)=>{ for(const r of L.items){ if(r.t==='roof'){ let g=cache.get(r.id); if(!g){ try{ g=roofGeom(roofExtended(r,lj),lj); }catch(e){ g=null; } cache.set(r.id,g); } if(!g) continue;
       let hitF=false; if(!nd) { const O=g.O||r.pts; if(O&&inPoly(O,q)) inO=true; }
@@ -12139,11 +12141,14 @@ function cabLaneShift(it,Q0){ let LS=null; try{ LS=cabRoofLanes()[it.id]; }catch
   for(const [k,lane] of Object.entries(M)){ const i=+k; for(const v of [i,i+1]) if(v>0&&v<Q.length-1) off[v]=Math.max(off[v],lane*CAB_LANE); }
   /* a vertex where the shared stretch begins or ends moves square to that stretch only (a mitred shift there would give a slanted piece) */
   const segN0=k=>{ const a=Q[k], b=Q[k+1], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); return l>20?[-dy/l,dx/l]:null; }, segN=k=>{ /* a vertical stretch (riser) moves square to the run that leads into it */ let g=segN0(k); for(let j=k-1;!g&&j>=0;j--) g=segN0(j); for(let j=k+1;!g&&j<Q.length-1;j++) g=segN0(j); return g; }, NV=VN.map((n,v)=>{ const pS=v>0&&M[v-1]!=null, nS=M[v]!=null; if(pS===nS) return n; const g=segN(pS?v-1:v); if(!g) return n; return g[0]*n[0]+g[1]*n[1]<0?[-g[0],-g[1]]:g; });
-  const sh=i=>off[i]?[NV[i][0]*off[i],NV[i][1]*off[i]]:[0,0], R=[];
+  /* the side is kept unless it would put the cable into a wall (a riser on a facade must stay on the outer face): then the other side, else no shift */
+  const cc=new Map(), inW=q=>{ try{ return cabWalls(cc).some(W=>q[2]>=W.z0-30&&q[2]<=W.z1+25&&inPoly(W.P,{x:q[0],y:q[1]})); }catch(_){ return false; } };
+  const build=sg=>{ const sh=i=>off[i]?[NV[i][0]*off[i]*sg,NV[i][1]*off[i]*sg]:[0,0], R=[];
   for(let i=0;i<Q.length;i++){ const q=Q[i], v=sh(i), n=off[i]?[q[0]+v[0],q[1]+v[1],q[2]]:q; if(off[i]) for(const k of Object.keys(q)) if(isNaN(+k)) n[k]=q[k];
     /* lane starts / ends: a short step across at the corner where the shared stretch begins / ends — the rest of the run stays on its line, no slanted piece */ if(i>0&&!!off[i]!==!!off[i-1]){ const p=Q[i-1], d=[q[0]-p[0],q[1]-p[1]], l=Math.hypot(...d), w=off[i]?v:sh(i-1), lw=Math.hypot(...w); if(lw>1&&(l<=1||Math.abs((d[0]*w[0]+d[1]*w[1])/(l*lw))<0.9)) R.push(off[i]?[q[0],q[1],q[2]]:[p[0],p[1],p[2]]); }
     R.push(n); }
   /* no spikes (there and back) and no crumbs left after the shift */ for(let g=0;g<4;g++){ let ch=false; for(let i=1;i<R.length-1;i++){ const a=R[i-1], b=R[i], c=R[i+1], u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], w=[c[0]-b[0],c[1]-b[1],c[2]-b[2]], lu=Math.hypot(...u), lw=Math.hypot(...w); if(lu<5||(lw>1&&lu>1&&(u[0]*w[0]+u[1]*w[1]+u[2]*w[2])/(lu*lw)<-0.95)){ if(lu<5&&i===1) continue; R.splice(i,1); i--; ch=true; } } if(!ch) break; }
+  return R; }; const wallIn=R=>R.some(q=>inW(q)&&!Q0.some(o=>Math.hypot(o[0]-q[0],o[1]-q[1],o[2]-q[2])<1)); let R=build(1); if(wallIn(R)){ R=build(-1); if(wallIn(R)) return Q0; }
   /* keep the shift only when it adds no slanted or doubling-back pieces; otherwise the route stays as it was */ const bad=P=>{ let n=0; for(let i=0;i<P.length-1;i++){ const a=P[i], b=P[i+1], dx=Math.abs(b[0]-a[0]), dy=Math.abs(b[1]-a[1]), dz=Math.abs(b[2]-a[2]), dxy=Math.hypot(dx,dy); if(dz>100&&dxy>5&&dxy<0.2*dz) n++; if(dz<5&&dx>5&&dy>5) n++; const c=P[i+2]; if(c){ const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], w=[c[0]-b[0],c[1]-b[1],c[2]-b[2]], lu=Math.hypot(...u), lw=Math.hypot(...w); if(lu>1&&lw>1&&(u[0]*w[0]+u[1]*w[1]+u[2]*w[2])/(lu*lw)<-0.95) n++; } } return n; };
   return bad(R)>bad(Q0)?Q0:R; }
 /* a stretch hanging in free air between buildings is drawn as the calculation takes it: down the wall, 0,7 m deep in the trench, up again */
@@ -12193,7 +12198,7 @@ function cabPath0(it,li){ const P=it.pts||[], role=cabKind(it); if(P.length<2) r
   const end=(key,atStart)=>{ const E=cabEnd(it,key); if(!E) return; const R=atStart?out[0]:out[out.length-1]; let add=[];
     if(E.it.t==='dev'){ const c=devCP(E.it,E.li,role,it), A=devCPapp(E.it,role,c,it), side=devCPkey(E.it,role,it).split('-')[0];
       /* ввод снизу (сверху), а трасса приходит сверху (снизу): колонна — сбоку от корпуса, под ним к точке ввода, не сквозь прибор */
-      const A2=(()=>{ if(HDEV[E.it.k]||(side!=='bot'&&side!=='top')) return A; const zr=RT.zr!=null?R[2]:R[2]; if(side==='bot'?zr<=c[2]+1:zr>=c[2]-1) return A; const Fd=devFrame(E.it), off=Fd.D.w/2+100, bk=Math.max(0,Fd.D.d/2-50); /* колонна — у стены (50 мм от грани), сбоку от корпуса; под прибором — к точке ввода */ const sg=((R[0]-c[0])*Fd.u.x+(R[1]-c[1])*Fd.u.y)>=0?1:-1, cand=k=>[c[0]+Fd.u.x*off*k-Fd.n.x*bk,c[1]+Fd.u.y*off*k-Fd.n.y*bk,A[2]]; let P2=cand(sg); try{ if(cabInWall({x:P2[0],y:P2[1]},A[2],cache)) P2=cand(-sg); }catch(_){} P2.m=bk>1?[c[0]-Fd.n.x*bk,c[1]-Fd.n.y*bk,A[2]]:null; return P2; })(), A2m=A2!==A&&A2.m?[A2.m]:[];
+      const A2=(()=>{ if(HDEV[E.it.k]||(side!=='bot'&&side!=='top')) return A; const zr=RT.zr!=null?R[2]:R[2]; if(side==='bot'?zr<=c[2]+1:zr>=c[2]-1) return A; const Fd=devFrame(E.it), off=Fd.D.w/2+100, bk=Math.max(0,Fd.D.d/2-50); /* колонна — у стены (50 мм от грани), сбоку от корпуса; под прибором — к точке ввода */ const sg=((R[0]-c[0])*Fd.u.x+(R[1]-c[1])*Fd.u.y)>=0?1:-1, tc=(c[0]-E.it.p.x)*Fd.u.x+(c[1]-E.it.p.y)*Fd.u.y /* the entry slot may sit off the box centre: the column still goes beside the box, not through its edge */, cand=k=>{ const o=off+Math.max(0,-k*tc); return [c[0]+Fd.u.x*o*k-Fd.n.x*bk,c[1]+Fd.u.y*o*k-Fd.n.y*bk,A[2]]; }; let P2=cand(sg); try{ if(cabInWall({x:P2[0],y:P2[1]},A[2],cache)) P2=cand(-sg); }catch(_){} P2.m=bk>1?[c[0]-Fd.n.x*bk,c[1]-Fd.n.y*bk,A[2]]:null; return P2; })(), A2m=A2!==A&&A2.m?[A2.m]:[];
       const N1=atStart?out[1]:out[out.length-2], foot=(Pq,a,b)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], l2=dx*dx+dy*dy; if(l2<1) return null; const t=((Pq[0]-a[0])*dx+(Pq[1]-a[1])*dy)/l2; return {t,x:a[0]+dx*t,y:a[1]+dy*t}; };
       if(RT.zr!=null){ /* между устройствами: из точки подключения — по вертикали на высоту трассы, отход под прямым углом к трассе, дальше по трассе */ const S=side==='bot'||side==='top'?(A2!==A?A2:c):A, z=R[2], Fo=N1&&Math.abs(N1[2]-z)<1?foot(S,R,N1):null; let mid=[];
         if(Fo&&Fo.t>0.001&&Fo.t<0.999){ R[0]=Fo.x; R[1]=Fo.y; } else if(Fo&&Fo.t<=0.001&&Math.hypot(Fo.x-R[0],Fo.y-R[1])>1) mid=[[Fo.x,Fo.y,z]];
