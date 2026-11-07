@@ -119,6 +119,7 @@ select.inp{font-family:var(--f-ui);font-size:13px;width:auto;padding-right:6px}
 .axpick button[aria-pressed="true"]{background:var(--tape);color:var(--tape-ink)}
 .lvdd{position:relative;flex:none}
 @media (max-width:520px){.top{padding-inline:8px;gap:3px}.num{height:36px;padding:0 2px 0 6px}#docNum{width:54px;font-size:14px}.unitsel{padding:0 2px;font-size:13px}.lvbtn{max-width:96px;padding:0 7px;font-size:13px}.lvbtn small{display:none}.export{padding:0 10px 4px;font-size:15px;height:36px}#docName{font-size:15px}}
+.plb[aria-pressed="true"]{outline:2px solid #4a7fe8;outline-offset:-2px;background:rgba(74,127,232,.18)}
 #popMenu .btn[aria-pressed="true"]{outline:2px solid #4a7fe8;outline-offset:-2px;background:rgba(74,127,232,.14)}
 .hshi{width:14px;height:14px;vertical-align:-2px}.dda{font-size:10px;opacity:.8;padding-left:2px}
 .unitsel{height:36px;flex:none;padding:0 4px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-weight:700;font-size:14px;cursor:pointer}
@@ -1671,6 +1672,8 @@ function levelWallCen(){ let x=0,y=0,n=0; for(const w of doc.items) if(isWall(w)
 // какая грань стены наружная: дальняя от центра стен уровня
 function wallOutSide(it,cen){ const u=unit(it.a,it.b), n={x:-u.y,y:u.x}, m={x:(it.a.x+it.b.x)/2-cen.x,y:(it.a.y+it.b.y)/2-cen.y}; return m.x*n.x+m.y*n.y>=0?'L':'R'; }
 const sfOk=c=>{ const m=doc.settings.snapFace||'all'; return m==='all'||!c.fs||c.fs===m; };
+/* walls of this level and of the level below, regardless of the snap toggles (roof plan contour) */
+function snapGeoAll(ex){ const st=doc.settings, sv=st.snapLv; if(sv===false) st.snapLv=true; try{ return snapGeo(ex); } finally{ if(sv===false) st.snapLv=sv; } }
 function snapGeo0(ex){
   const pts=[],segs=[],circs=[]; let wc0=null; const wcen=()=>{ if(wc0) return wc0; let x=0,y=0,n=0; for(const w of doc.items) if(isWall(w)&&!isArc(w)){ x+=w.a.x+w.b.x; y+=w.a.y+w.b.y; n+=2; } return wc0=n?{x:x/n,y:y/n}:{x:0,y:0}; };
   const mid=(a,b)=>({x:r3((a.x+b.x)/2),y:r3((a.y+b.y)/2)});
@@ -1733,7 +1736,7 @@ let polarGuide=null, trackGuide=null;
 function trackCands(pts,from){ return pts.filter(c=>(c.k==='end'||c.k==='mid'||c.k==='origin')&&!(from&&near(c.p,from))); }
 function snapPoint(sx,sy,from,opt){ polarGuide=null; trackGuide=null;
   opt=opt||{}; let w=toW(sx,sy); liveSnap=null; alignGuide=null;
-  const G=opt.onlyExtra?{pts:[],segs:[],circs:[]}:osnapOn?snapGeo(opt.exclude):{pts:chain.pts.map(p=>({p,k:'end'})).concat([{p:{x:0,y:0},k:'origin'}]),segs:[],circs:[]};
+  const G=opt.onlyExtra?{pts:[],segs:[],circs:[]}:opt.geoAll?snapGeoAll(opt.exclude):osnapOn?snapGeo(opt.exclude):{pts:chain.pts.map(p=>({p,k:'end'})).concat([{p:{x:0,y:0},k:'origin'}]),segs:[],circs:[]};
   const {segs,circs}=G; let pts=opt.extra?G.pts.concat(opt.extra.map(p=>({p,k:'end'}))):G.pts; if(opt.extraMid) pts=pts.concat(opt.extraMid.map(p=>({p,k:'mid'})));
   let best=null,bd=18;
   const okPt=q=>{ if(!opt.strict||!from||axisMode==='free') return true;
@@ -5324,7 +5327,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.52':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.53':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6819,11 +6822,11 @@ function planStart(r){ if(!r||r.t!=='roof'||isExt(r)||r.type==='prc') return; pl
 function planHist(){ const E=planEd; E.H.push(JSON.stringify(E.L)); if(E.H.length>200) E.H.shift(); }
 function planUndo(){ const E=planEd; if(!E) return false; if(E.a){ E.a=null; E.live=null; } else if(E.H.length){ E.L=JSON.parse(E.H.pop()); E.S=[]; } else { toast('Нечего отменять'); } panelKey=''; syncPanel(); redraw(); return true; }
 /* snapping = drawing lines: the app's snapPoint (Орто 0/45/90°, guides) with every line end as a point; a line under the finger stops the segment */
-function planSnap(sx,sy,from,skip,polar){ const L=planEd.L, ex=[], mid=[]; /* sketch vertices and line midpoints: snap targets and tracking (dashed guide) sources */
+function planSnap(sx,sy,from,skip,polar,wall){ if(wall==null) wall=planEd.k==='c'; /* contour snaps to walls (this level and below); ridges and joints only to the sketch */ const L=planEd.L, ex=[], mid=[]; /* sketch vertices and line midpoints: snap targets and tracking (dashed guide) sources */
   L.forEach((l,i)=>{ const sa=skip&&skip(i,'a'), sb=skip&&skip(i,'b'); if(!sa) ex.push(l.a); if(!sb) ex.push(l.b); if(!sa&&!sb&&Math.hypot(l.b.x-l.a.x,l.b.y-l.a.y)>1) mid.push({x:(l.a.x+l.b.x)/2,y:(l.a.y+l.b.y)/2}); });
-  let q; try{ q=snapPoint(sx,sy,from||null,{extra:ex,extraMid:mid,onlyExtra:true,track:true,polar:polar&&polar.length?polar:undefined}); }catch(e){ q=toW(sx,sy); }
+  let q; try{ q=snapPoint(sx,sy,from||null,{extra:ex,extraMid:mid,onlyExtra:!wall,geoAll:wall,exclude:planEd.id?new Set([planEd.id]):undefined,track:true,polar:polar&&polar.length?polar:undefined}); }catch(e){ q=toW(sx,sy); }
   /* a vertex, a midpoint or a tracking alignment wins over sliding onto a line */
-  if(liveSnap==='end'||liveSnap==='corner'||liveSnap==='mid'||(trackGuide&&trackGuide.length)||(polarGuide&&polarGuide.length>1)) return {x:r3(q.x),y:r3(q.y)};
+  if(liveSnap==='end'||liveSnap==='corner'||liveSnap==='mid'||liveSnap==='center'||(wall&&(liveSnap==='face'||liveSnap==='axis'||liveSnap==='onc'))||(trackGuide&&trackGuide.length)||(polarGuide&&polarGuide.length>1)) return {x:r3(q.x),y:r3(q.y)};
   const sq=toS(q); let best=null, bd=14; L.forEach((l,i)=>{ if(skip&&(skip(i,'a')||skip(i,'b'))) return; const A=l.a,B=l.b, d=segDist(sq.x,sq.y,toS(A),toS(B)); if(d>=bd) return;
     if(from&&axisMode==='ortho'){ const d0={x:q.x-from.x,y:q.y-from.y}, len=Math.hypot(d0.x,d0.y); if(len<1) return; const u={x:d0.x/len,y:d0.y/len}, e={x:B.x-A.x,y:B.y-A.y}, den=u.x*e.y-u.y*e.x; if(Math.abs(den)<1e-9) return; const t=((A.x-from.x)*e.y-(A.y-from.y)*e.x)/den, uu=((A.x-from.x)*u.y-(A.y-from.y)*u.x)/den; if(t<=0||uu<-1e-6||uu>1+1e-6) return; bd=d; best={x:from.x+u.x*t,y:from.y+u.y*t}; }
     else { const v={x:B.x-A.x,y:B.y-A.y}, l2=v.x*v.x+v.y*v.y||1, t=Math.max(0,Math.min(1,((q.x-A.x)*v.x+(q.y-A.y)*v.y)/l2)); bd=d; best={x:A.x+v.x*t,y:A.y+v.y*t}; } });
@@ -6848,7 +6851,7 @@ function planMove(q,p){ const E=planEd; E.L=JSON.parse(q.snap); let S=q.t==='mv'
   const pts=planPts(S,true), w=toW(p.x,p.y); /* points attract but are never glued: only the taken point / line moves */ let dx=w.x-q.w0.x, dy=w.y-q.w0.y;
   if(q.t==='rot'){ const C=pts.reduce((m,x)=>({x:m.x+x.o[x.f].x/pts.length,y:m.y+x.o[x.f].y/pts.length}),{x:0,y:0}); let an=Math.atan2(w.y-C.y,w.x-C.x)-Math.atan2(q.w0.y-C.y,q.w0.x-C.x); an=Math.round(an/(Math.PI/12))*(Math.PI/12); const c=Math.cos(an), sn=Math.sin(an);
     for(const x of pts){ const v=x.o[x.f], X=v.x-C.x, Y=v.y-C.y; x.o[x.f]={x:r3(C.x+X*c-Y*sn),y:r3(C.y+X*sn+Y*c)}; } }
-  else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth]); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; }
+  else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth],l0.t==='c'); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; }
     for(const x of pts){ const v=x.o[x.f]; x.o[x.f]={x:r3(v.x+dx),y:r3(v.y+dy)}; } }
   q.moved=true; redraw(); }
 function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0) E.S.splice(j,1); else E.S.push(q.h); panelKey=''; syncPanel(); redraw(); } return; }
@@ -6895,7 +6898,7 @@ function planPanel(){ const E=planEd, S=E.S||[];
   const I={s:'<path d="M8 3v15l4-4 3 6 2.5-1-3-6H20z"/>',c:'<path d="M3 12h18" stroke="#9aa5b1" stroke-width="3"/>',r:'<path d="M3 12h18" stroke="#d63fd6" stroke-width="3"/>',j:'<path d="M3 12h18" stroke="#2fae5a" stroke-width="3" stroke-dasharray="4 3"/>',
     v:'<path d="M2 15h20"/><rect x="9" y="11" width="6" height="6"/><path d="M12 3v5M9.5 5.5h5"/>',m:'<path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/>',cp:'<rect x="4" y="7" width="11" height="13" rx="2"/><rect x="9" y="3" width="11" height="13" rx="2"/>',rot:'<path d="M19 8a8 8 0 1 0 1 6"/><path d="M19 3v5h-5"/>',
     or:'<path d="M4 20V4M4 20h16"/><path d="M4 14h6v6" stroke-width="1.4"/>',t:'<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/>',del:'<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>'};
-  const B=(act,k,lbl,tt,on)=>`<button class="btn" data-act="${act}"${k?` data-k="${k}"`:''} aria-pressed="${!!on}" title="${tt}" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:58px;height:auto;min-height:52px;line-height:1.1;padding:4px 6px"><svg viewBox="0 0 24 24" style="width:24px;height:20px;flex:none" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k||act]}</svg><span style="font-size:11px">${lbl}</span></button>`;
+  const B=(act,k,lbl,tt,on)=>`<button class="btn plb" data-act="${act}"${k?` data-k="${k}"`:''} aria-pressed="${!!on}" title="${tt}" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:58px;height:auto;min-height:52px;line-height:1.1;padding:4px 6px"><svg viewBox="0 0 24 24" style="width:24px;height:20px;flex:none" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k||act]}</svg><span style="font-size:11px">${lbl}</span></button>`;
   return `<div class="title">План кровли</div>
     ${B('plK','s','Выбор','Касание — выбрать (подряд — несколько, ещё раз — отпустить); тянуть точку или линию — двигается только она',E.k==='s')}${B('plK','c','Контур','Контур крыши — линиями, как «Линии»',E.k==='c')}${B('plK','r','Конёк','Конёк — линиями, как «Линии»',E.k==='r')}${B('plK','j','Стык','Ребро вальмы или ендова — линиями, как «Линии»',E.k==='j')}
     <span style="display:inline-block;width:1px;height:34px;background:#8885;margin:0 4px;vertical-align:middle"></span>
