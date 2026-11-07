@@ -4555,5 +4555,14 @@
 "завершить": "finish",
 "Двойное касание — изменить текст": "Double tap — edit the text",
 "Край обоих скатов сдвинут на": "Edge of both slopes moved by",
-"ступенька не помещается": "the step does not fit"
+"ступенька не помещается": "the step does not fit",
+"конёк зафиксирован": "ridge fixed",
+"карниз на месте, конёк": "eave in place, ridge",
+"Не соответствует: скат не короче": "Not valid: slope not shorter than",
+"при фиксированном коньке скат короче не сделать": "with a fixed ridge the slope cannot be shorter",
+"конёк ниже карниза": "ridge below the eave",
+"уклон соседнего ската вышел бы": "the opposite slope pitch would be",
+"свес стал бы меньше": "the overhang would be less than",
+"пересчитан": "recalculated",
+"По скату": "Along the slope"
 }
