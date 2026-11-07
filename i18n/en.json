@@ -4805,5 +4805,8 @@
 "Линии сохранены": "Lines saved",
 "Аннотации": "Annotations",
 "к выбору": "back to Select",
-"Конструкц.": "Construction"
+"Конструкц.": "Construction",
+"одна незамкнутая линия от массива или устройства до другого устройства": "one open line from an array or a device to another device",
+"устройства — магнит": "devices — magnet",
+"выводы панелей": "panel terminals"
 }
