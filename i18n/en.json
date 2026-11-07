@@ -4864,5 +4864,7 @@
 "Дуга: тяните концы или ромб на дуге": "Arc: drag the ends or the diamond on the arc",
 "коснитесь, чтобы ввести": "tap to type",
 "Окружность удалена": "Circle deleted",
-"Дуга удалена": "Arc deleted"
+"Дуга удалена": "Arc deleted",
+"выбрана дуга: тяните концы или": "arc selected: drag the ends or",
+"коснитесь": "tap"
 }
