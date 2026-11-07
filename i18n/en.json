@@ -4812,5 +4812,12 @@
 "одна незамкнутая линия — ось марша, ступени по ней": "one open line — the flight axis, steps along it",
 "Нарисуйте траекторию": "Draw the path",
 "Траектория лестницы": "Stair path",
-"Не соответствует: траектория лестницы — незамкнутая линия": "Not valid: a stair path is an open line"
+"Не соответствует: траектория лестницы — незамкнутая линия": "Not valid: a stair path is an open line",
+"Профиль крыши — низ кровли: незамкнутая линия слева направо. Липнет к стенам и уровням": "Roof profile — underside of the roofing: an open line from left to right. Snaps to walls and levels",
+"нарисуйте профиль: минимум две точки": "draw the profile: at least two points",
+"профиль — незамкнутая линия": "the profile is an open line",
+"дальше отступ и глубина": "next: offset and depth",
+"нет профиля": "no profile",
+"Профиль крыши (низ кровли": "Roof profile (underside of the roofing",
+"от гор": "from horiz"
 }
