@@ -4858,5 +4858,11 @@
 "Своё": "Own",
 "Крыша закреплена — не двигается. Уклоны, высоты, свесы меняются как обычно. Снять — замок у крыши": "The roof is locked — it does not move. Pitches, heights, overhangs change as usual. Unlock — the padlock by the roof",
 "Крыша закреплена: не двигается. Уклоны, высоты, свесы — как обычно": "Roof locked: it does not move. Pitches, heights, overhangs — as usual",
-"Закреплённую крышу не удалить — сначала снимите замок у крыши": "A locked roof cannot be deleted — unlock it first (the padlock by the roof)"
+"Закреплённую крышу не удалить — сначала снимите замок у крыши": "A locked roof cannot be deleted — unlock it first (the padlock by the roof)",
+"Не соответствует: радиус не меньше половины расстояния между концами": "Not valid: the radius is at least half the distance between the ends",
+"Окружность: тяните центр или ромб на окружности": "Circle: drag the centre or the diamond on the circle",
+"Дуга: тяните концы или ромб на дуге": "Arc: drag the ends or the diamond on the arc",
+"коснитесь, чтобы ввести": "tap to type",
+"Окружность удалена": "Circle deleted",
+"Дуга удалена": "Arc deleted"
 }
