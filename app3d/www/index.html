@@ -5372,7 +5372,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.49':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.50':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6917,9 +6917,16 @@ function planDel(){ const E=planEd, S=E.S||[]; if(!S.length){ toast('Снача�
 function planBuild(){ const E=planEd, C=E.L.filter(l=>l.t==='c'); if(C.length<3){ toast('Нарисуйте контур крыши (кнопка «Контур»)'); return false; }
   let pts=null; try{ const G=planGraph([],C.map(l=>({a:l.a,b:l.b,t:'c'}))); let best=null; for(const F of G.F){ const A=Math.abs(polyArea2(F.P)); if(!best||A>best.A) best={A,P:F.P}; } if(best) pts=cleanPoly(best.P.map(v=>({x:r3(v.x),y:r3(v.y)}))); }catch(e){ pts=null; }
   if(!pts||pts.length<3){ toast('Контур не замкнут — соедините концы линий контура'); return false; } if(polyArea2(pts)<0) pts.reverse();
-  const lines=E.L.filter(l=>l.t!=='c').map(l=>({...l})), K=Math.tan(30*Math.PI/180);
-  /* a ridge without its height takes the joined ridge's, else 30° from the nearest contour edge */ for(let g=0;g<5;g++) for(const l of lines){ if(l.t!=='r'||l.h!=null) continue; const o=lines.find(x=>x!==l&&x.t==='r'&&x.h!=null&&[x.a,x.b].some(v=>[l.a,l.b].some(w=>Math.hypot(v.x-w.x,v.y-w.y)<5))); if(o) l.h=o.h; }
-  for(const l of lines) if(l.t==='r'&&l.h==null){ const m={x:(l.a.x+l.b.x)/2,y:(l.a.y+l.b.y)/2}; l.h=r1(segDistPoly(pts,m)*K); }
+  const lines=E.L.filter(l=>l.t!=='c').map(l=>({...l,a:{...l.a},b:{...l.b}})), K=Math.tan(30*Math.PI/180);
+  /* ends that almost meet (a finger is not exact) are joined: to a contour corner, another line's end, or onto a line / contour edge — a gap of a few cm would split slopes apart */
+  const tol=80, C2=pts.map((v,k)=>[v,pts[(k+1)%pts.length]]);
+  { /* ends close together form one point (a contour corner wins, else their middle) */ const N=[]; for(const v of pts) N.push({v,fix:true}); for(const l of lines) for(const e of ['a','b']) N.push({v:l[e],l,e}); const par=N.map((_,k)=>k), f=k=>par[k]===k?k:(par[k]=f(par[k]));
+    for(let a=0;a<N.length;a++) for(let b=a+1;b<N.length;b++) if(Math.hypot(N[a].v.x-N[b].v.x,N[a].v.y-N[b].v.y)<tol) par[f(a)]=f(b);
+    const G=new Map(); N.forEach((n,k)=>{ const r=f(k); if(!G.has(r)) G.set(r,[]); G.get(r).push(n); });
+    for(const g of G.values()){ if(g.length<2) continue; const fx=g.find(n=>n.fix), c=fx?fx.v:{x:g.reduce((m,n)=>m+n.v.x,0)/g.length,y:g.reduce((m,n)=>m+n.v.y,0)/g.length}; for(const n of g) if(n.l){ n.l[n.e]={x:r3(c.x),y:r3(c.y)}; n.done=true; } }
+    /* a lone end close to a line or contour edge lands on it */ for(const n of N){ if(!n.l||n.done) continue; let best=null, bd=tol; for(const [A,B] of C2.concat(lines.filter(o=>o!==n.l).map(o=>[o.a,o.b]))){ const w={x:B.x-A.x,y:B.y-A.y}, l2=w.x*w.x+w.y*w.y||1, t=Math.max(0,Math.min(1,((n.v.x-A.x)*w.x+(n.v.y-A.y)*w.y)/l2)), q={x:A.x+w.x*t,y:A.y+w.y*t}, d=Math.hypot(q.x-n.v.x,q.y-n.v.y); if(d<bd&&d>0.01){ bd=d; best=q; } } if(best) n.l[n.e]={x:r3(best.x),y:r3(best.y)}; } }
+  /* ridges: one height for the whole roof (eaves are all at one level) — the highest one drawn, else 30° on the widest slope */
+  const RR=lines.filter(l=>l.t==='r'); if(RR.length){ let h=null; for(const l of RR) if(l.h!=null) h=Math.max(h==null?0:h,l.h); if(h==null){ let w=0; for(const l of RR){ const m={x:(l.a.x+l.b.x)/2,y:(l.a.y+l.b.y)/2}; w=Math.max(w,segDistPoly(pts,m)); } h=r1(w*K); } for(const l of RR) l.h=h; }
   let r=E.id?doc.items.find(i=>i.id===E.id):null; pushUndo();
   if(!r){ const d=roofDef(), cur=doc.curLv, hasW=li=>doc.levels[li].items.some(isWall); r={id:uid(),t:'roof',pts,type:'custom',ang:30,ov:d.ov,th:d.th,onTop:hasW(cur)?true:(cur>0&&hasW(cur-1)?false:true),bo:0}; doc.items.push(r); }
   else r.pts=pts; r.edges=pts.map(()=>({s:false})); r.plan={L:lines}; const g=planSync(r); planEd=null; selId=r.id; persist(); panelKey=''; syncPanel(); syncModeBtns(); redraw(); viewRefresh();
