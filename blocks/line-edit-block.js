@@ -1,23 +1,9 @@
-/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.56.
-   Извлечено из web-src/zamer-dxf.html (функции sk* и plan*). Не самостоятельный модуль: опирается на холст приложения
-   (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc, openInline/closeInline kind 'sk', toast, syncPanel).
-   Описание поведения и меню — blocks/STANDARD_LINE_BLOCK.md. */
-function skylDef(){ if(!doc.settings.skyl) doc.settings.skyl={w:780,h:1180,pr:100,fr:60,op:true}; return doc.settings.skyl; }
-
-function skylST(it,shr){ const w=it.w||780, h=it.sh==='round'?w:(it.h||1180); if(it.sh==='round'){ const r=w/2-(shr||0), P=[]; for(let i=0;i<24;i++){ const a=i/24*Math.PI*2; P.push([Math.cos(a)*r,Math.sin(a)*r]); } return P; } const a=w/2-(shr||0), b=h/2-(shr||0); return [[-a,-b],[a,-b],[a,b],[-a,b]]; }
-
-function skylGeom(it,F){ const w=it.w||780, h=it.sh==='round'?w:(it.h||1180); return {w,h,fp:skylST(it,0).map(([s2,t])=>F.P2(s2,t*F.ca))}; }
-
-function skylMesh(M,it,li){ const F=insFrame(it,li); if(!F) return; const w=it.w||780, h=it.h||1180, pr=it.pr==null?100:it.pr, fr=it.fr||60, thp=F.g.th;
-  const S=(s,t,n)=>F.W(s,t*F.ca-n*F.sa,t*F.sa+n*F.ca), col=rgbOf(it.fc,'#5d5650'), gl=[0.55,0.75,0.9];
-  const O=skylST(it,0), I=skylST(it,fr), n=O.length;
-  for(let i=0;i<n;i++){ const j=(i+1)%n;
-    addQuad(M,S(...O[i],pr),S(...O[j],pr),S(...I[j],pr),S(...I[i],pr),col,'frame'); addQuad(M,S(...I[i],-thp),S(...I[j],-thp),S(...O[j],-thp),S(...O[i],-thp),col,'frame');
-    addQuad(M,S(...O[i],-thp),S(...O[j],-thp),S(...O[j],pr),S(...O[i],pr),col,'frame'); addQuad(M,S(...I[j],-thp),S(...I[i],-thp),S(...I[i],pr),S(...I[j],pr),col,'frame');
-    M.lines.push([S(...O[i],pr),S(...O[j],pr)],[S(...I[i],pr),S(...I[j],pr)]); if(n===4) M.lines.push([S(...O[i],0),S(...O[i],pr)]); }
-  const gz=Math.max(10,pr*0.55); for(let i=1;i<n-1;i++) M.tri.push({v:[S(...I[0],gz),S(...I[i],gz),S(...I[i+1],gz)],col:gl,tag:'glass',iid:M.cur,li:M.curLi});
-  if(it.op!==false){ const bw=Math.min(40,fr*0.6), x0=-(it.w||780)/2+fr, x1=-x0; addQuad(M,S(x0,-bw/2,gz+15),S(x1,-bw/2,gz+15),S(x1,bw/2,gz+15),S(x0,bw/2,gz+15),col,'frame'); M.lines.push([S(x0,0,gz+16),S(x1,0,gz+16)]); } }
-
+/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.59.
+   Извлечено из web-src/zamer-dxf.html: константы SK*, функции sk*, plan* (редактор эскиза) и drawPlanEd (отрисовка).
+   Не самостоятельный модуль: опирается на холст приложения (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc,
+   openInline/closeInline kind 'sk', toast, syncPanel, redraw). Описание поведения и меню — blocks/STANDARD_LINE_BLOCK.md.
+   Изменения после 2.9.56: 2.9.58 — размер выделенной вершины показывается, даже если её линия тоже выделена;
+   2.9.59 — выделена только одна вершина: касание другой снимает прежнюю. */
 function planOpen(r){ /* r: a roof to edit (its contour and plan become lines), or null: a new roof */ const L=[];
   if(r){ if(polyArea2(r.pts)<0){ r.pts.reverse(); if(r.edges&&r.edges.length===r.pts.length){ const E=r.edges, n=r.pts.length; r.edges=r.pts.map((_,k)=>E[(n-2-k+n)%n]); } }
     const P=r.pts; if(r.sk&&r.sk.h===skHash(r)) for(const l of r.sk.L) L.push({...l,a:{...l.a},b:{...l.b}}); else for(let k=0;k<P.length;k++) L.push({a:{...P[k]},b:{...P[(k+1)%P.length]},t:'c'}); const pl=r.plan&&r.plan.L?r.plan.L:planFrom(r); for(const l of pl) L.push({...l,a:{...l.a},b:{...l.b}}); }
@@ -63,7 +49,7 @@ function planMove(q,p){ const E=planEd; E.L=JSON.parse(q.snap); if(q.snapSP!=nul
     for(const x of pts){ const v=x.o[x.f]; x.o[x.f]={x:r3(v.x+dx),y:r3(v.y+dy)}; } }
   q.moved=true; redraw(); }
 
-function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0) E.S.splice(j,1); else E.S.push(q.h); panelKey=''; syncPanel(); redraw(); } return; }
+function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0) E.S.splice(j,1); else { if(q.h.k==='e') E.S=E.S.filter(o=>o.k!=='e'); /* one vertex at a time: a new one replaces the old */ E.S.push(q.h); } panelKey=''; syncPanel(); redraw(); } return; }
   const now=E.L, nowS=E.SP; E.L=JSON.parse(q.snap); if(q.snapSP!=null) E.SP=JSON.parse(q.snapSP); planHist(); E.L=now; E.SP=nowS; if(q.t==='cp') E.S=[]; panelKey=''; syncPanel(); redraw(); }
 
 const SKN={s:'Выбор',ln:'Линия',pl:'Полилиния',rc:'Прямоугольник',pgi:'Многоугольник вписанный',pgc:'Многоугольник описанный',ci:'Окружность',a3:'Дуга: начало — конец — радиус',ac:'Дуга из центра и концов',at:'Дуга по касательной',af:'Дуга сопряжения',sp:'Сплайн',pw:'Подобрать стены',pli:'Подобрать линии',pe:'Подобрать края',cp:'Копировать',rot:'Повернуть',mi:'Зеркало: выбрать ось',md:'Зеркало: нарисовать ось',of:'Смещение',tc:'Обрезать до угла',t1:'Обрезать один до границы',tm:'Обрезать несколько до границы',sv:'Разделить',sg:'Разделить с зазором',t:'Обрезать между пересечениями',del:'Удалить'};
@@ -301,7 +287,7 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
     if(sel){ ctx.save(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=1; ctx.setLineDash([3,4]); ctx.beginPath(); Sp.p.forEach((v,k)=>{ const q=toS(v); k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); }); ctx.stroke(); ctx.restore(); for(const v of Sp.p){ const q=toS(v); ctx.beginPath(); ctx.arc(q.x,q.y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } } });
   /* sizes you can tap and type: the selected segment / vertex (the other end stays), the segment just drawn */
   { const lab=(i,e,txt)=>{ const l=E.L[i]; if(!l) return; const a=toS(l.a), b=toS(l.b), u=skU({x:b.x-a.x,y:b.y-a.y}), m={x:(a.x+b.x)/2-u.y*22,y:(a.y+b.y)/2+u.x*22}, L=skL(skV(l.a,l.b)); tmpBox(fmtU(L),m.x,m.y,0,true); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skSetLen(i,e,v)}); };
-    const SL=S.filter(o=>o.k!=='sp'); if(SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
+    const SL=S.filter(o=>o.k!=='sp'), SE=SL.filter(o=>o.k==='e'); /* one selected vertex wins even when its lines are selected too */ if(SE.length===1&&!E.live) lab(SE[0].i,SE[0].e); else if(SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
   /* vertex circles only on the selected lines; the rest stay clean */
   for(const i of selL){ const l=E.L[i]; if(!l) continue; for(const e of ['a','b']){ const q=toS(l[e]), se=on(i,e); ctx.beginPath(); ctx.arc(q.x,q.y,se?8:6,0,Math.PI*2); ctx.fillStyle=se?'#4c9aff':'#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } }
   const q=E.live, k=E.k, P=E.pts;
