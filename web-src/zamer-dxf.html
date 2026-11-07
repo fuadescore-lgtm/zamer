@@ -5343,7 +5343,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.57':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.58':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -7059,7 +7059,7 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
     if(sel){ ctx.save(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=1; ctx.setLineDash([3,4]); ctx.beginPath(); Sp.p.forEach((v,k)=>{ const q=toS(v); k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); }); ctx.stroke(); ctx.restore(); for(const v of Sp.p){ const q=toS(v); ctx.beginPath(); ctx.arc(q.x,q.y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } } });
   /* sizes you can tap and type: the selected segment / vertex (the other end stays), the segment just drawn */
   { const lab=(i,e,txt)=>{ const l=E.L[i]; if(!l) return; const a=toS(l.a), b=toS(l.b), u=skU({x:b.x-a.x,y:b.y-a.y}), m={x:(a.x+b.x)/2-u.y*22,y:(a.y+b.y)/2+u.x*22}, L=skL(skV(l.a,l.b)); tmpBox(fmtU(L),m.x,m.y,0,true); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skSetLen(i,e,v)}); };
-    const SL=S.filter(o=>o.k!=='sp'); if(SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
+    const SL=S.filter(o=>o.k!=='sp'), SE=SL.filter(o=>o.k==='e'); /* one selected vertex wins even when its lines are selected too */ if(SE.length===1&&!E.live) lab(SE[0].i,SE[0].e); else if(SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
   /* vertex circles only on the selected lines; the rest stay clean */
   for(const i of selL){ const l=E.L[i]; if(!l) continue; for(const e of ['a','b']){ const q=toS(l[e]), se=on(i,e); ctx.beginPath(); ctx.arc(q.x,q.y,se?8:6,0,Math.PI*2); ctx.fillStyle=se?'#4c9aff':'#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } }
   const q=E.live, k=E.k, P=E.pts;
