@@ -4625,5 +4625,19 @@
 "и направляющие от точек": "and guides from points",
 "подстроен": "adjusted",
 "построить крышу": "build the roof",
-"Орто включено: 0° / 45° / 90°": "Ortho on: 0° / 45° / 90°"
+"Орто включено: 0° / 45° / 90°": "Ortho on: 0° / 45° / 90°",
+"Выйти без изменений": "Exit without changes",
+"Касание на линии — новая точка": "Tap a line — new point",
+"Касание — выбрать (подряд — несколько, ещё раз — отпустить); тянуть точку или линию — вместе с соединёнными": "Tap — select (one after another — several, again — release); drag a point or line — with what is joined",
+"Контур крыши — линиями, как «Линии": "Roof outline — with lines, like «Lines",
+"Контур не замкнут — соедините концы линий контура": "The outline is not closed — join the ends of the outline lines",
+"Конёк — линиями, как «Линии": "Ridge — with lines, like «Lines",
+"Крыша построена (плоская — нет коньков). Двойное касание — снова линии": "Roof built (flat — no ridges). Double tap — back to the lines",
+"Нарисуйте контур крыши (кнопка «Контур": "Draw the roof outline (button «Outline",
+"План кровли: правьте линии": "Roof plan: edit the lines",
+"План кровли: рисуйте контур (как линии), потом «Конёк» и «Стык": "Roof plan: draw the outline (as lines), then «Ridge» and «Joint",
+"Построить крышу": "Build the roof",
+"Ребро вальмы или ендова — линиями, как «Линии": "Hip or valley — with lines, like «Lines",
+"Сначала выберите линию": "First select a line",
+"построить": "build"
 }
