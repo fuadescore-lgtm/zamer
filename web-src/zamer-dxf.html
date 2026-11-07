@@ -5304,7 +5304,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.42':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.43':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -7295,7 +7295,7 @@ function drawRoof(it,sel){ let R; try{ R=roofPlan(it); }catch(e){ drawRoofBad(it
       /* temporary dimension along the slope: ridge → outer edge of the eave, as a tape on the plane */
       const SL=roofSlopeLen(it,doc.curLv,roofEdge.i); if(SL){ const a=toS(SL.top), b=toS(SL.foot), act=!!(inlineH&&inlineH.kind==='rfL'&&inlineH.id===it.id); ctx.save(); ctx.strokeStyle='#ff9f43'; ctx.fillStyle='#ff9f43'; ctx.lineWidth=1.8; line(a,b);
         const L=Math.hypot(b.x-a.x,b.y-a.y)||1, ux=(b.x-a.x)/L, uy=(b.y-a.y)/L; for(const q of [a,b]){ ctx.beginPath(); ctx.moveTo(q.x-uy*7,q.y+ux*7); ctx.lineTo(q.x+uy*7,q.y-ux*7); ctx.stroke(); } ctx.restore();
-        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2; tmpBox(tr('по скату')+' '+fmtU(SL.L),mx,my,0,act); labelHits.push({id:it.id,kind:'rfL',i:roofEdge.i,one:true,w:toW(mx,my),x:mx,y:my,val:r1(SL.L)}); } }
+        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2; tmpBox(fmtU(SL.L),mx,my,0,act); labelHits.push({id:it.id,kind:'rfL',i:roofEdge.i,one:true,w:toW(mx,my),x:mx,y:my,val:r1(SL.L)}); } }
     if(ridgeHi){ ctx.save(); ctx.strokeStyle=C.sel; ctx.lineWidth=5; ctx.globalAlpha=.6; line(toS(ridgeHi[0]),toS(ridgeHi[1])); ctx.restore(); }
     for(const H of ridgeList(it)){ { const c=toS(H.m), so=toS({x:0,y:0}), dv=toS(H.dir), dl=Math.hypot(dv.x-so.x,dv.y-so.y)||1, dx=(dv.x-so.x)/dl, dy=(dv.y-so.y)/dl; ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(c.x,c.y,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
       ctx.fillStyle=C.sel; for(const sgn of [1,-1]){ const tx=c.x+dx*sgn*8, ty=c.y+dy*sgn*8; ctx.beginPath(); ctx.moveTo(tx+dx*sgn*7,ty+dy*sgn*7); ctx.lineTo(tx-dy*5,ty+dx*5); ctx.lineTo(tx+dy*5,ty-dx*5); ctx.closePath(); ctx.fill(); } ctx.restore(); } }
