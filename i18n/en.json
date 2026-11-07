@@ -4819,5 +4819,17 @@
 "дальше отступ и глубина": "next: offset and depth",
 "нет профиля": "no profile",
 "Профиль крыши (низ кровли": "Roof profile (underside of the roofing",
-"от гор": "from horiz"
+"от гор": "from horiz",
+"контур не замкнут — соедините концы линий": "the contour is not closed — join the line ends",
+"один замкнутый контур, Орто — по осям": "one closed contour, Ortho — along the axes",
+"Правка эскиза: тот же блок линий": "Sketch edit: the same line block",
+"нужен один замкнутый контур": "one closed contour is needed",
+"горизонтальная грань": "horizontal face",
+"Эскиз на плоскости": "Sketch on the plane",
+"нужно хотя бы": "at least",
+"как было": "as it was",
+"правка": "edit",
+"Наружу": "Outward",
+"Внутрь": "Inward",
+"объём": "volume"
 }
