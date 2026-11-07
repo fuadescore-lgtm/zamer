@@ -4604,5 +4604,13 @@
 "поворот": "rotation",
 "сдвиг": "move",
 "угла": "corners",
-"+ Вершина": "+ Vertex"
+"+ Вершина": "+ Vertex",
+"Закончить линию": "Finish the line",
+"Орто включено": "Ortho on",
+"Орто выключено": "Ortho off",
+"Орто: линия строго вдоль краёв контура, поперёк или под 45°": "Ortho: the line goes exactly along the outline edges, across or at 45°",
+"Касание — выбрать (подряд — несколько, ещё раз — отпустить); тянуть точку или линию — двигать вместе с соединёнными": "Tap — select (one after another — several, again — release); drag a point or line — moves with what is joined",
+"Тяните — выбранное двигается само по себе (отрывается от соседних)": "Drag — the selection moves on its own (torn off its neighbours)",
+"Орто: линия строго вдоль краёв контура, поперёк или под": "Ortho: the line goes exactly along the outline edges, across or at",
+"Тяните — выбранное двигается само по себе (отрывается от соседних": "Drag — the selection moves on its own (torn off its neighbours"
 }
