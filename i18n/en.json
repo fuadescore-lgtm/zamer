@@ -4748,5 +4748,6 @@
 "Крыша по эскизу: контур": "Roof by sketch: contour",
 "Не соответствует: низ": "Invalid: bottom",
 "один замкнутый контур": "one closed contour",
-"Перекрытие: контур": "Slab: contour"
+"Перекрытие: контур": "Slab: contour",
+"Не соответствует: длина больше": "Invalid: length greater than"
 }
