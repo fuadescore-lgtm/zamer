@@ -5343,7 +5343,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.58':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.59':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6868,7 +6868,7 @@ function planMove(q,p){ const E=planEd; E.L=JSON.parse(q.snap); if(q.snapSP!=nul
   else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth],l0.t==='c'); skAcq(z); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; }
     for(const x of pts){ const v=x.o[x.f]; x.o[x.f]={x:r3(v.x+dx),y:r3(v.y+dy)}; } }
   q.moved=true; redraw(); }
-function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0) E.S.splice(j,1); else E.S.push(q.h); panelKey=''; syncPanel(); redraw(); } return; }
+function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0) E.S.splice(j,1); else { if(q.h.k==='e') E.S=E.S.filter(o=>o.k!=='e'); /* one vertex at a time: a new one replaces the old */ E.S.push(q.h); } panelKey=''; syncPanel(); redraw(); } return; }
   const now=E.L, nowS=E.SP; E.L=JSON.parse(q.snap); if(q.snapSP!=null) E.SP=JSON.parse(q.snapSP); planHist(); E.L=now; E.SP=nowS; if(q.t==='cp') E.S=[]; panelKey=''; syncPanel(); redraw(); }
 /* ===== «Эскиз»: one toolbar and one behaviour for every line sketch (Revit's Draw + Modify for lines). First client: the roof plan.
    Lines are straight segments {a,b,t}; arcs, circles and splines become chains of straight segments. ===== */
