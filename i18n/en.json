@@ -4612,5 +4612,18 @@
 "Касание — выбрать (подряд — несколько, ещё раз — отпустить); тянуть точку или линию — двигать вместе с соединёнными": "Tap — select (one after another — several, again — release); drag a point or line — moves with what is joined",
 "Тяните — выбранное двигается само по себе (отрывается от соседних)": "Drag — the selection moves on its own (torn off its neighbours)",
 "Орто: линия строго вдоль краёв контура, поперёк или под": "Ortho: the line goes exactly along the outline edges, across or at",
-"Тяните — выбранное двигается само по себе (отрывается от соседних": "Drag — the selection moves on its own (torn off its neighbours"
+"Тяните — выбранное двигается само по себе (отрывается от соседних": "Drag — the selection moves on its own (torn off its neighbours",
+"Двойное касание — снова линии": "Double tap — back to the lines",
+"Коснитесь куска линии, который надо убрать": "Tap the piece of a line to remove",
+"Крыша построена, но": "Roof built, but",
+"Крыша построена: скатов": "Roof built: slopes",
+"Кусок вырезан": "Piece cut out",
+"Кусок обрезан": "Piece trimmed",
+"Обрезать": "Trim",
+"Обрезать пересекающиеся линии: касание куска линии между пересечениями — он удаляется": "Trim crossing lines: tap a piece of a line between crossings — it is removed",
+"Орто, как в «Линиях": "Ortho, as in «Lines",
+"и направляющие от точек": "and guides from points",
+"подстроен": "adjusted",
+"построить крышу": "build the roof",
+"Орто включено: 0° / 45° / 90°": "Ortho on: 0° / 45° / 90°"
 }
