@@ -4796,5 +4796,14 @@
 "вершина на коньке, карниз по дуге на одной высоте": "apex on the ridge, the eave along the arc at one height",
 "дуга не пересчитывается": "the arc cannot be recalculated",
 "конус: уклон": "cone: pitch",
-"Конус": "Cone"
+"Конус": "Cone",
+"Линии: инструменты как в эскизах, всё сразу на чертеже": "Lines: the same tools as in sketches, everything goes straight onto the drawing",
+"отменить изменения линий": "undo the line changes",
+"Изменения линий отменены": "Line changes cancelled",
+"выбранным линиям": "to the selected lines",
+"для новых линий": "for new lines",
+"Линии сохранены": "Lines saved",
+"Аннотации": "Annotations",
+"к выбору": "back to Select",
+"Конструкц.": "Construction"
 }

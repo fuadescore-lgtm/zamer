@@ -1,9 +1,11 @@
-/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.62.
+/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.64.
    Извлечено из web-src/zamer-dxf.html: константы SK*, функции sk*, plan* (редактор эскиза) и drawPlanEd (отрисовка).
    Не самостоятельный модуль: опирается на холст приложения (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc,
    openInline/closeInline kind 'sk', popMenu (вертикальный список ▾), toast, syncPanel, redraw). Описание — blocks/STANDARD_LINE_BLOCK.md.
    Изменения после 2.9.56: 2.9.58 — размер выделенной вершины; 2.9.59 — одна вершина за раз;
-   2.9.62 — «Выбор ▾» (Выбор одного / Выбрать несколько), «Переместить» (соседи тянутся), все линии в одной кнопке «▾», списки ▾ — вертикальные всплывающие. */
+   2.9.62 — «Выбор ▾» (Выбор одного / Выбрать несколько), «Переместить» (соседи тянутся), все линии в одной кнопке «▾», списки ▾ — вертикальные всплывающие;
+   2.9.64 — живой размер не перехватывает клик в точку; клиент «Линии» (cfg.kind lines). */
+
 function planOpen(r){ /* r: a roof to edit (its contour and plan become lines), or null: a new roof */ const L=[];
   if(r){ if(polyArea2(r.pts)<0){ r.pts.reverse(); if(r.edges&&r.edges.length===r.pts.length){ const E=r.edges, n=r.pts.length; r.edges=r.pts.map((_,k)=>E[(n-2-k+n)%n]); } }
     const P=r.pts; if(r.sk&&r.sk.h===skHash(r)) for(const l of r.sk.L) L.push({...l,a:{...l.a},b:{...l.b}}); else for(let k=0;k<P.length;k++) L.push({a:{...P[k]},b:{...P[(k+1)%P.length]},t:'c'}); const pl=r.plan&&r.plan.L?r.plan.L:planFrom(r); for(const l of pl) L.push({...l,a:{...l.a},b:{...l.b}}); }
@@ -17,7 +19,7 @@ function skHistPop(E){ const o=JSON.parse(E.H.pop()); if(Array.isArray(o)) E.L=o
 function planSnap(sx,sy,from,skip,polar,wall){ if(wall==null) wall=planEd.cfg?true:planEd.t==='c'; /* contour snaps to walls (this level and below); ridges and joints only to the sketch */ const L=planEd.L, ex=[], mid=[]; /* sketch vertices and line midpoints: snap targets and tracking (dashed guide) sources */
   L.forEach((l,i)=>{ const sa=skip&&skip(i,'a'), sb=skip&&skip(i,'b'); if(!sa) ex.push(l.a); if(!sb) ex.push(l.b); if(!sa&&!sb&&Math.hypot(l.b.x-l.a.x,l.b.y-l.a.y)>1) mid.push({x:(l.a.x+l.b.x)/2,y:(l.a.y+l.b.y)/2}); });
   (planEd.SP||[]).forEach((S,j)=>{ if(skip&&skip('sp'+j)) return; ex.push(S.p[0]); if(!S.cl) ex.push(S.p[S.p.length-1]); });
-  let q; try{ q=snapPoint(sx,sy,from||null,{extra:ex,extraMid:mid,onlyExtra:!wall,geoAll:wall,exclude:planEd.id||(planEd.cfg&&planEd.cfg.id)?new Set([planEd.id||planEd.cfg.id]):undefined,track:true,trackSrc:planEd.acq||[],polar:polar&&polar.length?polar:undefined}); }catch(e){ q=toW(sx,sy); }
+  let q; try{ q=snapPoint(sx,sy,from||null,{extra:ex,extraMid:mid,onlyExtra:!wall,geoAll:wall,exclude:planEd.cfg&&planEd.cfg.ex?planEd.cfg.ex:planEd.id||(planEd.cfg&&planEd.cfg.id)?new Set([planEd.id||planEd.cfg.id]):undefined,track:true,trackSrc:planEd.acq||[],polar:polar&&polar.length?polar:undefined}); }catch(e){ q=toW(sx,sy); }
   /* a vertex, a midpoint or a tracking alignment wins over sliding onto a line */
   if(liveSnap==='end'||liveSnap==='corner'||liveSnap==='mid'||liveSnap==='center'||(wall&&(liveSnap==='face'||liveSnap==='axis'||liveSnap==='onc'))||(trackGuide&&trackGuide.length)||(polarGuide&&polarGuide.length>1)) return {x:r3(q.x),y:r3(q.y)};
   const sq=toS(q); let best=null, bd=14; L.forEach((l,i)=>{ if(skip&&(skip(i,'a')||skip(i,'b'))) return; const A=l.a,B=l.b, d=segDist(sq.x,sq.y,toS(A),toS(B)); if(d>=bd) return;
@@ -72,7 +74,7 @@ const SKNEED={mv:2,ln:2,rc:2,pgi:2,pgc:2,ci:2,a3:3,ac:3,at:2,md:2,cp:2,rot:2};
 
 const SKSEL=new Set(['cp','rot','mi','md']); /* need a selection */
 
-function skAllowed(k,t){ t=t||planEd.t; const c=planEd&&planEd.cfg; if(c&&c.open&&['rc','pgi','pgc','ci'].includes(k)) return false; if(t==='r'||t==='j') return ['s','sm','mv','ln','pl','cp','rot','mi','md','of','tc','t1','tm','sv','sg','t','del'].includes(k); return true; }
+function skAllowed(k,t){ t=t||planEd.t; const c=planEd&&planEd.cfg; if(c&&c.open&&['rc','pgi','pgc','ci'].includes(k)) return false; if(t==='x') return ['s','sm','mv','ln','del'].includes(k); if(t==='r'||t==='j') return ['s','sm','mv','ln','pl','cp','rot','mi','md','of','tc','t1','tm','sv','sg','t','del'].includes(k); return true; }
 
 const SKI={s:'<path d="M7 3v15l4-4 3 6 2.5-1-3-6H19z"/>',sm:'<path d="M5 3v12l3-3 2.5 5 2-1-2.5-5H14z"/><rect x="14" y="13" width="7" height="7" rx="1"/><path d="M16 16.5h3M17.5 15v3"/>',mv:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',ln:'<path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/>',pl:'<path d="M3 18l6-9 5 6 7-10"/>',rc:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
   pgi:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 2"/>',pgc:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="6.6" stroke-dasharray="2 2"/>',ci:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1"/>',
@@ -157,7 +159,7 @@ function skGen(k,P,q){ const E=planEd, o=E.opt, A=P[0];
     case 'rot': { const C=skCentroid(); if(!A||!C) return {}; const an=skRotAng(C,A,q); return {X:p=>skRotP(C,an,p),copy:o.cpy,ang:an,C}; }
   } return {S:[]}; }
 
-function skAdd(S,t){ const E=planEd; let n=0; for(const [A,B] of S){ if(skL(skV(A,B))<1) continue; E.L.push({a:skR3(A),b:skR3(B),t:t||E.t}); n++; } return n; }
+function skAdd(S,t){ const E=planEd, ly=isLnSk(E)?{ly:E.cfg.ly}:{}; let n=0; for(const [A,B] of S){ if(skL(skV(A,B))<1) continue; E.L.push({a:skR3(A),b:skR3(B),t:t||E.t,...ly}); n++; } return n; }
 
 function skApplyX(G){ const E=planEd, I=skSelLines(), J=skSelSp(); if((!I.length&&!J.length)||!G.X) return; planHist(); E.SP=E.SP||[];
   if(G.copy){ const N=I.map(i=>{ const l=E.L[i]; return {...l,a:skR3(G.X(l.a)),b:skR3(G.X(l.b))}; }), M=J.map(j=>({...E.SP[j],p:E.SP[j].p.map(q=>skR3(G.X(q)))})); const s0=E.L.length, t0=E.SP.length; E.L.push(...N); E.SP.push(...M); E.S=N.map((_,k)=>({k:'l',i:s0+k})).concat(M.map((_,k)=>({k:'sp',i:t0+k}))); }
@@ -181,11 +183,13 @@ function skPoint(q){ const E=planEd, k=E.k;
   if(k==='sp'){ const n=E.pts.length; if(n&&skL(skV(E.pts[n-1],q))<50){ skSplineDone(false); return; } if(n>=3&&skL(skV(E.pts[0],q))<1){ skSplineDone(true); return; } E.pts.push(q); skSync(); return; }
   E.pts.push(q); if(E.pts.length<(SKNEED[k]||2)){ skSync(); return; }
   const P=E.pts.slice(0,-1), G=skGen(k,P,q);
+  if(isLnSk(E)&&E.t==='x'&&k==='ln'){ pushUndo(); const id=uid(); doc.levels[E.cfg.li].items.push({id,t:'aux',a:skR3(P[0]),b:skR3(q)}); E.cfg.extra.add(id); persist(); skReset(E); skSync(); return; }
+  if(isLnSk(E)&&G.S&&G.S.length&&(k==='ci'||k==='a3'||k==='ac'||k==='at')){ lnTrue(k,P,q,G); skReset(E); skSync(); return; }
   if(G.X){ skApplyX(G); if(k==='mv') E.lastMv={A:{...P[0]},B:{...q}}; /* the distance stays on screen: tap — type the exact one */ if(k==='cp'&&E.opt.mul){ E.pts=[P[0]]; skSync(); return; } }
   else { planHist(); if(!skAdd(G.S)){ E.H.pop(); toast('Слишком мало — линия не добавлена'); } else if(k==='ln') E.lastI=E.L.length-1; }
   skReset(E); skSync(); }
 
-function skSplineDone(closed){ const E=planEd; if(E.pts.length>=2){ planHist(); (E.SP=E.SP||[]).push({p:E.pts.map(skR3),t:E.t,cl:!!closed}); } skReset(E); skSync(); }
+function skSplineDone(closed){ const E=planEd; if(E.pts.length>=2){ planHist(); (E.SP=E.SP||[]).push({p:E.pts.map(skR3),t:E.t,cl:!!closed,...(isLnSk(E)?{ly:E.cfg.ly}:{})}); } skReset(E); skSync(); }
 
 const skSpCurve=S=>{ const P=skSpline(S.p,!!S.cl); return S.cl?P.concat([P[0]]):P; };
 
@@ -257,7 +261,7 @@ function planUndo(){ const E=planEd; if(!E) return false; if(E.pts&&E.pts.length
 
 function planDown(p){ const E=planEd, m=E.k;
   if(E.fly){ const pm=document.getElementById('popMenu'); E.fly=null; if(pm&&!pm.hidden){ pm.hidden=true; skSync(); return {plN:true}; } }
-  /* a size on the screen: tap — type the exact value */ const lh=(E.lh||[]).find(h=>Math.hypot(h.x-p.x,h.y-p.y)<24); if(lh){ openInline({kind:'sk',id:null,w:toW(lh.x,lh.y),val:lh.val,fn:lh.fn}); return {plN:true}; }
+  /* a size on the screen: tap — type the exact value; a size that rides with the cursor never takes a click aimed at the point itself */ const lvS=E.live?toS(E.live):null, lh=(E.lh||[]).find(h=>{ const d=Math.hypot(h.x-p.x,h.y-p.y); return d<24&&!(h.lv&&lvS&&Math.hypot(lvS.x-p.x,lvS.y-p.y)<=d); }); if(lh){ openInline({kind:'sk',id:null,w:toW(lh.x,lh.y),val:lh.val,fn:lh.fn}); return {plN:true}; }
   if(SKPT.has(m)||(m==='af'&&E.pick.length===2)){ E.live=skSnap(p.x,p.y); E.ld=E.live; skAcq(E.live); redraw(); return {plL:true}; }
   if(m!=='s'&&m!=='sm') return null; const snapSP=JSON.stringify(E.SP||[]);
   /* control points of a selected spline */ for(const j of skSelSp()){ const P=E.SP[j].p; for(let k=0;k<P.length;k++){ const q=toS(P[k]); if(Math.hypot(q.x-p.x,q.y-p.y)<16) return {plD:{t:'spp',j,k,w0:toW(p.x,p.y),snap:JSON.stringify(E.L),snapSP}}; } }
@@ -290,8 +294,8 @@ function planPanel(){ const E=skState(planEd), S=E.S||[], k=E.k, t=E.t, ok=x=>sk
   let inp=''; if(k==='ln'||k==='pl') inp=num('skLen','Длина','','мм')+(k==='pl'?chk('skRad','Радиус',o.rad)+(o.rad?num('skR','R',o.R):''):''); else if(k==='rc') inp=chk('skRad','Радиус углов',o.rad)+(o.rad?num('skR','R',o.R):''); else if(k==='pgi'||k==='pgc') inp=num('skN','Стороны',o.n); else if(k==='ci') inp=num('skCR','Радиус','','мм'); else if(k==='af') inp=num('skFR','Радиус','','мм');
   else if(k==='cp') inp=chk('skMul','Несколько копий',o.mul); else if(k==='mv') inp=num('skLen','Длина','','мм'); else if(k==='rot') inp=num('skAng','Угол, °','','')+chk('skCpy','Копия',o.cpy); else if(k==='mi'||k==='md') inp=chk('skKeep','Оставить исходное',o.keep); else if(k==='of') inp=num('skOff','Расстояние',o.off); else if(k==='sg') inp=num('skGap','Зазор',o.gap);
   const busy=E.pts.length||E.pick.length;
-  const C=E.cfg, head=C?`<span class="skh"><b>${C.title}</b></span>${C.kind==='rail'?`<div class="skt" role="group" aria-label="Низ ограждения"><button data-act="plRB" data-b="lv" aria-pressed="${C.base!=='slab'}">На уровне</button><button data-act="plRB" data-b="slab" aria-pressed="${C.base==='slab'}">На перекрытии</button></div>${C.base!=='slab'?num('skZ','Низ',r1(C.z||0)):''}`:''}`:`<div class="skt" role="group" aria-label="Тип линии">${ti('c','Контур','#9aa5b1')}${ti('r','Конёк','#d63fd6')}${ti('j','Стык','#2fae5a',1)}</div>`;
-  const opts=`<div class="skrow">${head}<span class="skok"><button class="ibn okb" data-act="plDone" title="${E.cfg?'Готово':'Построить крышу'}" aria-label="${E.cfg?'Готово':'Построить крышу'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ibn cxb" data-act="plQuit" title="Выйти без изменений" aria-label="Выйти без изменений"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div><div class="skrow skwr"><span class="skh"><b>${SKN[k]||''}</b>${hint?': '+hint:''}${S.length?' · выбрано: '+S.length:''}</span>${inp}${busy?`<button class="btn" data-act="plCancel">${k==='sp'?'Закончить сплайн':'Закончить'}</button>`:''}</div>`;
+  const C=E.cfg, head=C&&C.kind==='lines'?`<div class="skt" role="group" aria-label="Тип линии">${ti('l','Линия','#9aa5b1')}${ti('x','Конструкц.','#5c7cfa',1)}</div>`:C?`<span class="skh"><b>${C.title}</b></span>${C.kind==='rail'?`<div class="skt" role="group" aria-label="Низ ограждения"><button data-act="plRB" data-b="lv" aria-pressed="${C.base!=='slab'}">На уровне</button><button data-act="plRB" data-b="slab" aria-pressed="${C.base==='slab'}">На перекрытии</button></div>${C.base!=='slab'?num('skZ','Низ',r1(C.z||0)):''}`:''}`:`<div class="skt" role="group" aria-label="Тип линии">${ti('c','Контур','#9aa5b1')}${ti('r','Конёк','#d63fd6')}${ti('j','Стык','#2fae5a',1)}</div>`;
+  const opts=`<div class="skrow">${head}<span class="skok"><button class="ibn okb" data-act="plDone" title="${E.cfg?'Готово':'Построить крышу'}" aria-label="${E.cfg?'Готово':'Построить крышу'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ibn cxb" data-act="plQuit" title="Выйти без изменений" aria-label="Выйти без изменений"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div><div class="skrow skwr">${C&&C.kind==='lines'?`<div class="skt" role="group" aria-label="Слой линий">${[['misc','Прочее'],['open','Проёмы']].map(([k2,n2])=>`<button data-act="plLy" data-ly="${k2}" aria-pressed="${C.ly===k2}">${n2}</button>`).join('')}</div>`:''}<span class="skh"><b>${SKN[k]||''}</b>${hint?': '+hint:''}${S.length?' · выбрано: '+S.length:''}</span>${inp}${busy?`<button class="btn" data-act="plCancel">${k==='sp'?'Закончить сплайн':'Закончить'}</button>`:''}</div>`;
   const fly=''; /* the lists open as a vertical pop-up over the drawing (skFlyOpen) */
   const dock=`<div class="skdock">${grp('ВЫБОР',F('se')+B('mv',SKS.mv,k==='mv'))}${sep}${grp('РИСОВАТЬ',draw)}${sep}${grp('ИЗМЕНИТЬ',mod)}${sep}${grp('РЕЖИМ',`<button class="skb" data-act="plOr" aria-pressed="${axisMode==='ortho'}" title="Орто: 0° / 45° / 90° и пунктир от вершин">${skSvg('or')}<span>Орто</span></button>`)}
     </div>`;
@@ -314,9 +318,9 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
     else G=skGen(k,P,q);
     if(G){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2.5; ctx.setLineDash([10,6]); if(G.S) for(const [A,B] of G.S) line(toS(A),toS(B)); if(G.X) for(const i of skSelLines()){ const l=E.L[i]; line(toS(G.X(l.a)),toS(G.X(l.b))); } ctx.setLineDash([]); }
     const A=P.length?P[P.length-1]:null;
-    if(A&&(k==='ln'||k==='pl'||((k==='mv'||k==='cp')&&P.length===1))){ const a=toS(A), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, L=skL(skV(A,q)); tmpBox(fmtU(L),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skTyped(v)}); }
+    if(A&&(k==='ln'||k==='pl'||((k==='mv'||k==='cp')&&P.length===1))){ const a=toS(A), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, L=skL(skV(A,q)); tmpBox(fmtU(L),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skTyped(v),lv:true}); }
     if(P.length&&k==='rc'){ const b=toS(q); tmpBox(fmtU(Math.abs(q.x-P[0].x))+' × '+fmtU(Math.abs(q.y-P[0].y)),b.x+44,b.y-18,0,false); }
-    if(P.length===1&&(k==='ci'||k==='pgi'||k==='pgc')){ const a=toS(P[0]), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, R=skL(skV(P[0],q)); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(a,b); tmpBox('R '+fmtU(R),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:R,fn:v=>skTypedR(v)}); }
+    if(P.length===1&&(k==='ci'||k==='pgi'||k==='pgc')){ const a=toS(P[0]), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, R=skL(skV(P[0],q)); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(a,b); tmpBox('R '+fmtU(R),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:R,fn:v=>skTypedR(v),lv:true}); }
     if(k==='rot'&&G&&G.C){ const c=toS(G.C), b=toS(q); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(c,b); if(P[0]) line(c,toS(P[0])); tmpBox((G.ang*180/Math.PI).toFixed(1)+'°',b.x+30,b.y-18,0,false); }
     if((k==='cp'||k==='mv')&&P[0]){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(toS(P[0]),toS(q)); } }
   for(const p of P){ const s=toS(p); ctx.beginPath(); ctx.arc(s.x,s.y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2; ctx.stroke(); }
@@ -335,9 +339,9 @@ function skOpenBsk(c,segs,tool){ c.title=SKTITLE[c.kind]||'Эскиз'; c.open=c
   planEd=skState({id:null,L,SP,acq:[],k:tool||'pl',t:'c',a:null,live:null,S:[],H:[],cfg:c,bad:[]}); panelKey=''; syncPanel(); syncModeBtns(); syncTop(); redraw();
   toast(c.title+({slab:': внешний контур — граница, внутренние — отверстия',roof:': один замкнутый контур',rail:': одна цепь линий (можно незамкнутая)',nslab:': замкнутый контур, липнет к стенам',nroof:': замкнутый контур, липнет к стенам'}[c.kind]||'')+'. ✓ — готово, ✕ — отмена',true,true); }
 
-function skQuit(){ const E=planEd; if(!E) return; const c=E.cfg; planEd=null; if(c&&c.id){ selId=c.id; if(c.det) roofEd=c.id; } panelKey=''; syncPanel(); syncModeBtns(); syncTop(); redraw(); if(c) toast('Эскиз отменён'); }
+function skQuit(){ const E=planEd; if(!E) return; const c=E.cfg; if(isLnSk(E)){ lnRevert(); planEd=null; setTool('select'); toast('Изменения линий отменены'); return; } planEd=null; if(c&&c.id){ selId=c.id; if(c.det) roofEd=c.id; } panelKey=''; syncPanel(); syncModeBtns(); syncTop(); redraw(); if(c) toast('Эскиз отменён'); }
 
-function skBskDone(){ const E=planEd, c=E.cfg, segs=skAllL(E).map(l=>[{...l.a},{...l.b}]), n00=doc.items.length;
+function skBskDone(){ if(isLnSk(planEd)){ lnCommit(); planEd=null; setTool('select'); toast('Линии сохранены'); return; } const E=planEd, c=E.cfg, segs=skAllL(E).map(l=>[{...l.a},{...l.b}]), n00=doc.items.length;
   /* the sketch (with its splines) is kept on the object while its outline is unchanged */ const keepSk=()=>{ if(!(E.SP||[]).length) return; const it=c.id?doc.items.find(i=>i.id===c.id):(doc.items.length>n00?doc.items[doc.items.length-1]:null); if(!it||!it.pts) return; it.sk={L:JSON.parse(JSON.stringify(E.L)),SP:JSON.parse(JSON.stringify(E.SP)),h:skHash(it)}; persist(); };
   if(c.kind==='nslab'||c.kind==='nroof'){ const R=bskLoops(segs); if(R.err){ E.bad=R.bad||[]; skSync(); toast('Не соответствует: '+R.err,true,true); return; } if(R.loops.length!==1){ E.bad=R.loops.slice(1).map(P=>P[0]); skSync(); toast('Не соответствует: нужен один замкнутый контур',true,true); return; }
     const n0=doc.items.length, keep=planEd; planEd=null; tool='roof'; slabMode=c.slab; roofSk={pts:R.loops[0].map(q=>({x:r3(q.x),y:r3(q.y)}))}; finishRoofSketch();
