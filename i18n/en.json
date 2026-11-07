@@ -4639,5 +4639,12 @@
 "Построить крышу": "Build the roof",
 "Ребро вальмы или ендова — линиями, как «Линии": "Hip or valley — with lines, like «Lines",
 "Сначала выберите линию": "First select a line",
-"построить": "build"
+"построить": "build",
+"Касание — выбрать (подряд — несколько, ещё раз — отпустить); тянуть точку или линию — двигается только она": "Tap — select (one after another — several, again — release); drag a point or line — only it moves",
+"Крыша построена (плоская — нет коньков). Линии — кнопка": "Roof built (flat — no ridges). Lines — button",
+"Линии — кнопка": "Lines — button",
+"Эскиз (план кровли): контур, коньки и стыки линиями — крыша строится по ним": "Sketch (roof plan): outline, ridges and joints as lines — the roof is built from them",
+"Эскиз крыши: правьте линии": "Roof sketch: edit the lines",
+"два разных ската — проведите линию до угла": "two different slopes — draw a line to the corner",
+"✎ Эскиз": "✎ Sketch"
 }
