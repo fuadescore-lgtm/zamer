@@ -4791,5 +4791,10 @@
 "Многоуг. описанный": "Polygon circumscribed",
 "Дуга из центра": "Arc from center",
 "Перемещено на": "Moved by",
-"Дуга: 3 точки": "Arc: 3 points"
+"Дуга: 3 точки": "Arc: 3 points",
+"Главным может быть только плоский скат — уклон конуса меняется по дуге": "Only a flat slope can be the main one — a cone's pitch changes along the arc",
+"вершина на коньке, карниз по дуге на одной высоте": "apex on the ridge, the eave along the arc at one height",
+"дуга не пересчитывается": "the arc cannot be recalculated",
+"конус: уклон": "cone: pitch",
+"Конус": "Cone"
 }
