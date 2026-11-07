@@ -4855,5 +4855,8 @@
 "по плану": "on the plan",
 "площадь": "area",
 "Готовые": "Presets",
-"Своё": "Own"
+"Своё": "Own",
+"Крыша закреплена — не двигается. Уклоны, высоты, свесы меняются как обычно. Снять — замок у крыши": "The roof is locked — it does not move. Pitches, heights, overhangs change as usual. Unlock — the padlock by the roof",
+"Крыша закреплена: не двигается. Уклоны, высоты, свесы — как обычно": "Roof locked: it does not move. Pitches, heights, overhangs — as usual",
+"Закреплённую крышу не удалить — сначала снимите замок у крыши": "A locked roof cannot be deleted — unlock it first (the padlock by the roof)"
 }
