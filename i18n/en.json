@@ -4740,5 +4740,13 @@
 "ВЫБОР": "SELECT",
 "РЕЖИМ": "MODE",
 "Края": "Edges",
-"Один": "Single"
+"Один": "Single",
+"внешний контур — граница, внутренние — отверстия": "outer contour — boundary, inner ones — openings",
+"Не соответствует: нужен один замкнутый контур": "Invalid: one closed contour is needed",
+"одна цепь линий (можно незамкнутая": "one chain of lines (may be open",
+"замкнутый контур, липнет к стенам": "closed contour, snaps to walls",
+"Крыша по эскизу: контур": "Roof by sketch: contour",
+"Не соответствует: низ": "Invalid: bottom",
+"один замкнутый контур": "one closed contour",
+"Перекрытие: контур": "Slab: contour"
 }
