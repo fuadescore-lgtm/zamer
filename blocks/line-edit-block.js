@@ -1,9 +1,9 @@
-/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.59.
+/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.62.
    Извлечено из web-src/zamer-dxf.html: константы SK*, функции sk*, plan* (редактор эскиза) и drawPlanEd (отрисовка).
    Не самостоятельный модуль: опирается на холст приложения (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc,
-   openInline/closeInline kind 'sk', toast, syncPanel, redraw). Описание поведения и меню — blocks/STANDARD_LINE_BLOCK.md.
-   Изменения после 2.9.56: 2.9.58 — размер выделенной вершины показывается, даже если её линия тоже выделена;
-   2.9.59 — выделена только одна вершина: касание другой снимает прежнюю. */
+   openInline/closeInline kind 'sk', popMenu (вертикальный список ▾), toast, syncPanel, redraw). Описание — blocks/STANDARD_LINE_BLOCK.md.
+   Изменения после 2.9.56: 2.9.58 — размер выделенной вершины; 2.9.59 — одна вершина за раз;
+   2.9.62 — «Выбор ▾» (Выбор одного / Выбрать несколько), «Переместить» (соседи тянутся), все линии в одной кнопке «▾», списки ▾ — вертикальные всплывающие. */
 function planOpen(r){ /* r: a roof to edit (its contour and plan become lines), or null: a new roof */ const L=[];
   if(r){ if(polyArea2(r.pts)<0){ r.pts.reverse(); if(r.edges&&r.edges.length===r.pts.length){ const E=r.edges, n=r.pts.length; r.edges=r.pts.map((_,k)=>E[(n-2-k+n)%n]); } }
     const P=r.pts; if(r.sk&&r.sk.h===skHash(r)) for(const l of r.sk.L) L.push({...l,a:{...l.a},b:{...l.b}}); else for(let k=0;k<P.length;k++) L.push({a:{...P[k]},b:{...P[(k+1)%P.length]},t:'c'}); const pl=r.plan&&r.plan.L?r.plan.L:planFrom(r); for(const l of pl) L.push({...l,a:{...l.a},b:{...l.b}}); }
@@ -49,30 +49,32 @@ function planMove(q,p){ const E=planEd; E.L=JSON.parse(q.snap); if(q.snapSP!=nul
     for(const x of pts){ const v=x.o[x.f]; x.o[x.f]={x:r3(v.x+dx),y:r3(v.y+dy)}; } }
   q.moved=true; redraw(); }
 
-function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0) E.S.splice(j,1); else { if(q.h.k==='e') E.S=E.S.filter(o=>o.k!=='e'); /* one vertex at a time: a new one replaces the old */ E.S.push(q.h); } panelKey=''; syncPanel(); redraw(); } return; }
+function planUp(q){ const E=planEd; if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k); if(j>=0){ E.S.splice(j,1); if(q.h.k!=='e') E.S=E.S.filter(o=>!(o.k==='e'&&o.i===q.h.i)); } else { if(q.h.k==='e') E.S=E.S.filter(o=>o.k!=='e'); /* one vertex at a time: a new one replaces the old */ else if(E.k==='s') E.S=[]; /* «Выбор»: one segment — another one replaces it */ E.S.push(q.h); } panelKey=''; syncPanel(); redraw(); } return; }
   const now=E.L, nowS=E.SP; E.L=JSON.parse(q.snap); if(q.snapSP!=null) E.SP=JSON.parse(q.snapSP); planHist(); E.L=now; E.SP=nowS; if(q.t==='cp') E.S=[]; panelKey=''; syncPanel(); redraw(); }
 
-const SKN={s:'Выбор',ln:'Линия',pl:'Полилиния',rc:'Прямоугольник',pgi:'Многоугольник вписанный',pgc:'Многоугольник описанный',ci:'Окружность',a3:'Дуга: начало — конец — радиус',ac:'Дуга из центра и концов',at:'Дуга по касательной',af:'Дуга сопряжения',sp:'Сплайн',pw:'Подобрать стены',pli:'Подобрать линии',pe:'Подобрать края',cp:'Копировать',rot:'Повернуть',mi:'Зеркало: выбрать ось',md:'Зеркало: нарисовать ось',of:'Смещение',tc:'Обрезать до угла',t1:'Обрезать один до границы',tm:'Обрезать несколько до границы',sv:'Разделить',sg:'Разделить с зазором',t:'Обрезать между пересечениями',del:'Удалить'};
+const SKN={s:'Выбор',sm:'Выбрать несколько',mv:'Переместить',ln:'Линия',pl:'Полилиния',rc:'Прямоугольник',pgi:'Многоугольник вписанный',pgc:'Многоугольник описанный',ci:'Окружность',a3:'Дуга: начало — конец — радиус',ac:'Дуга из центра и концов',at:'Дуга по касательной',af:'Дуга сопряжения',sp:'Сплайн',pw:'Подобрать стены',pli:'Подобрать линии',pe:'Подобрать края',cp:'Копировать',rot:'Повернуть',mi:'Зеркало: выбрать ось',md:'Зеркало: нарисовать ось',of:'Смещение',tc:'Обрезать до угла',t1:'Обрезать один до границы',tm:'Обрезать несколько до границы',sv:'Разделить',sg:'Разделить с зазором',t:'Обрезать между пересечениями',del:'Удалить'};
 
-const SKS={s:'Выбор',ln:'Линия',pl:'Полилиния',rc:'Прямоуг.',pgi:'Вписанный',pgc:'Описанный',ci:'Окружность',a3:'Нач.–кон.–R',ac:'Из центра',at:'Касательная',af:'Сопряжение',sp:'Сплайн',pw:'Стены',pli:'Линии',pe:'Края',cp:'Копировать',rot:'Повернуть',mi:'Выбрать ось',md:'Нарисовать ось',of:'Смещение',tc:'До угла',t1:'Один',tm:'Несколько',sv:'Разделить',sg:'С зазором',t:'Между пересеч.',del:'Удалить'};
+const SKS={s:'Выбор',sm:'Несколько',mv:'Переместить',ln:'Линия',pl:'Полилиния',rc:'Прямоуг.',pgi:'Вписанный',pgc:'Описанный',ci:'Окружность',a3:'Нач.–кон.–R',ac:'Из центра',at:'Касательная',af:'Сопряжение',sp:'Сплайн',pw:'Стены',pli:'Линии',pe:'Края',cp:'Копировать',rot:'Повернуть',mi:'Выбрать ось',md:'Нарисовать ось',of:'Смещение',tc:'До угла',t1:'Один',tm:'Несколько',sv:'Разделить',sg:'С зазором',t:'Между пересеч.',del:'Удалить'};
 
-const SKFLY={pg:['pgi','pgc'],ar:['a3','ac','at','af'],pk:['pw','pli','pe'],mr:['mi','md'],tr:['tc','t1','tm','sv','sg','t']};
+const SKFLY={se:['s','sm'],ln:['ln','pl','rc','pgi','pgc','ci','a3','ac','at','af','sp'],pg:['pgi','pgc'],ar:['a3','ac','at','af'],pk:['pw','pli','pe'],mr:['mi','md'],tr:['tc','t1','tm','sv','sg','t']};
 
-const SKFN={pg:'Многоуг.',ar:'Дуга',pk:'Подобрать',mr:'Зеркало',tr:'Обрезать'};
+const SKPL={s:'Выбор',sm:'Выбрать несколько',ln:'Линия',pl:'Полилиния',rc:'Прямоугольник',pgi:'Многоуг. вписанный',pgc:'Многоуг. описанный',ci:'Окружность',a3:'Дуга: 3 точки',ac:'Дуга из центра',at:'Дуга по касательной',af:'Дуга сопряжения',sp:'Сплайн'};
 
-const SKHINT={s:['касание — выделить (ещё — добавить, повторно — снять); тяните точку или линию'],ln:['начало (касание вершины — магнит)','конец'],pl:['первая точка','следующая точка; касание последней точки — конец'],rc:['первый угол','противоположный угол'],pgi:['центр','вершина'],pgc:['центр','середина стороны'],ci:['центр','радиус (или число)'],
+const SKFN={se:'Выбор',ln:'Линии',pg:'Многоуг.',ar:'Дуга',pk:'Подобрать',mr:'Зеркало',tr:'Обрезать'};
+
+const SKHINT={s:['касание — выделить один отрезок (другой — заменяет, повторно — снять); тяните точку или линию'],sm:['касание — добавить отрезок, повторно — снять; пусто — снять всё'],mv:['базовая точка — конец или середина отрезка','куда (цифра размера — ввод)'],ln:['начало (касание вершины — магнит)','конец'],pl:['первая точка','следующая точка; касание последней точки — конец'],rc:['первый угол','противоположный угол'],pgi:['центр','вершина'],pgc:['центр','середина стороны'],ci:['центр','радиус (или число)'],
   a3:['начало','конец','точка изгиба'],ac:['центр','начало','конец'],at:['конец линии (дуга продолжит её)','конец дуги'],af:['первая линия','вторая линия','радиус: тяните или введите число'],sp:['точки подряд; касание последней — конец'],pw:['коснитесь стены с нужной стороны'],pli:['коснитесь линии чертежа'],pe:['коснитесь края перекрытия, крыши'],
   cp:['базовая точка','куда'],rot:['начальный луч (центр — середина выбранного)','конечный луч (или угол)'],mi:['коснитесь линии — ось'],md:['первая точка оси','вторая точка оси'],of:['коснитесь линии с нужной стороны'],tc:['первая линия (часть, что остаётся)','вторая линия'],t1:['граница','линия (часть, что остаётся)'],tm:['граница','линии подряд; пусто — новая граница'],sv:['касание на линии — разделить'],sg:['касание на линии — разрыв'],t:['кусок между пересечениями — удалить'],del:['коснитесь линии']};
 
-const SKPT=new Set(['ln','pl','rc','pgi','pgc','ci','a3','ac','at','sp','md','cp','rot']); /* point-input tools: the finger shows the live point */
+const SKPT=new Set(['ln','pl','rc','pgi','pgc','ci','a3','ac','at','sp','md','cp','rot','mv']); /* point-input tools: the finger shows the live point */
 
-const SKNEED={ln:2,rc:2,pgi:2,pgc:2,ci:2,a3:3,ac:3,at:2,md:2,cp:2,rot:2};
+const SKNEED={mv:2,ln:2,rc:2,pgi:2,pgc:2,ci:2,a3:3,ac:3,at:2,md:2,cp:2,rot:2};
 
 const SKSEL=new Set(['cp','rot','mi','md']); /* need a selection */
 
-function skAllowed(k,t){ t=t||planEd.t; const c=planEd&&planEd.cfg; if(c&&c.open&&['rc','pgi','pgc','ci'].includes(k)) return false; if(t==='r'||t==='j') return ['s','ln','pl','cp','rot','mi','md','of','tc','t1','tm','sv','sg','t','del'].includes(k); return true; }
+function skAllowed(k,t){ t=t||planEd.t; const c=planEd&&planEd.cfg; if(c&&c.open&&['rc','pgi','pgc','ci'].includes(k)) return false; if(t==='r'||t==='j') return ['s','sm','mv','ln','pl','cp','rot','mi','md','of','tc','t1','tm','sv','sg','t','del'].includes(k); return true; }
 
-const SKI={s:'<path d="M7 3v15l4-4 3 6 2.5-1-3-6H19z"/>',ln:'<path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/>',pl:'<path d="M3 18l6-9 5 6 7-10"/>',rc:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
+const SKI={s:'<path d="M7 3v15l4-4 3 6 2.5-1-3-6H19z"/>',sm:'<path d="M5 3v12l3-3 2.5 5 2-1-2.5-5H14z"/><rect x="14" y="13" width="7" height="7" rx="1"/><path d="M16 16.5h3M17.5 15v3"/>',mv:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',ln:'<path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.8"/><circle cx="19" cy="5" r="1.8"/>',pl:'<path d="M3 18l6-9 5 6 7-10"/>',rc:'<rect x="4" y="6" width="16" height="12" rx="1"/>',
   pgi:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 2"/>',pgc:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="6.6" stroke-dasharray="2 2"/>',ci:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1"/>',
   a3:'<path d="M4 18A9 9 0 0 1 20 18"/><circle cx="12" cy="9" r="1.4"/>',ac:'<path d="M5 17A8 8 0 0 1 19 9"/><path d="M12 17L19 9" stroke-dasharray="2 2"/>',at:'<path d="M3 18h8"/><path d="M11 18a7 7 0 0 0 7-7V5"/>',af:'<path d="M4 20V12a8 8 0 0 1 8-8h8"/><path d="M4 4v4M4 4h4" stroke-dasharray="2 2"/>',sp:'<path d="M3 17l3-6 3-3 3 1 3 4 3 1 3-6"/>',
   pw:'<path d="M3 9h18M3 15h18"/><path d="M3 9h18" stroke-width="3"/>',pli:'<path d="M4 18L20 6" stroke-dasharray="3 3"/>',pe:'<path d="M4 16l6-10h10l-6 10z"/><path d="M4 16h10" stroke-width="3"/>',
@@ -82,13 +84,16 @@ const SKI={s:'<path d="M7 3v15l4-4 3 6 2.5-1-3-6H19z"/>',ln:'<path d="M5 19L19 5
 
 const skSvg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SKI[k]||''}</svg>`;
 
-function skState(E){ E.t=E.t||'c'; E.pts=E.pts||[]; E.pick=E.pick||[]; E.opt=E.opt||{n:6,rad:false,R:300,off:500,gap:100,mul:true,keep:true,cpy:false}; E.last=E.last||{pg:'pgi',ar:'a3',pk:'pw',mr:'mi',tr:'tc'}; return E; }
+function skState(E){ E.t=E.t||'c'; E.pts=E.pts||[]; E.pick=E.pick||[]; E.opt=E.opt||{n:6,rad:false,R:300,off:500,gap:100,mul:true,keep:true,cpy:false}; E.last=E.last||{se:'s',ln:'pl',pg:'pgi',ar:'a3',pk:'pw',mr:'mi',tr:'tc'}; return E; }
 
 function skSync(){ panelKey=''; syncPanel(); redraw(); }
 
+function skFlyOpen(g){ const E=planEd; if(!E) return; const ok=x=>skAllowed(x,E.t), L=SKFLY[g].filter(ok), btn=panel.querySelector('[data-act="plF"][data-g="'+g+'"]'); if(!btn||!L.length) return;
+  popMenu(btn,`<div class="skpl">${L.map(x=>`<button class="skpi" data-k="${x}" aria-pressed="${E.k===x}">${skSvg(x)}<span>${SKPL[x]||SKN[x]}</span></button>`).join('')}</div>`,b=>{ const k=b.dataset.k; if(!planEd||!k) return; skSetTool(k); planEd.fly=null; skSync(); }); }
+
 function skReset(E){ E.pts=[]; E.pick=[]; E.live=null; E.a=null; }
 
-function skSetTool(k){ const E=planEd; if(!E||!skAllowed(k)) return; const was=E.k; E.k=k; skReset(E); E.lastI=null; if(was!==k) E.acq=[]; if(!SKSEL.has(k)&&k!=='del'&&k!=='s'&&k!=='of') E.S=[];
+function skSetTool(k){ const E=planEd; if(!E||!skAllowed(k)) return; const was=E.k; E.k=k; skReset(E); E.lastMv=null; E.lastI=null; if(was!==k) E.acq=[]; if(!SKSEL.has(k)&&k!=='del'&&k!=='s'&&k!=='sm'&&k!=='mv'&&k!=='of') E.S=[];
   for(const g in SKFLY) if(SKFLY[g].includes(k)) E.last[g]=k; if(SKSEL.has(k)&&!(E.S||[]).length) toast('Сначала выберите линии: «Выбор», затем «'+SKS[k]+'»'); if(was!==k) E.fly=null; }
 
 const skV=(a,b)=>({x:b.x-a.x,y:b.y-a.y}), skL=v=>Math.hypot(v.x,v.y), skU=v=>{ const l=skL(v)||1; return {x:v.x/l,y:v.y/l}; }, skAddP=(a,v,k)=>({x:a.x+v.x*(k==null?1:k),y:a.y+v.y*(k==null?1:k)}), skR3=p=>({x:r3(p.x),y:r3(p.y)});
@@ -148,6 +153,7 @@ function skGen(k,P,q){ const E=planEd, o=E.opt, A=P[0];
     case 'sp': return {S:A?skChain(skSpline(P.concat([q]),false)):[]};
     case 'md': return A?{X:p=>skMir(A,q,p),copy:o.keep}:{};
     case 'cp': return A?{X:p=>({x:p.x+q.x-A.x,y:p.y+q.y-A.y}),copy:true}:{};
+    case 'mv': return A?{X:p=>({x:p.x+q.x-A.x,y:p.y+q.y-A.y}),mv:true}:{};
     case 'rot': { const C=skCentroid(); if(!A||!C) return {}; const an=skRotAng(C,A,q); return {X:p=>skRotP(C,an,p),copy:o.cpy,ang:an,C}; }
   } return {S:[]}; }
 
@@ -155,7 +161,12 @@ function skAdd(S,t){ const E=planEd; let n=0; for(const [A,B] of S){ if(skL(skV(
 
 function skApplyX(G){ const E=planEd, I=skSelLines(), J=skSelSp(); if((!I.length&&!J.length)||!G.X) return; planHist(); E.SP=E.SP||[];
   if(G.copy){ const N=I.map(i=>{ const l=E.L[i]; return {...l,a:skR3(G.X(l.a)),b:skR3(G.X(l.b))}; }), M=J.map(j=>({...E.SP[j],p:E.SP[j].p.map(q=>skR3(G.X(q)))})); const s0=E.L.length, t0=E.SP.length; E.L.push(...N); E.SP.push(...M); E.S=N.map((_,k)=>({k:'l',i:s0+k})).concat(M.map((_,k)=>({k:'sp',i:t0+k}))); }
-  else { for(const i of I){ const l=E.L[i]; l.a=skR3(G.X(l.a)); l.b=skR3(G.X(l.b)); } for(const j of J) E.SP[j].p=E.SP[j].p.map(q=>skR3(G.X(q))); } }
+  else { const old=[]; if(G.mv){ for(const i of I) old.push({...E.L[i].a},{...E.L[i].b}); for(const j of J){ const P=E.SP[j].p; if(!E.SP[j].cl&&P.length) old.push({...P[0]},{...P[P.length-1]}); } }
+    for(const i of I){ const l=E.L[i]; l.a=skR3(G.X(l.a)); l.b=skR3(G.X(l.b)); } for(const j of J) E.SP[j].p=E.SP[j].p.map(q=>skR3(G.X(q)));
+    /* Переместить: the ends of the other segments that met the moved ones follow — the outline does not break */
+    if(G.mv&&old.length){ const at=v=>old.some(p=>Math.hypot(p.x-v.x,p.y-v.y)<1), sI=new Set(I), sJ=new Set(J);
+      E.L.forEach((l,i)=>{ if(sI.has(i)) return; for(const e of ['a','b']) if(at(l[e])) l[e]=skR3(G.X(l[e])); });
+      (E.SP||[]).forEach((S,j)=>{ if(sJ.has(j)||S.cl||!S.p.length) return; const n=S.p.length-1; if(at(S.p[0])) S.p[0]=skR3(G.X(S.p[0])); if(n>0&&at(S.p[n])) S.p[n]=skR3(G.X(S.p[n])); }); } } }
 
 function skFrom(){ const E=planEd, k=E.k, n=E.pts.length; if(!n) return null; if(k==='rc'||k==='pgi'||k==='pgc'||k==='ci'||(k==='a3'&&n===2)||(k==='ac'&&n===2)||k==='rot') return null; return E.pts[n-1]; }
 
@@ -170,7 +181,7 @@ function skPoint(q){ const E=planEd, k=E.k;
   if(k==='sp'){ const n=E.pts.length; if(n&&skL(skV(E.pts[n-1],q))<50){ skSplineDone(false); return; } if(n>=3&&skL(skV(E.pts[0],q))<1){ skSplineDone(true); return; } E.pts.push(q); skSync(); return; }
   E.pts.push(q); if(E.pts.length<(SKNEED[k]||2)){ skSync(); return; }
   const P=E.pts.slice(0,-1), G=skGen(k,P,q);
-  if(G.X){ skApplyX(G); if(k==='cp'&&E.opt.mul){ E.pts=[P[0]]; skSync(); return; } }
+  if(G.X){ skApplyX(G); if(k==='mv') E.lastMv={A:{...P[0]},B:{...q}}; /* the distance stays on screen: tap — type the exact one */ if(k==='cp'&&E.opt.mul){ E.pts=[P[0]]; skSync(); return; } }
   else { planHist(); if(!skAdd(G.S)){ E.H.pop(); toast('Слишком мало — линия не добавлена'); } else if(k==='ln') E.lastI=E.L.length-1; }
   skReset(E); skSync(); }
 
@@ -226,8 +237,11 @@ function skTyped(v){ /* a number typed while drawing: length, radius or angle */
   if(k==='af'&&E.pick.length===2){ skFillet(v); return; }
   if((k==='ln'||k==='pl')&&n){ const A=E.pts[n-1], tgt=E.ld&&skL(skV(A,E.ld))>1?E.ld:null, prev=E.L.length?E.L[E.L.length-1]:null, d=tgt?skU(skV(A,tgt)):prev?skU(skV(prev.a,prev.b)):{x:1,y:0}; skPoint(skR3(skAddP(A,d,v))); return; }
   if(k==='ci'&&n===1){ skPoint(skR3({x:E.pts[0].x+v,y:E.pts[0].y})); return; }
+  if((k==='mv'||k==='cp')&&n===1){ const A=E.pts[0], tgt=E.ld&&skL(skV(A,E.ld))>1?E.ld:null; if(!tgt){ toast('Покажите направление пальцем или курсором, затем число'); return; } skPoint(skR3(skAddP(A,skU(skV(A,tgt)),v))); return; }
   if(k==='rot'){ const C=skCentroid(); if(!C){ toast('Сначала выберите линии'); return; } const an=v*Math.PI/180; skApplyX({X:p=>skRotP(C,an,p),copy:E.opt.cpy}); skReset(E); skSync(); return; }
   toast('Сначала поставьте первую точку'); }
+
+function skMvAgain(v){ const E=planEd, M=E&&E.lastMv; if(!M) return; if(!(v>0)){ toast('Не соответствует: нужно число больше 0'); return; } const L0=skL(skV(M.A,M.B)); if(L0<1) return; const d=skU(skV(M.A,M.B)), dv=v-L0; if(Math.abs(dv)<0.5) return; skApplyX({X:p=>({x:p.x+d.x*dv,y:p.y+d.y*dv}),mv:true}); M.B=skR3(skAddP(M.A,d,v)); skSync(); toast('Перемещено на '+fmtU(v)); }
 
 function skTypedR(v){ const E=planEd, k=E.k; if(!(v>0)){ toast('Не соответствует: радиус больше 0'); return; } if(E.pts.length!==1) return; const c=E.pts[0], d=E.ld&&skL(skV(c,E.ld))>1?skU(skV(c,E.ld)):{x:1,y:0}; skPoint(skR3(skAddP(c,d,v))); }
 
@@ -242,16 +256,19 @@ function skOpt(t){ const E=planEd, o=E.opt, id=t.id, v=t.type==='checkbox'?t.che
 function planUndo(){ const E=planEd; if(!E) return false; if(E.pts&&E.pts.length){ E.pts.pop(); E.a=E.pts.length?E.pts[E.pts.length-1]:null; E.live=null; } else if(E.pick&&E.pick.length){ E.pick.pop(); } else if(E.H.length){ skHistPop(E); E.S=[]; E.lastI=null; } else { toast('Нечего отменять'); } skSync(); return true; }
 
 function planDown(p){ const E=planEd, m=E.k;
+  if(E.fly){ const pm=document.getElementById('popMenu'); E.fly=null; if(pm&&!pm.hidden){ pm.hidden=true; skSync(); return {plN:true}; } }
   /* a size on the screen: tap — type the exact value */ const lh=(E.lh||[]).find(h=>Math.hypot(h.x-p.x,h.y-p.y)<24); if(lh){ openInline({kind:'sk',id:null,w:toW(lh.x,lh.y),val:lh.val,fn:lh.fn}); return {plN:true}; }
   if(SKPT.has(m)||(m==='af'&&E.pick.length===2)){ E.live=skSnap(p.x,p.y); E.ld=E.live; skAcq(E.live); redraw(); return {plL:true}; }
-  if(m!=='s') return null; const snapSP=JSON.stringify(E.SP||[]);
+  if(m!=='s'&&m!=='sm') return null; const snapSP=JSON.stringify(E.SP||[]);
   /* control points of a selected spline */ for(const j of skSelSp()){ const P=E.SP[j].p; for(let k=0;k<P.length;k++){ const q=toS(P[k]); if(Math.hypot(q.x-p.x,q.y-p.y)<16) return {plD:{t:'spp',j,k,w0:toW(p.x,p.y),snap:JSON.stringify(E.L),snapSP}}; } }
   const h=planHit(p.x,p.y); if(!h) return null; return {plD:{t:'mv',h,w0:toW(p.x,p.y),snap:JSON.stringify(E.L),snapSP}}; }
 
 function planLiveMove(p){ const E=planEd; if(!E) return; if(SKPT.has(E.k)||(E.k==='af'&&E.pick.length===2)){ E.live=skSnap(p.x,p.y); E.ld=E.live; skAcq(E.live); redraw(); } }
 
 function planTap(sx,sy,pt){ const E=planEd, m=E.k; E.live=null;
-  if(m==='s'){ E.S=[]; skSync(); return; }
+  if(m==='s'||m==='sm'){ E.S=[]; skSync(); return; }
+  /* Переместить with nothing selected: the touched segment is taken */
+  if(m==='mv'&&!skSelLines().length&&!skSelSp().length){ const sp=pt?toS(pt):{x:sx,y:sy}, i=planLineAt(sp.x,sp.y); if(i>=0){ E.S=[{k:'l',i}]; toast('Переместить: базовая точка — конец или середина отрезка'); } else toast('Коснитесь отрезка — или выберите несколько: «Выбор ▾»'); skSync(); return; }
   if(pt||SKPT.has(m)||(m==='af'&&E.pick.length===2)){ skPoint(pt||skSnap(sx,sy)); return; }
   if(m==='t'){ /* trim: the piece between the neighbouring crossings goes */ const i=planLineAt(sx,sy); if(i<0){ toast('Коснитесь куска линии, который надо убрать'); return; } const l=E.L[i], w=toW(sx,sy), v={x:l.b.x-l.a.x,y:l.b.y-l.a.y}, l2=v.x*v.x+v.y*v.y||1, tw=((w.x-l.a.x)*v.x+(w.y-l.a.y)*v.y)/l2, T=[0,1];
     E.L.forEach((o,j)=>{ if(j===i) return; const A=o.a,B=o.b, e={x:B.x-A.x,y:B.y-A.y}, den=v.x*e.y-v.y*e.x; if(Math.abs(den)<1e-9) return; const t=((A.x-l.a.x)*e.y-(A.y-l.a.y)*e.x)/den, u=((A.x-l.a.x)*v.y-(A.y-l.a.y)*v.x)/den; if(t>1e-4&&t<1-1e-4&&u>=-1e-4&&u<=1+1e-4) T.push(t); });
@@ -263,20 +280,20 @@ function planDel(){ const E=planEd, S=E.S||[]; if(!S.length){ skSetTool('del'); 
 
 function planPanel(){ const E=skState(planEd), S=E.S||[], k=E.k, t=E.t, ok=x=>skAllowed(x,t);
   const B=(key,lbl,on,act)=>`<button class="skb" data-act="${act||'plK'}" data-k="${key}" aria-pressed="${!!on}" title="${SKN[key]||lbl}">${skSvg(key)}<span>${lbl}</span></button>`;
-  const F=g=>{ const L=SKFLY[g].filter(ok); if(!L.length) return ''; const cur=L.includes(E.last[g])?E.last[g]:L[0]; return `<button class="skb skf" data-act="plF" data-g="${g}" data-k="${cur}" aria-pressed="${L.includes(k)}" aria-expanded="${E.fly===g}" title="${SKN[cur]} — ещё раз: список">${skSvg(cur)}<span>${SKFN[g]}</span><i></i></button>`; };
+  const F=g=>{ const L=SKFLY[g].filter(ok); if(!L.length) return ''; const cur=L.includes(E.last[g])?E.last[g]:L[0]; return `<button class="skb skf" data-act="plF" data-g="${g}" data-k="${cur}" aria-pressed="${L.includes(k)}" aria-expanded="${E.fly===g}" title="${SKN[cur]} — ещё раз: список">${skSvg(cur)}<span>${g==='se'||g==='ln'?SKS[cur]:SKFN[g]}</span><i></i></button>`; };
   const grp=(cap,h)=>h?`<div class="skg"><b>${cap}</b><div>${h}</div></div>`:'', sep='<span class="sksep"></span>';
-  const draw=['ln','pl','rc'].filter(ok).map(x=>B(x,SKS[x],k===x)).join('')+F('pg')+(ok('ci')?B('ci',SKS.ci,k==='ci'):'')+F('ar')+(ok('sp')?B('sp',SKS.sp,k==='sp'):'')+F('pk');
+  const draw=F('ln')+F('pk');
   const mod=B('cp',SKS.cp,k==='cp')+B('rot',SKS.rot,k==='rot')+F('mr')+B('of',SKS.of,k==='of')+F('tr')+`<button class="skb skdel" data-act="plDel" data-k="del" aria-pressed="${k==='del'}" title="Удалить выбранное; без выбора — касание линии">${skSvg('del')}<span>Удалить</span></button>`;
   const ti=(x,n,c,d)=>`<button data-act="plT" data-t="${x}" aria-pressed="${t===x}"><i style="border-top:3px ${d?'dashed':'solid'} ${c}"></i>${n}</button>`;
   const steps=SKHINT[k]||[''], st=['af','tc','t1','tm'].includes(k)?E.pick.length:E.pts.length, hint=steps[Math.min(st,steps.length-1)];
   const num=(id,l,v,ph)=>`<label class="skin">${l}<input id="${id}" inputmode="decimal" value="${v==null?'':v}" placeholder="${ph||''}" autocomplete="off"></label>`, chk=(id,l,v)=>`<label class="skin"><input type="checkbox" id="${id}"${v?' checked':''}>${l}</label>`, o=E.opt;
   let inp=''; if(k==='ln'||k==='pl') inp=num('skLen','Длина','','мм')+(k==='pl'?chk('skRad','Радиус',o.rad)+(o.rad?num('skR','R',o.R):''):''); else if(k==='rc') inp=chk('skRad','Радиус углов',o.rad)+(o.rad?num('skR','R',o.R):''); else if(k==='pgi'||k==='pgc') inp=num('skN','Стороны',o.n); else if(k==='ci') inp=num('skCR','Радиус','','мм'); else if(k==='af') inp=num('skFR','Радиус','','мм');
-  else if(k==='cp') inp=chk('skMul','Несколько копий',o.mul); else if(k==='rot') inp=num('skAng','Угол, °','','')+chk('skCpy','Копия',o.cpy); else if(k==='mi'||k==='md') inp=chk('skKeep','Оставить исходное',o.keep); else if(k==='of') inp=num('skOff','Расстояние',o.off); else if(k==='sg') inp=num('skGap','Зазор',o.gap);
+  else if(k==='cp') inp=chk('skMul','Несколько копий',o.mul); else if(k==='mv') inp=num('skLen','Длина','','мм'); else if(k==='rot') inp=num('skAng','Угол, °','','')+chk('skCpy','Копия',o.cpy); else if(k==='mi'||k==='md') inp=chk('skKeep','Оставить исходное',o.keep); else if(k==='of') inp=num('skOff','Расстояние',o.off); else if(k==='sg') inp=num('skGap','Зазор',o.gap);
   const busy=E.pts.length||E.pick.length;
   const C=E.cfg, head=C?`<span class="skh"><b>${C.title}</b></span>${C.kind==='rail'?`<div class="skt" role="group" aria-label="Низ ограждения"><button data-act="plRB" data-b="lv" aria-pressed="${C.base!=='slab'}">На уровне</button><button data-act="plRB" data-b="slab" aria-pressed="${C.base==='slab'}">На перекрытии</button></div>${C.base!=='slab'?num('skZ','Низ',r1(C.z||0)):''}`:''}`:`<div class="skt" role="group" aria-label="Тип линии">${ti('c','Контур','#9aa5b1')}${ti('r','Конёк','#d63fd6')}${ti('j','Стык','#2fae5a',1)}</div>`;
   const opts=`<div class="skrow">${head}<span class="skok"><button class="ibn okb" data-act="plDone" title="${E.cfg?'Готово':'Построить крышу'}" aria-label="${E.cfg?'Готово':'Построить крышу'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button class="ibn cxb" data-act="plQuit" title="Выйти без изменений" aria-label="Выйти без изменений"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div><div class="skrow skwr"><span class="skh"><b>${SKN[k]||''}</b>${hint?': '+hint:''}${S.length?' · выбрано: '+S.length:''}</span>${inp}${busy?`<button class="btn" data-act="plCancel">${k==='sp'?'Закончить сплайн':'Закончить'}</button>`:''}</div>`;
-  const fly=E.fly&&SKFLY[E.fly]?`<div class="skrow skfly"><span class="skh"><b>${SKFN[E.fly]}:</b></span>${SKFLY[E.fly].filter(ok).map(x=>`<button class="skc" data-act="plK" data-k="${x}" aria-pressed="${k===x}">${skSvg(x)}${SKN[x]}</button>`).join('')}</div>`:'';
-  const dock=`<div class="skdock">${grp('ВЫБОР',B('s','Выбор',k==='s'))}${sep}${grp('РИСОВАТЬ',draw)}${sep}${grp('ИЗМЕНИТЬ',mod)}${sep}${grp('РЕЖИМ',`<button class="skb" data-act="plOr" aria-pressed="${axisMode==='ortho'}" title="Орто: 0° / 45° / 90° и пунктир от вершин">${skSvg('or')}<span>Орто</span></button>`)}
+  const fly=''; /* the lists open as a vertical pop-up over the drawing (skFlyOpen) */
+  const dock=`<div class="skdock">${grp('ВЫБОР',F('se')+B('mv',SKS.mv,k==='mv'))}${sep}${grp('РИСОВАТЬ',draw)}${sep}${grp('ИЗМЕНИТЬ',mod)}${sep}${grp('РЕЖИМ',`<button class="skb" data-act="plOr" aria-pressed="${axisMode==='ortho'}" title="Орто: 0° / 45° / 90° и пунктир от вершин">${skSvg('or')}<span>Орто</span></button>`)}
     </div>`;
   return `<div class="skw">${opts}${fly}${dock}</div>`; }
 
@@ -287,7 +304,8 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
     if(sel){ ctx.save(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=1; ctx.setLineDash([3,4]); ctx.beginPath(); Sp.p.forEach((v,k)=>{ const q=toS(v); k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); }); ctx.stroke(); ctx.restore(); for(const v of Sp.p){ const q=toS(v); ctx.beginPath(); ctx.arc(q.x,q.y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } } });
   /* sizes you can tap and type: the selected segment / vertex (the other end stays), the segment just drawn */
   { const lab=(i,e,txt)=>{ const l=E.L[i]; if(!l) return; const a=toS(l.a), b=toS(l.b), u=skU({x:b.x-a.x,y:b.y-a.y}), m={x:(a.x+b.x)/2-u.y*22,y:(a.y+b.y)/2+u.x*22}, L=skL(skV(l.a,l.b)); tmpBox(fmtU(L),m.x,m.y,0,true); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skSetLen(i,e,v)}); };
-    const SL=S.filter(o=>o.k!=='sp'), SE=SL.filter(o=>o.k==='e'); /* one selected vertex wins even when its lines are selected too */ if(SE.length===1&&!E.live) lab(SE[0].i,SE[0].e); else if(SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
+    const SL=S.filter(o=>o.k!=='sp'), SE=SL.filter(o=>o.k==='e'); /* one selected vertex wins even when its lines are selected too */ const selM=E.k==='s'||E.k==='sm'; /* sizes of the selection — only while selecting (a move / copy shows its own size) */ if(selM&&SE.length===1&&!E.live) lab(SE[0].i,SE[0].e); else if(selM&&SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
+    if(E.k==='mv'&&E.lastMv&&!E.pts.length){ const M=E.lastMv, a=toS(M.A), b=toS(M.B), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, L=skL(skV(M.A,M.B)); ctx.save(); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; ctx.setLineDash([4,4]); line(a,b); ctx.restore(); tmpBox(fmtU(L),m.x,m.y,0,true); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skMvAgain(v)}); }
   /* vertex circles only on the selected lines; the rest stay clean */
   for(const i of selL){ const l=E.L[i]; if(!l) continue; for(const e of ['a','b']){ const q=toS(l[e]), se=on(i,e); ctx.beginPath(); ctx.arc(q.x,q.y,se?8:6,0,Math.PI*2); ctx.fillStyle=se?'#4c9aff':'#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } }
   const q=E.live, k=E.k, P=E.pts;
@@ -296,11 +314,11 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
     else G=skGen(k,P,q);
     if(G){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2.5; ctx.setLineDash([10,6]); if(G.S) for(const [A,B] of G.S) line(toS(A),toS(B)); if(G.X) for(const i of skSelLines()){ const l=E.L[i]; line(toS(G.X(l.a)),toS(G.X(l.b))); } ctx.setLineDash([]); }
     const A=P.length?P[P.length-1]:null;
-    if(A&&(k==='ln'||k==='pl')){ const a=toS(A), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, L=skL(skV(A,q)); tmpBox(fmtU(L),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skTyped(v)}); }
+    if(A&&(k==='ln'||k==='pl'||((k==='mv'||k==='cp')&&P.length===1))){ const a=toS(A), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, L=skL(skV(A,q)); tmpBox(fmtU(L),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skTyped(v)}); }
     if(P.length&&k==='rc'){ const b=toS(q); tmpBox(fmtU(Math.abs(q.x-P[0].x))+' × '+fmtU(Math.abs(q.y-P[0].y)),b.x+44,b.y-18,0,false); }
     if(P.length===1&&(k==='ci'||k==='pgi'||k==='pgc')){ const a=toS(P[0]), b=toS(q), m={x:(a.x+b.x)/2,y:(a.y+b.y)/2-16}, R=skL(skV(P[0],q)); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(a,b); tmpBox('R '+fmtU(R),m.x,m.y,0,false); E.lh.push({x:m.x,y:m.y,val:R,fn:v=>skTypedR(v)}); }
     if(k==='rot'&&G&&G.C){ const c=toS(G.C), b=toS(q); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(c,b); if(P[0]) line(c,toS(P[0])); tmpBox((G.ang*180/Math.PI).toFixed(1)+'°',b.x+30,b.y-18,0,false); }
-    if(k==='cp'&&P[0]){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(toS(P[0]),toS(q)); } }
+    if((k==='cp'||k==='mv')&&P[0]){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; line(toS(P[0]),toS(q)); } }
   for(const p of P){ const s=toS(p); ctx.beginPath(); ctx.arc(s.x,s.y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2; ctx.stroke(); }
   if(k==='rot'){ const C=skCentroid(); if(C){ const c=toS(C); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(c.x-7,c.y); ctx.lineTo(c.x+7,c.y); ctx.moveTo(c.x,c.y-7); ctx.lineTo(c.x,c.y+7); ctx.stroke(); } }
   for(const a of E.acq||[]){ const s=toS(a); ctx.strokeStyle='#0ea5b7'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(s.x-7,s.y); ctx.lineTo(s.x+7,s.y); ctx.moveTo(s.x,s.y-7); ctx.lineTo(s.x,s.y+7); ctx.stroke(); }

@@ -4779,5 +4779,17 @@
 "Главный": "Main",
 "Угломер": "Inclinometer",
 "расч": "calc",
-"мм — край крыши на месте, сдвинут контур": "mm — the roof edge stays, the outline moved"
+"мм — край крыши на месте, сдвинут контур": "mm — the roof edge stays, the outline moved",
+"касание — выделить один отрезок (другой — заменяет, повторно — снять); тяните точку или линию": "tap — select one segment (another one replaces it, again — clear); drag a point or a line",
+"касание — добавить отрезок, повторно — снять; пусто — снять всё": "tap — add a segment, again — remove; empty — clear all",
+"Переместить: базовая точка — конец или середина отрезка": "Move: base point — an end or the middle of a segment",
+"Покажите направление пальцем или курсором, затем число": "Show the direction with a finger or the cursor, then the number",
+"Коснитесь отрезка — или выберите несколько: «Выбор": "Tap a segment — or select several: «Select",
+"базовая точка — конец или середина отрезка": "base point — an end or the middle of a segment",
+"куда (цифра размера — ввод": "where to (tap the size number to type",
+"Многоуг. вписанный": "Polygon inscribed",
+"Многоуг. описанный": "Polygon circumscribed",
+"Дуга из центра": "Arc from center",
+"Перемещено на": "Moved by",
+"Дуга: 3 точки": "Arc: 3 points"
 }
