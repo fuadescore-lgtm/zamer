@@ -5372,7 +5372,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.50':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.51':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -11989,6 +11989,18 @@ function strBindCab(it){ const P=it.pts; if(!P||P.length<2) return null; let k=n
 /* string connection marks in 3D: a box lying on the module (follows the slope via zt) */
 function strBoxOn(M,zt,c,a,b,la,lb,z0,h,col,tag){ const P=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>{ const q={x:c.x+a.x*la*i+b.x*lb*j,y:c.y+a.y*la*i+b.y*lb*j}; return [q.x,q.y,zt(q)+z0]; }), T=P.map(q=>[q[0],q[1],q[2]+h]);
   addQuad(M,T[0],T[1],T[2],T[3],col,tag); addQuad(M,P[3],P[2],P[1],P[0],col,tag); for(let k=0;k<4;k++){ const k2=(k+1)%4; addQuad(M,P[k],P[k2],T[k2],T[k],col,tag); } }
+/* point on the top surface of the module under a plan point q, lifted by n along the module normal (follows slope, offset and rack tilt like solarMesh) */
+function strSurf(it,F){ if(!F||!F.W||!F.u||!F.b) return null; const off=it.off==null?150:it.off, z1=off+(it.th||30), ca=F.ca||1, sa=F.sa||0, SW=solarWH(it,F), rel=SW.rel||0, cr=Math.cos(rel), sr=Math.sin(rel), RR=Math.abs(rel)>1e-4?solarRects(it,F):null;
+  const S0=(x,t,n)=>F.W(x,t*ca-n*sa,t*sa+n*ca);
+  return (q,n)=>{ const dx=q.x-it.p.x, dy=q.y-it.p.y, x=dx*F.u.x+dy*F.u.y, t=(dx*F.b.x+dy*F.b.y)/ca; if(!RR||!RR.length) return S0(x,t,z1+n);
+    let r=RR[0], bd=Infinity; for(const R of RR){ const d=Math.max(0,R[0]-x,x-R[1])+Math.max(0,R[2]-t,t-(R[2]+SW.h0*cr)); if(d<bd){ bd=d; r=R; } }
+    const t0=r[2], s=(t-t0)/(cr||1), nn=z1+n-off; return S0(x,t0+s*cr-nn*sr,off+s*sr+nn*cr); }; }
+/* box lying on the module surface: half-sizes la/lb along d/e, from n0 to n0+h above the top, sides along the module normal */
+function strBoxS(M,S3,c,a,b,la,lb,n0,h,col,tag){ const Q=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:c.x+a.x*la*i+b.x*lb*j,y:c.y+a.y*la*i+b.y*lb*j})), P=Q.map(q=>S3(q,n0)), T=Q.map(q=>S3(q,n0+h));
+  addQuad(M,T[0],T[1],T[2],T[3],col,tag); addQuad(M,P[3],P[2],P[1],P[0],col,tag); for(let k=0;k<4;k++){ const k2=(k+1)%4; addQuad(M,P[k],P[k2],T[k2],T[k],col,tag); } }
+/* connection / grounding point: small flat yellow square, 1/4 of the area of the «+»/«−» box (140×210 → 86×86 mm), lying on the surface */
+const STR_SQ=43, STR_SQ_H=20;
+function strMarkSq(M,zt,c,d,z0,S3){ const e={x:-d.y,y:d.x}, col=rgbOf('#fcc419'); if(S3) strBoxS(M,S3,c,d,e,STR_SQ,STR_SQ,z0,STR_SQ_H,col,'strpt'); else strBoxOn(M,zt,c,d,e,STR_SQ,STR_SQ,z0,STR_SQ_H,col,'strpt'); }
 /* PE washer: short cylinder on the frame, yellow-green with a bolt head */
 function strWasher(M,zt,c,r,z0,h,tag){ const n=14, ring=(rr,dz)=>{ const R=[]; for(let k=0;k<n;k++){ const t=k*2*Math.PI/n, q={x:c.x+Math.cos(t)*rr,y:c.y+Math.sin(t)*rr}; R.push([q.x,q.y,zt(c)+z0+dz]); } return R; };
   const g=rgbOf('#94d82d'), y=rgbOf('#fcc419'), B=ring(r,0), T=ring(r,h), Bi=ring(r*0.45,h), Ti=ring(r*0.45,h+h*0.8);
@@ -11999,8 +12011,9 @@ function strMarks3D(M){ const TM=strTerms(); if(!TM.length) return; for(const t 
     const f=itemById(t.arr), F=onLv(f.li,()=>insFrame(f.it,f.li)), top=(f.it.off==null?150:f.it.off)+(f.it.th||30), zt=q=>F.zt(q)+top;
     let d={x:t.x-t.cx,y:t.y-t.cy}; const dl=Math.hypot(d.x,d.y)||1; d={x:d.x/dl,y:d.y/dl}; const e={x:-d.y,y:d.x}, c={x:t.x,y:t.y};
     const man=strTailsOf(t.tk).length>0, plus=t.pol==='+', col=rgbOf(plus?(man?'#e03131':'#f06565'):(man?'#212529':'#495057')), wh=rgbOf('#ffffff');
-    strBoxOn(M,zt,c,d,e,70,105,4,48,col,'strpt'); strBoxOn(M,zt,c,d,e,12,62,52,6,wh,'strpt'); if(plus) strBoxOn(M,zt,c,d,e,52,12,52,6,wh,'strpt'); }
-  const own=strOwner(); for(const {it,li} of strMains()){ if(![...own.values()].includes(it)) continue; let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||!Q.length) continue; const ki=cabEnd(it,'a')&&cabEnd(it,'a').it.t==='solar'?0:Q.length-1, p=Q[ki]; tubeJoint(M,[p[0],p[1],p[2]+40],150,rgbOf('#f2c200'),'strpt'); } }
+    const S3=strSurf(f.it,F), BX=(la,lb,z0,h,cl)=>S3?strBoxS(M,S3,c,d,e,la,lb,z0,h,cl,'strpt'):strBoxOn(M,zt,c,d,e,la,lb,z0,h,cl,'strpt');
+    BX(70,105,0,48,col); BX(12,62,48,6,wh); if(plus) BX(52,12,48,6,wh); }
+  const own=strOwner(); for(const {it,li} of strMains()){ if(![...own.values()].includes(it)) continue; let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||!Q.length) continue; const ki=cabEnd(it,'a')&&cabEnd(it,'a').it.t==='solar'?0:Q.length-1, p=Q[ki]; const pn=Q[ki===0?Math.min(1,Q.length-1):Math.max(0,Q.length-2)], dx=pn[0]-p[0], dy=pn[1]-p[1], dl=Math.hypot(dx,dy); const du=dl>1?{x:dx/dl,y:dy/dl}:{x:1,y:0}; strMarkSq(M,()=>p[2]+40-STR_SQ_H/2,{x:p[0],y:p[1]},du,0); } }
 // ===== Заземление (PE): точка ⏚ на раме у «+» каждого стринга, PE-провод туда же, куда идёт DC-кабель; проверки приборов =====
 const PE_BR=['ПуГВ (ПВ-3) жёлто-зелёный','H07V-K жёлто-зелёный'], PE_COL='#2f9e44', PE_COL2='#fcc419';
 function peCfg(){ const v=vedCfg(); if(!v.pe||typeof v.pe!=='object') v.pe={}; const c=v.pe; if(!c.mode) c.mode='trunk'; if(!c.g||typeof c.g!=='object') c.g={}; return c; }
@@ -12101,8 +12114,8 @@ function drawPE(){ if(vHidPK('pe')) return; let G=[]; try{ G=peGroups(); }catch(
 /* device PE terminal ⏚: front face, bottom right corner of the body */
 function devPEpt(it,li){ const F=devFrame(it), D=F.D, q=F.P(D.w/2-Math.min(70,D.w/4),D.d/2+35); return {x:q.x,y:q.y,z:onLv(li,()=>devZ(it,li))+40}; }
 function devPEList(){ const r=[]; doc.levels.forEach((L,li)=>{ if(L.gp) return; for(const it of L.items) if(it.t==='dev'&&['dcb','inv','bat','pnl'].includes(it.k)&&!HDEV[it.k]&&it.p) r.push({it,li}); }); return r; }
-function peMarks3D(M){ for(const p of strPEPts()){ try{ const f=itemById(p.arr), F=f?onLv(f.li,()=>insFrame(f.it,f.li)):null; if(!F||!F.zt) continue; const top=(f.it.off==null?150:f.it.off)+(f.it.th||30); strWasher(M,q=>F.zt(q)+top,{x:p.x,y:p.y},72,4,24,'strpt'); }catch(_){} }
-  for(const {it,li} of devPEList()){ try{ const q=devPEpt(it,li); strWasher(M,()=>q.z,{x:q.x,y:q.y},42,0,14,'strpt'); }catch(_){} } }
+function peMarks3D(M){ for(const p of strPEPts()){ try{ const f=itemById(p.arr), F=f?onLv(f.li,()=>insFrame(f.it,f.li)):null; if(!F||!F.zt) continue; const top=(f.it.off==null?150:f.it.off)+(f.it.th||30); strMarkSq(M,q=>F.zt(q)+top,{x:p.x,y:p.y},F.u||{x:1,y:0},0,strSurf(f.it,F)); }catch(_){} }
+  for(const {it,li} of devPEList()){ try{ const q=devPEpt(it,li); strMarkSq(M,()=>q.z,{x:q.x,y:q.y},{x:1,y:0},0); }catch(_){} } }
 function peMesh(M){ let G=[]; try{ G=peGroups(); }catch(_){ return; } const col=rgbOf('#94d82d'), r=12;
   const along=(it,li,lane,cut)=>{ let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||Q.length<2) return; const VN=cabSideN(Q), R=onLv(li,()=>cabR(it,li)), pair=!isTail(it)&&!HCAB[R.kind]&&R.kind!=='ac', gap=6, ln=(lane||0)*(2*r+gap),
     off=pair?-(R.r*1.25+R.r+gap+r+ln):(R.r+gap+r+ln); /* DC pair: + | − | PE (next to the black core); single cable: PE beside it */
