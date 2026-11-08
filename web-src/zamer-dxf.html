@@ -5399,7 +5399,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.88':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.89':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -12783,7 +12783,10 @@ function strMarks3D(M){ const TM=strTerms(); if(!TM.length) return; for(const t 
     const man=strTailsOf(t.tk).length>0, plus=t.pol==='+', col=rgbOf(plus?(man?'#e03131':'#f06565'):(man?'#212529':'#495057')), wh=rgbOf('#ffffff');
     const S3=strSurf(f.it,F), BX=(la,lb,z0,h,cl)=>S3?strBoxS(M,S3,c,d,e,la,lb,z0,h,cl,'strpt'):strBoxOn(M,zt,c,d,e,la,lb,z0,h,cl,'strpt');
     BX(70,105,0,48,col); BX(12,62,48,6,wh); if(plus) BX(52,12,48,6,wh); }
-  const own=strOwner(); for(const {it,li} of strMains()){ if(![...own.values()].includes(it)) continue; let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||!Q.length) continue; const ki=cabEnd(it,'a')&&cabEnd(it,'a').it.t==='solar'?0:Q.length-1, p=Q[ki]; const pn=Q[ki===0?Math.min(1,Q.length-1):Math.max(0,Q.length-2)], dx=pn[0]-p[0], dy=pn[1]-p[1], dl=Math.hypot(dx,dy); const du=dl>1?{x:dx/dl,y:dy/dl}:{x:1,y:0}; strMarkSq(M,()=>p[2]+40-STR_SQ_H/2,{x:p[0],y:p[1]},du,0); } }
+  const own=strOwner(); for(const {it,li} of strMains()){ if(![...own.values()].includes(it)) continue; let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||!Q.length) continue; const ki=cabEnd(it,'a')&&cabEnd(it,'a').it.t==='solar'?0:Q.length-1, p=Q[ki]; const pn=Q[ki===0?Math.min(1,Q.length-1):Math.max(0,Q.length-2)], dx=pn[0]-p[0], dy=pn[1]-p[1], dl=Math.hypot(dx,dy); const du=dl>1?{x:dx/dl,y:dy/dl}:{x:1,y:0};
+    /* the connection point lies flat on the module plane (follows slope and rack tilt), sides along the module edges */
+    let S3=null, Fu=null; try{ const A=[cabEnd(it,'a'),cabEnd(it,'b')].find(x=>x&&x.it.t==='solar'), F=A?onLv(A.li,()=>insFrame(A.it,A.li)):null; if(F){ S3=strSurf(A.it,F); Fu=F.u; } }catch(_){}
+    if(S3&&Fu) strMarkSq(M,null,{x:p[0],y:p[1]},Fu,0,S3); else strMarkSq(M,()=>p[2]+40-STR_SQ_H/2,{x:p[0],y:p[1]},du,0); } }
 // ===== Заземление (PE): точка ⏚ на раме у «+» каждого стринга, PE-провод туда же, куда идёт DC-кабель; проверки приборов =====
 const PE_BR=['ПуГВ (ПВ-3) жёлто-зелёный','H07V-K жёлто-зелёный'], PE_COL='#2f9e44', PE_COL2='#fcc419';
 function peCfg(){ const v=vedCfg(); if(!v.pe||typeof v.pe!=='object') v.pe={}; const c=v.pe; if(!c.mode) c.mode='trunk'; if(!c.g||typeof c.g!=='object') c.g={}; return c; }
