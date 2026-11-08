@@ -5034,5 +5034,9 @@
 "толщина на другую сторону линии": "thickness to the other side of the line",
 "толщина на другую сторону": "thickness to the other side",
 "Стена перевёрнута": "Wall flipped",
-"Перевернуть стену": "Flip the wall"
+"Перевернуть стену": "Flip the wall",
+"Готово — снять выбор (или касание пустого места)": "Done — clear the selection (or tap an empty spot)",
+"Готово — снять выбор": "Done — clear the selection",
+"или касание пустого места": "or tap an empty spot",
+"снять выбор": "clear the selection"
 }
