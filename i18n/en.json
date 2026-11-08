@@ -4882,5 +4882,13 @@
 "Кабель от панелей идёт по кровле — «Между устройствами» для него нет": "A cable from the panels runs over the roof — “Between devices” does not apply to it",
 "как нарисовано": "as drawn",
 "Пусто — на той высоте, где нарисован профиль": "Empty — at the height where the profile is drawn",
-"Нижняя точка профиля над уровнем, мм. Пусто — на той высоте, где нарисован профиль": "Lowest point of the profile above the level, mm. Empty — at the height where the profile is drawn"
+"Нижняя точка профиля над уровнем, мм. Пусто — на той высоте, где нарисован профиль": "Lowest point of the profile above the level, mm. Empty — at the height where the profile is drawn",
+"Крыша «по профилю по контуру» из прежней версии: показывается как есть, профиль не меняется. Можно сменить тип крыши": "A “profile around the outline” roof from an earlier version: shown as it is, its profile does not change. You can change the roof type",
+"Новинка: план кровли — контур, коньки и стыки линиями": "New: roof plan — outline, ridges and joints as lines",
+"или долгое нажатие": "or a long press",
+"коснитесь отрезка, который переносим": "tap the segment to move",
+"куда поставить (цифра размера — ввод": "where to put it (tap the size to type",
+"перенесено · касание выделенного — ещё раз, мимо — выход": "moved · tap the selection — again, elsewhere — exit",
+"список — уголок": "list — the corner",
+"точка захвата: на отрезке (вершина выделенного — переносится одна вершина": "grab point on the segment (a vertex of the selected segment moves that vertex only"
 }
