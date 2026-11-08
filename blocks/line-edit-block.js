@@ -1,4 +1,4 @@
-/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.83.
+/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.84.
    Извлечено из web-src/zamer-dxf.html инструментом tools/extract_line_block.py: константы SK*, функции sk*, plan*, drawPlanEd,
    переходники плоскостей skv*, дуги как один объект (skArc*, lnArc*, arc*), сессия «Линии» (ln*).
    Не самостоятельный модуль: опирается на холст приложения (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc,
@@ -337,6 +337,7 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
   E.L.forEach((l,i)=>{ const a=toS(l.a), b=toS(l.b), st=stOf(l); if(selL.has(i)||PK.has(i)){ ctx.save(); ctx.strokeStyle=PK.has(i)?'#f59f00':'#4c9aff'; ctx.lineWidth=10; ctx.globalAlpha=.45; line(a,b); ctx.restore(); } ctx.strokeStyle=lnS&&st.lc?st.lc:col(l.t); ctx.lineWidth=l.t==='c'?2:3; ctx.setLineDash(l.t==='j'?[8,6]:lnS&&DASH[st.lt]?DASH[st.lt]:[]); line(a,b); ctx.setLineDash([]); });
   if(lnS) for(const it of lnArcItems()){ ctx.save(); ctx.strokeStyle=it.lc||col('l'); ctx.lineWidth=3; ctx.setLineDash(DASH[it.lt]||[]); ctx.beginPath(); if(it.t==='circ'){ const c=toS(it.c), e=toS({x:it.c.x+it.r,y:it.c.y}); ctx.arc(c.x,c.y,Math.hypot(e.x-c.x,e.y-c.y),0,7); } else { arcPts(arcG(it),0,0,1).map(toS).forEach((q,k)=>k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)); } ctx.stroke(); ctx.restore(); } /* arcs and circles of «Линии» — as thick as its lines */
   if(lnS&&E.arc) lnArcDraw(E);
+  if(SKV&&trackGuide&&E._dragL!=null){ ctx.save(); ctx.strokeStyle=C.tape||'#e0a400'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]); for(const [g0,g1] of trackGuide) line(toS(g0),toS(g1)); ctx.restore(); } /* on a facade / face the dragged segment's guide is drawn here (the plan draws its own) */
   const AG=skArcSel(E), AGI=new Set(AG?AG.I:[]); if(AG) skArcDraw(E);
   /* splines: one smooth curve; control points only when selected */ (E.SP||[]).forEach((Sp,j)=>{ const P=skSpCurve(Sp).map(toS), sel=selSp.has(j); if(sel){ ctx.save(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=10; ctx.globalAlpha=.45; ctx.beginPath(); P.forEach((q,k)=>k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)); ctx.stroke(); ctx.restore(); }
     ctx.strokeStyle=col(Sp.t); ctx.lineWidth=Sp.t==='c'?2:3; ctx.setLineDash(Sp.t==='j'?[8,6]:[]); ctx.beginPath(); P.forEach((q,k)=>k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)); ctx.stroke(); ctx.setLineDash([]);
