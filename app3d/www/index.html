@@ -5464,7 +5464,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.99':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.100':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -7645,7 +7645,7 @@ function bskSnap(sx,sy,from,ex,nbs){ if(bsk&&bsk.kind==='cab') return cabSnapP(s
   finally{ axisMode=sa; osnapOn=so; } }
 // привязка трассы кабеля: без стен — только к вершинам кабеля и устройствам; «Орто» — ровно по X / Y от соседней вершины; пунктир — линии выравнивания
 let cabGuide=null;
-function cabSnapPts(extra){ const P=(extra||[]).slice(); try{ for(const t of strTerms()) if(t.li==null||t.li===doc.curLv) P.push({x:t.x,y:t.y}); }catch(_){} /* ◆ string terminals of the panels attract, as the hint says */ for(const it of doc.items){ if(it.t!=='dev'||!it.p) continue; P.push(it.p); if(!HDEV[it.k]) for(const role of Object.keys(CPDEF[it.k]||{})){ try{ const q=devCP(it,doc.curLv,role); P.push({x:q[0],y:q[1]}); }catch(_){} } } return P; }
+function cabSnapPts(extra){ const P=(extra||[]).slice(); try{ for(const t of strTerms()) if(t.li==null||t.li===doc.curLv) P.push({x:t.x,y:t.y}); for(const t of strPEPts()) if(t.li==null||t.li===doc.curLv) P.push({x:t.x,y:t.y}); }catch(_){} /* ◆ string terminals and ⏚ points of the panels attract, as the hint says — the cable starts at their centre */ for(const it of doc.items){ if(it.t!=='dev'||!it.p) continue; P.push(it.p); if(!HDEV[it.k]) for(const role of Object.keys(CPDEF[it.k]||{})){ try{ const q=devCP(it,doc.curLv,role); P.push({x:q[0],y:q[1]}); }catch(_){} } } return P; }
 function cabSnapP(sx,sy,nb,extra){ cabGuide=null; liveSnap=null; const w=toW(sx,sy), P=(extra||[]).slice(); let best=null,bd=14; for(const q of P){ const t=toS(q), d=Math.hypot(t.x-sx,t.y-sy); if(d<bd){ bd=d; best=q; } }
   if(!best){ /* прибор — только касанием внутри его корпуса (центр) или точно в точку подключения; иначе трасса не «прилипает» к приборам рядом */ for(const it of doc.items){ if(it.t!=='dev'||!it.p) continue; if(!HDEV[it.k]) for(const role of Object.keys(CPDEF[it.k]||{})){ try{ const c=devCP(it,doc.curLv,role), t=toS({x:c[0],y:c[1]}), d=Math.hypot(t.x-sx,t.y-sy); if(d<7&&d<bd){ bd=d; best={x:c[0],y:c[1]}; } }catch(_){} } }
     if(!best) for(const it of doc.items){ if(it.t!=='dev'||!it.p) continue; let ins=false; try{ ins=HDEV[it.k]?Math.hypot(toS(it.p).x-sx,toS(it.p).y-sy)<10:inPoly(devFoot(it),w); }catch(_){} if(ins){ best=it.p; break; } } }
@@ -12926,6 +12926,7 @@ function drawStrPts(){ if(!strPtsOn()) return; const drw=(typeof bsk!=='undefine
     if(hot&&hot.tk===t.tk){ ctx.strokeStyle='#1c7ed6'; ctx.lineWidth=2.5; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.arc(p.x,p.y,r+8,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]); }
     ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); if(man){ ctx.fillStyle=col; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke(); } else { ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.stroke(); }
     if(big){ ctx.textAlign=t.pol==='+'?'right':'left'; haloText('С'+(t.si+1)+(t.pol==='+'?' +':' −'),p.x+(t.pol==='+'?-r-4:r+4),p.y,col); } }
+  if(hot&&/\|pe$/.test(hot.tk||'')){ const p=toS(hot); ctx.strokeStyle='#2f9e44'; ctx.lineWidth=3; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.arc(p.x,p.y,r+9,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]); ctx.beginPath(); ctx.arc(p.x,p.y,3.5,0,Math.PI*2); ctx.fillStyle='#2f9e44'; ctx.fill(); } /* the ⏚ point lights up like a «+»/«−» box */
   if(hot){ const p=toS(hot); ctx.textAlign='left'; ctx.font='700 12px '+FNUM; const s=/\|pe$/.test(hot.tk||'')?'⏚ Привязка: заземление '+(hot.kind==='link'?'(связь)':hot.kind==='extra'?'(доп.)':'(основная)')+' — кабель PE':'⚡ Привязка: С'+(hot.si+1)+(hot.pol==='+'?' +':' −'), w=ctx.measureText(s).width+16; ctx.fillStyle='#1c7ed6'; ctx.fillRect(p.x+16,p.y+14,w,22); ctx.fillStyle='#fff'; ctx.fillText(s,p.x+24,p.y+25); }
   // junctions on main cables: collection point and points where hand-drawn tails join
   const own=strOwner(); const TL=new Set(strTerms().filter(t=>t.li===doc.curLv).map(t=>t.si)); for(const {it,li} of strMains()){ const S=[...own.entries()].filter(([,c])=>c===it).map(([si])=>si); if(!S.length||(li!==doc.curLv&&!S.some(si=>TL.has(si)))) continue; const T=mainT(it), pts=[{p:T,S:[]}];
