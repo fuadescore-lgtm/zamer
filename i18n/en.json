@@ -4866,5 +4866,13 @@
 "Окружность удалена": "Circle deleted",
 "Дуга удалена": "Arc deleted",
 "выбрана дуга: тяните концы или": "arc selected: drag the ends or",
-"коснитесь": "tap"
+"коснитесь": "tap",
+"Свес справа: продолжение профиля за правый край, мм": "Right overhang: the profile continued past the right edge, mm",
+"Свес слева: продолжение профиля за левый край, мм": "Left overhang: the profile continued past the left edge, mm",
+"Редактировать эскиз: профиль на фасаде": "Edit sketch: the profile on the facade",
+"Нижняя точка профиля над уровнем, мм": "Lowest point of the profile above the level, mm",
+"Крыша по профилю (низ кровли": "Roof by profile (roof underside",
+"Крыша по профилю · правка": "Roof by profile · edit",
+"Введите число в мм": "Enter a number in mm",
+"Толщина кровли, мм": "Roof thickness, mm"
 }
