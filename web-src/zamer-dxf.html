@@ -5399,7 +5399,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.87':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.88':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -12878,12 +12878,11 @@ function peOff(Q,off){ const n=Q.length; if(n<2) return Q.slice(); const N=[]; f
 /* route in plan for PE drawing: the 3D path without its vertical parts (falls back to the drawn vertices) */
 function peXY(Q,M){ if(!Q||Q.length<2) return M.pts.map(toS); const r=[]; for(const q of Q){ const p=toS({x:q[0],y:q[1]}), l=r[r.length-1]; if(!l||Math.hypot(p.x-l.x,p.y-l.y)>0.5) r.push(p); } return r.length>1?r:M.pts.map(toS); }
 function drawPE(){ if(vHidPK('pe')) return; let G=[]; try{ G=peGroups(); }catch(_){ return; } const P=strPEPts(), cur=doc.curLv, big=view.scale>0.09, r=Math.max(4,Math.min(9,view.scale*70)), w=Math.max(1.6,Math.min(3.2,view.scale*24));
-  drawPE.ln=new Map(); ctx.save(); for(const g of G){ if(g.type==='str'){ const M=g.main, li=doc.levels.findIndex(L=>L.items.includes(M)); if(li===cur&&g.on){ const off=Math.max(6,view.scale*90), Q=peClean(cabPlanXY(M,li).map(toS)); /* trunk: beside the main cable along its real route, as the plan now draws the cable */ const Qs=g.jn?peSlice(Q,Q,toS({x:g.jn.p[0],y:g.jn.p[1]}),g.ki===0):Q; let sh=peOff(Qs,off); peDash(ctx,sh,w); } /* cut the route first, then the parallel line */
-      for(const q of g.taps){ const p=P.find(x=>x.si===q.si); if(!p||p.li!==cur||!g.on||q.man) continue; const a=toS(p), b=toS(p.term); peDash(ctx,[a,b],w); } }
-    else if(g.type==='join'&&g.on){ const M=g.main, li=doc.levels.findIndex(L=>L.items.includes(M)); if(li!==cur) continue; const off=Math.max(6,view.scale*90), Q=peClean(cabPlanXY(M,li).map(toS));
-      const jq=toS({x:g.jp[0],y:g.jp[1]}); let sh=peOff(peSlice(Q,Q,jq,g.ki!==0),off); peDash(ctx,sh,w*1.35); const e=g.ki!==0?sh[sh.length-1]:sh[0]; peIcon(ctx,e.x,e.y,r*1.25); if(big){ ctx.font='800 '+Math.max(9,Math.min(12,view.scale*110))+'px '+FNUM; ctx.textAlign='left'; ctx.textBaseline='middle'; haloText('⏚ общий PE',e.x+r*1.4+3,e.y-r-2,'#2b8a3e'); } }
-    else if(g.type==='dev'&&g.on&&g.path&&!g.man){ for(const o of g.path){ const n=(drawPE.ln.get(o.it.id)||0); drawPE.ln.set(o.it.id,n+1); const li=doc.levels.findIndex(L=>L.items.includes(o.it)); if(li!==cur) continue; const off=Math.max(6,view.scale*90)+n*Math.max(4,view.scale*40), Q=peClean(cabPlanXY(o.it,li).map(toS)), sh=peOff(Q,off); peDash(ctx,sh,w); } }
-    else if(g.cab&&g.on){ const li=doc.levels.findIndex(L=>L.items.includes(g.cab)); if(li!==cur) continue; const off=Math.max(6,view.scale*90), Q=peClean(cabPlanXY(g.cab,li).map(toS)), sh=peOff(Q,off); peDash(ctx,sh,w); } }
+  drawPE.ln=new Map(); ctx.save();
+  /* PE lines: the 3D conductors seen from above (a little wider apart than in 3D so they read beside the cable) */
+  for(const o of pePaths(Math.max(40,7/view.scale))){ if(o.li!==cur) continue; const S=[]; for(const q of o.P){ const p=toS({x:q[0],y:q[1]}), l=S[S.length-1]; if(!l||Math.hypot(p.x-l.x,p.y-l.y)>0.5) S.push(p); } if(S.length<2) continue; peDash(ctx,S,o.mark?w*1.35:w);
+    if(o.mark&&o.end){ const e=toS({x:o.end[0],y:o.end[1]}); peIcon(ctx,e.x,e.y,r*1.25); if(big){ ctx.font='800 '+Math.max(9,Math.min(12,view.scale*110))+'px '+FNUM; ctx.textAlign='left'; ctx.textBaseline='middle'; haloText('⏚ общий PE',e.x+r*1.4+3,e.y-r-2,'#2b8a3e'); } } }
+  for(const g of G){ if(g.type!=='str'||!g.on) continue; for(const q of g.taps){ const p=P.find(x=>x.si===q.si); if(!p||p.li!==cur||q.man) continue; const a=toS(p), b=toS(p.term); peDash(ctx,[a,b],w); } } /* string taps: point ⏚ → its terminal */
   for(const {it,li} of devPEList()){ if(li!==cur) continue; const q=toS(devPEpt(it,li)); peIcon(ctx,q.x,q.y,r*0.85); }
   for(const p of P){ if(p.li!==cur) continue; const g=G.find(q=>q.type==='str'&&q.strings.includes(p.si)), s=toS(p); peIcon(ctx,s.x,s.y,r); if(g&&!g.on){ ctx.strokeStyle='#e03131'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y,r+3,0,Math.PI*2); ctx.stroke(); }
     if(big){ ctx.font='800 '+Math.max(9,Math.min(12,view.scale*110))+'px '+FNUM; ctx.textAlign='left'; ctx.textBaseline='middle'; haloText('⏚ С'+(p.si+1),s.x+r+3,s.y-r-2,'#2b8a3e'); } }
@@ -12894,14 +12893,18 @@ function devPEpt(it,li){ const F=devFrame(it), D=F.D, q=F.P(D.w/2-Math.min(70,D.
 function devPEList(){ const r=[]; doc.levels.forEach((L,li)=>{ if(L.gp) return; for(const it of L.items) if(it.t==='dev'&&['dcb','inv','bat','pnl'].includes(it.k)&&!HDEV[it.k]&&it.p) r.push({it,li}); }); return r; }
 function peMarks3D(M){ for(const p of strPEPts()){ try{ const f=itemById(p.arr), F=f?onLv(f.li,()=>insFrame(f.it,f.li)):null; if(!F||!F.zt) continue; const top=(f.it.off==null?150:f.it.off)+(f.it.th||30); strMarkSq(M,q=>F.zt(q)+top,{x:p.x,y:p.y},F.u||{x:1,y:0},0,strSurf(f.it,F)); }catch(_){} }
   for(const {it,li} of devPEList()){ try{ const q=devPEpt(it,li); strMarkSq(M,()=>q.z,{x:q.x,y:q.y},{x:1,y:0},0); }catch(_){} } }
-function peMesh(M){ let G=[]; try{ G=peGroups(); }catch(_){ return; } const col=rgbOf('#94d82d'), r=12;
-  const along=(it,li,lane,cut)=>{ let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||Q.length<2) return; const VN=cabSideN(Q), R=onLv(li,()=>cabR(it,li)), pair=!isTail(it)&&!HCAB[R.kind]&&R.kind!=='ac', gap=6, ln=(lane||0)*(2*r+gap),
-    off=pair?-(R.r*1.25+R.r+gap+r+ln):(R.r+gap+r+ln); /* DC pair: + | − | PE (next to the black core); single cable: PE beside it */
-    let sh=Q.map((q,i)=>[q[0]+VN[i][0]*off,q[1]+VN[i][1]*off,q[2]]); if(cut){ sh=peSlice(sh,Q,cut.p,cut.start); const e=cut.start?sh[sh.length-1]:sh[0]; if(cut.mark) tubeJoint(M,e,r*3.2,rgbOf('#fcc419'),'cab'); } for(let i=0;i<sh.length-1;i++) tube(M,sh[i],sh[i+1],r,col,'cab'); for(let i=1;i<sh.length-1;i++) tubeJoint(M,sh[i],r*1.06,col,'cab'); };
+/* PE conductors as 3D polylines — the one source for the 3D tubes and the plan (the plan shows them from above, exactly as built).
+   minOff: least distance from the cable (the plan may ask for a visible gap; the side and the shape stay those of 3D) */
+function pePaths(minOff){ let G=[]; try{ G=peGroups(); }catch(_){ return []; } const r=12, out=[];
+  const along=(it,li,lane,cut)=>{ let Q=null; try{ Q=onLv(li,()=>cabPath(it,li)); }catch(_){} if(!Q||Q.length<2) return; const VN=cabSideN(Q), R=onLv(li,()=>cabR(it,li)), pair=!isTail(it)&&!HCAB[R.kind]&&R.kind!=='ac', gap=6, ln=(lane||0)*(2*r+gap);
+    let off=pair?-(R.r*1.25+R.r+gap+r+ln):(R.r+gap+r+ln); /* DC pair: + | − | PE (next to the black core); single cable: PE beside it */ if(minOff&&Math.abs(off)<minOff*(1+(lane||0))) off=Math.sign(off||1)*minOff*(1+(lane||0));
+    let sh=Q.map((q,i)=>[q[0]+VN[i][0]*off,q[1]+VN[i][1]*off,q[2]]); if(cut) sh=peSlice(sh,Q,cut.p,cut.start); out.push({P:sh,li,mark:!!(cut&&cut.mark),end:cut?(cut.start?sh[sh.length-1]:sh[0]):null,it}); };
   const LN=new Map(); /* several device PE conductors along one cable — side by side, each in its own lane */
   for(const g of G){ if(!g.on) continue; if(g.type==='dev'){ if(g.man||!g.path) continue; for(const o of g.path){ const n=LN.get(o.it.id)||0; LN.set(o.it.id,n+1); const li=doc.levels.findIndex(L=>L.items.includes(o.it)); if(li>=0) along(o.it,li,n); } continue; }
     const it=g.type==='str'||g.type==='join'?g.main:g.cab; const li=doc.levels.findIndex(L=>L.items.includes(it)); if(li<0) continue;
-    if(g.type==='str'&&g.jn) along(it,li,0,{p:g.jn.p,start:g.ki===0}); else if(g.type==='join') along(it,li,0,{p:g.jp,start:g.ki!==0,mark:true}); else along(it,li,0); } }
+    if(g.type==='str'&&g.jn) along(it,li,0,{p:g.jn.p,start:g.ki===0}); else if(g.type==='join') along(it,li,0,{p:g.jp,start:g.ki!==0,mark:true}); else along(it,li,0); }
+  return out; }
+function peMesh(M){ const col=rgbOf('#94d82d'), r=12; for(const o of pePaths(0)){ const sh=o.P; if(o.mark&&o.end) tubeJoint(M,o.end,r*3.2,rgbOf('#fcc419'),'cab'); for(let i=0;i<sh.length-1;i++) tube(M,sh[i],sh[i+1],r,col,'cab'); for(let i=1;i<sh.length-1;i++) tubeJoint(M,sh[i],r*1.06,col,'cab'); } }
 // ===== Существующее оборудование: прибор, аппараты внутри, кабель — «сущ.» не входит в смету, но проверяется =====
 const EXCOL={inv:'#ffffff',dcb:'#ffa94d',pnl:'#ffc9c9',bat:'#99e9f2'}, EXCOL2={inv:'#868e96',dcb:'#e8590c',pnl:'#c92a2a',bat:'#1098ad'};
 /* apparatus code of a row / BOM line: «QS1» → «QS»; panel lines by their name */
