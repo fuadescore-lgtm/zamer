@@ -1,4 +1,4 @@
-/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.77.
+/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.78.
    Извлечено из web-src/zamer-dxf.html инструментом tools/extract_line_block.py: константы SK*, функции sk*, plan*, drawPlanEd,
    переходники плоскостей skv*, дуги как один объект (skArc*, lnArc*, arc*), сессия «Линии» (ln*).
    Не самостоятельный модуль: опирается на холст приложения (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc,
@@ -40,7 +40,7 @@ function planMove(q,p){ const E=planEd; if(q.t==='arc'){ lnArcMove(q,p); return;
   const pts=planPts(S,q.t!=='mv'), w=toW(p.x,p.y); /* «Выбор»: the taken vertex / line pulls the lines joined to it (the far ends stay); copy / rotate move only their own lines */ let dx=w.x-q.w0.x, dy=w.y-q.w0.y;
   if(q.t==='rot'){ const C=pts.reduce((m,x)=>({x:m.x+x.o[x.f].x/pts.length,y:m.y+x.o[x.f].y/pts.length}),{x:0,y:0}); let an=Math.atan2(w.y-C.y,w.x-C.x)-Math.atan2(q.w0.y-C.y,q.w0.x-C.x); an=Math.round(an/(Math.PI/12))*(Math.PI/12); const c=Math.cos(an), sn=Math.sin(an);
     for(const x of pts){ const v=x.o[x.f], X=v.x-C.x, Y=v.y-C.y; x.o[x.f]={x:r3(C.x+X*c-Y*sn),y:r3(C.y+X*sn+Y*c)}; } }
-  else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth],l0.t==='c'); skAcq(z); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; }
+  else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth],l0.t==='c'); skAcq(z); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; if(axisMode==='ortho'&&q.t==='mv'){ if(Math.abs(dx)>=Math.abs(dy)) dy=0; else dx=0; } /* Орто: a dragged segment goes straight along X or along Y */ }
     for(const x of pts){ const v=x.o[x.f]; x.o[x.f]={x:r3(v.x+dx),y:r3(v.y+dy)}; } }
   q.moved=true; redraw(); }
 function lnArcMove(q,p){ const it=lnArcItems().find(i=>i.id===q.id); if(!it) return; const o=JSON.parse(q.o), w=toW(p.x,p.y); if(!q.moved&&Math.hypot(w.x-q.w0.x,w.y-q.w0.y)*view.scale<4) return; q.moved=true; if(q.L0==null&&planEd) q.L0=JSON.stringify(planEd.L);
@@ -60,7 +60,7 @@ const SKS={s:'Выбор',sm:'Несколько',mv:'Переместить',ln
 const SKFLY={se:['s','sm'],ln:['ln','pl','rc','pgi','pgc','ci','a3','ac','at','af','sp'],pg:['pgi','pgc'],ar:['a3','ac','at','af'],pk:['pw','pli','pe'],mr:['mi','md'],tr:['tc','t1','tm','sv','sg','t']};
 const SKPL={s:'Выбор',sm:'Выбрать несколько',ln:'Линия',pl:'Полилиния',rc:'Прямоугольник',pgi:'Многоуг. вписанный',pgc:'Многоуг. описанный',ci:'Окружность',a3:'Дуга: 3 точки',ac:'Дуга из центра',at:'Дуга по касательной',af:'Дуга сопряжения',sp:'Сплайн'};
 const SKFN={se:'Выбор',ln:'Линии',pg:'Многоуг.',ar:'Дуга',pk:'Подобрать',mr:'Зеркало',tr:'Обрезать'};
-const SKHINT={s:['касание — выделить один отрезок (другой — заменяет, повторно — снять); тяните точку или линию'],sm:['касание — добавить отрезок, повторно — снять; пусто — снять всё'],mv:['точка захвата: на отрезке (вершина выделенного — переносится одна вершина)','куда поставить (цифра размера — ввод)'],ln:['начало (касание вершины — магнит)','конец'],pl:['первая точка','следующая точка; касание последней точки — конец'],rc:['первый угол','противоположный угол'],pgi:['центр','вершина'],pgc:['центр','середина стороны'],ci:['центр','радиус (или число)'],
+const SKHINT={s:['касание — выделить один отрезок (другой — заменяет, повторно — снять); тяните точку или линию'],sm:['касание — добавить отрезок, повторно — снять; пусто — снять всё'],mv:['точка захвата: конец или середина отрезка','куда поставить (цифра размера — ввод)'],ln:['начало (касание вершины — магнит)','конец'],pl:['первая точка','следующая точка; касание последней точки — конец'],rc:['первый угол','противоположный угол'],pgi:['центр','вершина'],pgc:['центр','середина стороны'],ci:['центр','радиус (или число)'],
   a3:['начало','конец','точка изгиба'],ac:['центр','начало','конец'],at:['конец линии (дуга продолжит её)','конец дуги'],af:['первая линия','вторая линия','радиус: тяните или введите число'],sp:['точки подряд; касание последней — конец'],pw:['коснитесь стены с нужной стороны'],pli:['коснитесь линии чертежа'],pe:['коснитесь края перекрытия, крыши'],
   cp:['базовая точка','куда'],rot:['начальный луч (центр — середина выбранного)','конечный луч (или угол)'],mi:['коснитесь линии — ось'],md:['первая точка оси','вторая точка оси'],of:['коснитесь линии с нужной стороны'],tc:['первая линия (часть, что остаётся)','вторая линия'],t1:['граница','линия (часть, что остаётся)'],tm:['граница','линии подряд; пусто — новая граница'],sv:['касание на линии — разделить'],sg:['касание на линии — разрыв'],t:['кусок между пересечениями — удалить'],del:['коснитесь линии']};
 const SKPT=new Set(['ln','pl','rc','pgi','pgc','ci','a3','ac','at','sp','md','cp','rot','mv']); /* point-input tools: the finger shows the live point */
@@ -140,8 +140,6 @@ function skPoint(q){ const E=planEd, k=E.k;
   if(k==='pl'){ const n=E.pts.length; if(n&&skL(skV(E.pts[n-1],q))<50){ skReset(E); skSync(); return; }
     if(n){ planHist(); skAdd([[E.pts[n-1],q]]); E.lastI=E.L.length-1; if(E.opt.rad&&n>=2&&!(E.cfg&&E.cfg.kind==='stair')){ skFilletLast(); E.lastI=null; } if(n>=2&&skL(skV(E.pts[0],q))<1){ skReset(E); skSync(); return; } } E.pts.push(q); E.a=q; skSync(); return; }
   if(k==='sp'){ const n=E.pts.length; if(n&&skL(skV(E.pts[n-1],q))<50){ skSplineDone(false); return; } if(n>=3&&skL(skV(E.pts[0],q))<1){ skSplineDone(true); return; } E.pts.push(q); skSync(); return; }
-  if(k==='mv'&&!E.pts.length){ const I=skSelLines(); E.mvV=null; if(I.length===1&&!skSelSp().length) for(const i of I){ const l=E.L[i]; for(const e of ['a','b']) if(!E.mvV&&skL(skV(l[e],q))<1) E.mvV={i,e}; } } /* the base on a vertex of the taken segment: only that vertex moves */
-  if(k==='mv'&&E.pts.length===1&&E.mvV){ const V=E.mvV, l=E.L[V.i]; if(l){ planHist(); l[V.e]=skR3(q); E.lastMv=null; E._agK=null; } E.mvV=null; skReset(E); E.mvDone=true; skSync(); return; }
   E.pts.push(q); if(E.pts.length<(SKNEED[k]||2)){ skSync(); return; }
   const P=E.pts.slice(0,-1), G=skGen(k,P,q);
   if(isLnSk(E)&&E.t==='x'&&k==='ln'){ pushUndo(); const id=uid(); doc.levels[E.cfg.li].items.push({id,t:'aux',a:skR3(P[0]),b:skR3(q)}); E.cfg.extra.add(id); persist(); skReset(E); skSync(); return; }
@@ -321,7 +319,7 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
   if(q&&(SKPT.has(k)||(k==='af'&&E.pick.length===2))){ let G=null;
     if(k==='af'){ const [p1,p2]=E.pick, l1=E.L[p1.i], l2=E.L[p2.i]; if(l1&&l2){ const B0=skFilletGeo(l1,p1.w,l2,p2.w,0); if(!B0.err){ const R=skFilletR(B0,q), G2=skFilletGeo(l1,p1.w,l2,p2.w,R); if(!G2.err){ G={S:skChain(G2.arc)}; const m=toS(G2.arc[Math.floor(G2.arc.length/2)]); tmpBox('R '+fmtU(R),m.x,m.y-18,0,false); } } } }
     else G=skGen(k,P,q);
-    if(G){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2.5; ctx.setLineDash([10,6]); if(G.S) for(const [A,B] of G.S) line(toS(A),toS(B)); if(G.X&&k==='mv'&&E.mvV&&E.L[E.mvV.i]){ const l=E.L[E.mvV.i], o=l[E.mvV.e==='a'?'b':'a']; line(toS(o),toS(q)); } else if(G.X) for(const i of skSelLines()){ const l=E.L[i]; line(toS(G.X(l.a)),toS(G.X(l.b))); } ctx.setLineDash([]); }
+    if(G){ ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=2.5; ctx.setLineDash([10,6]); if(G.S) for(const [A,B] of G.S) line(toS(A),toS(B)); if(G.X) for(const i of skSelLines()){ const l=E.L[i]; line(toS(G.X(l.a)),toS(G.X(l.b))); } ctx.setLineDash([]); }
     const A=P.length?P[P.length-1]:null;
     if(A&&(k==='ln'||k==='pl'||((k==='mv'||k==='cp')&&P.length===1))){ const a=toS(A), b=toS(q), m=skLabAt(a,b), L=skL(skV(A,q)); tmpBox(fmtU(L),m.x,m.y,m.r,false); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skTyped(v),lv:true}); }
     if(P.length&&k==='rc'){ const b=toS(q); tmpBox(fmtU(Math.abs(q.x-P[0].x))+' × '+fmtU(Math.abs(q.y-P[0].y)),b.x+44,b.y-18,0,false); }

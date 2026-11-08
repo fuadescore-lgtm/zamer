@@ -4890,5 +4890,6 @@
 "куда поставить (цифра размера — ввод": "where to put it (tap the size to type",
 "перенесено · касание выделенного — ещё раз, мимо — выход": "moved · tap the selection — again, elsewhere — exit",
 "список — уголок": "list — the corner",
-"точка захвата: на отрезке (вершина выделенного — переносится одна вершина": "grab point on the segment (a vertex of the selected segment moves that vertex only"
+"точка захвата: на отрезке (вершина выделенного — переносится одна вершина": "grab point on the segment (a vertex of the selected segment moves that vertex only",
+"точка захвата: конец или середина отрезка": "grab point: an end or the middle of the segment"
 }
