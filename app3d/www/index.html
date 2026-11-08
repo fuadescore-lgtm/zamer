@@ -5464,7 +5464,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.94':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.95':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6032,9 +6032,13 @@ function prcGeom(r,li){ const P=r.pts, n=P.length, zb=roofBase(r,li), th=r.th||2
   const E2=E.map((e,i)=>({...e,a:prof[0].a}));
   return {P,O,zb,th,ov,pl,H,faces,E:E2,sg:polyArea2(P)>0?1:-1,skel:true,prc:true}; }
 // толщина кровли — поперёк ската (как в Revit): верх = низ + th·√(1+tg²α) у каждой грани; на коньке/изломе — меньшая из соседних
+/* slopes of different pitch (hips of a «План кровли» roof, an off-centre ridge): one vertical thickness for all of them — the eaves stay at one height
+   and the tops meet exactly over the hips and valleys (per-face √(1+tg²α) gave steps at the eave corners and strips along the hips). Very steep faces (> ~51°,
+   mansard) keep their own so a gentle slope does not get thick */
 function roofGeomT(g){ if(!g||g.T) return g; const th=g.th, kf=f=>f&&f.pl?Math.hypot(1,f.pl.nx,f.pl.ny):1;
-  g.tvF=f=>th*kf(f);
-  g.T=q=>{ let best=null, nf=null, nd=Infinity; for(const f of g.faces){ const P=f.P; if(!P||P.length<3) continue; let d=inPoly(P,q)?0:Infinity; if(d){ for(let i=0;i<P.length;i++){ const e=segDistW(q,P[i],P[(i+1)%P.length]); if(e<d) d=e; } } if(d<nd){ nd=d; nf=f; } if(d>1) continue; const z=(f.pl?f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c:g.H(q))+th*kf(f); if(best==null||z<best) best=z; } return best!=null?best:g.H(q)+th*kf(nf); };
+  let K=1; for(const f of g.faces||[]){ const k=kf(f); if(k<=1.6&&k>K) K=k; }
+  g.tvF=f=>{ const k=kf(f); return th*(k>1.6?k:K); };
+  g.T=q=>{ let best=null, nf=null, nd=Infinity; for(const f of g.faces){ const P=f.P; if(!P||P.length<3) continue; let d=inPoly(P,q)?0:Infinity; if(d){ for(let i=0;i<P.length;i++){ const e=segDistW(q,P[i],P[(i+1)%P.length]); if(e<d) d=e; } } if(d<nd){ nd=d; nf=f; } if(d>1) continue; const z=(f.pl?f.pl.nx*q.x+f.pl.ny*q.y+f.pl.c:g.H(q))+g.tvF(f); if(best==null||z<best) best=z; } return best!=null?best:g.H(q)+g.tvF(nf); };
   return g; }
 function roofThV(r){ let a=null; for(const e of (r.edges||[])) if(e&&e.s&&e.a>0&&(a==null||e.a<a)) a=e.a; if(a==null) a=+r.ang||0; const th=r.th||250; return th/Math.cos(Math.min(80,Math.max(0,a))*Math.PI/180); } // вертикальная толщина у конька
 function roofGeom(r,li){ return roofGeomT(roofGeom0(r,li)); }
@@ -6226,7 +6230,7 @@ function insFrame(it,li){ if(li==null) li=doc.curLv; const L=doc.levels[li];
   let g; try{ g=roofGeom(roofExtended(r,li),li); }catch(e){ return null; } if(it.t==='solar'&&g.faces.length===1&&!g.faces[0].pl) return flatFrame(it,r,g.faces[0].P,g.zb+g.th,li); const fqp=it.t==='solar'&&it.fq&&g.faces.some(f=>f.pl&&inPoly(f.P,it.fq))?it.fq:it.p; let f=g.faces.find(f=>f.pl&&inPoly(f.P,fqp));
   if(!f&&it.t==='solar'){ let bd=Infinity; for(const q of g.faces){ if(!q.pl) continue; const d=segDistPoly(q.P,it.p); if(d<bd){ bd=d; f=q; } } } /* панели не ограничены скатом: берут его плоскость (точка привязки fq), массив может выходить за край */
   if(!f) return null;
-  const pl=f.pl, k=Math.hypot(pl.nx,pl.ny); if(k<1e-3) return null; const b={x:pl.nx/k,y:pl.ny/k}, u={x:b.y,y:-b.x}, zt=q=>pl.nx*q.x+pl.ny*q.y+pl.c+g.th*Math.hypot(1,pl.nx,pl.ny), z0=zt(it.p), A=Math.atan(k);
+  const pl=f.pl, k=Math.hypot(pl.nx,pl.ny); if(k<1e-3) return null; const b={x:pl.nx/k,y:pl.ny/k}, u={x:b.y,y:-b.x}, zt=q=>pl.nx*q.x+pl.ny*q.y+pl.c+(g.tvF?g.tvF(f):g.th*Math.hypot(1,pl.nx,pl.ny)), z0=zt(it.p), A=Math.atan(k);
   const P2=(x,y)=>({x:it.p.x+u.x*x+b.x*y,y:it.p.y+u.y*x+b.y*y}), W=(x,y,z)=>[it.p.x+u.x*x+b.x*y,it.p.y+u.y*x+b.y*y,z0+z];
   let fo=null; try{ const go=roofGeom(r,li); fo=go.faces.find(q=>q.pl&&inPoly(q.P,fqp)&&Math.abs(q.pl.nx-pl.nx)<1e-6&&Math.abs(q.pl.ny-pl.ny)<1e-6)||null; }catch(e){} // свой скат без продления под соседнюю крышу
   return {r,g,f,pl,k,b,u,zt,z0,A,ca:Math.cos(A),sa:Math.sin(A),P2,W,li,fo}; }
@@ -7990,8 +7994,8 @@ function drawRoofEdgeH(it){ const li=doc.curLv, top=!!doc.settings.rhTop, z0=zRe
     const act=!!(inlineH&&inlineH.kind==='rfH'&&inlineH.id===it.id&&inlineH.key===H.key); tmpBox(tx,x,y,0,act); labelHits.push({id:it.id,kind:'rfH',e:'rg',key:H.key,i:H.i,one:true,w:toW(x,y),x,y,val:r3((z-z0)/1000)}); seen.push({x,y,z}); n++; }
   /* heights: one per ridge (above), ONE for all eaves at the same height (editing it moves all of them), the top edge only for a roof without ridges (shed) */
   const FI=[]; for(let i=0;i<(it.pts||[]).length;i++){ let I=null; try{ I=roofFaceH(it,li,i); }catch(e){} if(!I||I.zmax-I.zmin<5) continue; FI.push([i,I]); }
-  const loG=[]; for(const [i,I] of FI){ const th=top?I.g.th*Math.hypot(1,I.pl.nx,I.pl.ny):0, z=I.zmin+th, G=loG.find(g=>Math.abs(g.z-z)<3); if(G) G.grp.push(i); else loG.push({z,i,grp:[i]}); }
-  for(const [i,I] of FI){ const th=top?I.g.th*Math.hypot(1,I.pl.nx,I.pl.ny):0, so=toS({x:0,y:0}), dv=toS(I.pl.dn), dl=Math.hypot(dv.x-so.x,dv.y-so.y)||1, dx=(dv.x-so.x)/dl, dy=(dv.y-so.y)/dl;
+  const loG=[]; for(const [i,I] of FI){ const th=top?(I.g.tvF?I.g.tvF({pl:I.pl}):I.g.th*Math.hypot(1,I.pl.nx,I.pl.ny)):0, z=I.zmin+th, G=loG.find(g=>Math.abs(g.z-z)<3); if(G) G.grp.push(i); else loG.push({z,i,grp:[i]}); }
+  for(const [i,I] of FI){ const th=top?(I.g.tvF?I.g.tvF({pl:I.pl}):I.g.th*Math.hypot(1,I.pl.nx,I.pl.ny)):0, so=toS({x:0,y:0}), dv=toS(I.pl.dn), dl=Math.hypot(dv.x-so.x,dv.y-so.y)||1, dx=(dv.x-so.x)/dl, dy=(dv.y-so.y)/dl;
     for(const [k,P,sg] of [['lo',I.lo,-1],['hi',I.hi,1]]){ if(k==='hi'&&(RL.length||onR(P))) continue; let grp=null; if(k==='lo'){ const G=loG.find(g=>g.i===i); if(!G) continue; grp=G.grp; } const z=(k==='lo'?I.zmin:I.zmax)+th, c=toS(P), tx='h '+fmtElev(z-z0).replace('+',''); ctx.font='600 12px '+FNUM; const bw=ctx.measureText(tx).width/2+6, off=14+Math.abs(dx)*bw+Math.abs(dy)*10, x=c.x+dx*sg*off, y=c.y+dy*sg*off;
       if(k==='hi'&&seen.some(o=>Math.abs(o.z-z)<3&&Math.hypot(o.x-x,o.y-y)<80)) continue; seen.push({x,y,z}); if(++n>16) return;
       ctx.save(); ctx.fillStyle='#d6336c'; ctx.beginPath(); ctx.arc(c.x,c.y,3.5,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#d6336c'; ctx.lineWidth=1; line(c,{x,y}); ctx.restore();
@@ -8035,7 +8039,7 @@ function roofEqAll(){ for(const L of doc.levels) for(const r of L.items){ if(!ro
 // конёк, на котором лежит точка (метка «h» верхнего края)
 function ridgeAtPt(r,P){ for(const H of ridgeList(r)) if(segDistW(P,H.seg[0],H.seg[1])<5) return H; return null; }
 // задать высоту края ската i (k: 'lo' карниз / 'hi' верхний край) — абсолютная отметка выбранной поверхности (низ/верх кровли)
-function roofSetEdgeH(r,li,i,k,zAbs){ const top=!!doc.settings.rhTop, I0=roofFaceH(r,li,i); if(!I0) return 'у этого края нет ската'; const th=I0.g.th*Math.hypot(1,I0.pl.nx,I0.pl.ny), zt=zAbs-(top?th:0), hadFix=r.fixT!=null; delete r.fixT;
+function roofSetEdgeH(r,li,i,k,zAbs){ const top=!!doc.settings.rhTop, I0=roofFaceH(r,li,i); if(!I0) return 'у этого края нет ската'; const th=I0.g.tvF?I0.g.tvF({pl:I0.pl}):I0.g.th*Math.hypot(1,I0.pl.nx,I0.pl.ny), zt=zAbs-(top?th:0), hadFix=r.fixT!=null; delete r.fixT;
   const shift=d=>{ r.bo=r1((r.bo||0)+d); }, fe=z=>fmtElev(z+(top?th:0)-zRefE());
   const slopes=()=>(r.edges||[]).map((e,j)=>e.s?j:-1).filter(j=>j>=0);
   // противоположный параллельный край (у односкатной — верхний край)
