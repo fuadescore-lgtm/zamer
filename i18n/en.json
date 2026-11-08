@@ -5057,5 +5057,17 @@
 "Коснитесь точки стринга": "Tap a string point",
 "на главный кабель или": "on the main cable or",
 "Главный кабель С": "Main cable S",
-"В проекте нет": "The project has no"
+"В проекте нет": "The project has no",
+"Привязка: заземление": "Snap: PE",
+"кабель PE": "PE cable",
+"Основную ⏚ удалить нельзя — у группы всегда есть точка заземления; её можно перенести": "The main ⏚ cannot be removed — a group always has a PE point; it can be moved",
+"коснитесь точки заземления, которую убрать": "tap the PE point to remove",
+"коснитесь места на группе — там будет новая точка заземления (к ней можно провести кабель PE)": "tap a place on the group — a new PE point goes there (a PE cable can be drawn to it)",
+"Новая точка заземления — кнопка «+ ⏚», потом касание места на группе": "New PE point — the «+ ⏚» button, then tap a place on the group",
+"Добавить точку заземления: коснитесь места на группе": "Add a PE point: tap a place on the group",
+"Убрать точку заземления: коснитесь её": "Remove a PE point: tap it",
+"добавить / убрать точку заземления": "add / remove a PE point",
+"(основная)": "(main)",
+"(связь)": "(link)",
+"(доп.)": "(added)"
 }
