@@ -5038,5 +5038,9 @@
 "Готово — снять выбор (или касание пустого места)": "Done — clear the selection (or tap an empty spot)",
 "Готово — снять выбор": "Done — clear the selection",
 "или касание пустого места": "or tap an empty spot",
-"снять выбор": "clear the selection"
+"снять выбор": "clear the selection",
+"Переместить: возьмите группу за любой угол и поставьте на нужную точку (магнит). Касание пустого места или ✓ — готово": "Move: grab the group by any corner and drop it on the point you need (snap). Tap an empty spot or ✓ — done",
+"Переместить: возьмите за любой угол и поставьте на точку": "Move: grab any corner and drop it on a point",
+"возьмите группу за любой угол и поставьте на нужную точку (магнит). Касание пустого места или ✓ — готово": "grab the group by any corner and drop it on the point you need (snap). Tap an empty spot or ✓ — done",
+"возьмите за любой угол и поставьте на точку": "grab any corner and drop it on a point"
 }
