@@ -1,4 +1,4 @@
-/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.78.
+/* Стандартный блок редактирования линий («Эскиз») — эталонная реализация, BIMsketcher 3D 2.9.79.
    Извлечено из web-src/zamer-dxf.html инструментом tools/extract_line_block.py: константы SK*, функции sk*, plan*, drawPlanEd,
    переходники плоскостей skv*, дуги как один объект (skArc*, lnArc*, arc*), сессия «Линии» (ln*).
    Не самостоятельный модуль: опирается на холст приложения (toS/toW, ctx, line, tmpBox, snapPoint с opt.trackSrc,
@@ -32,7 +32,8 @@ function planPts(S,free){ const L=planEd.L, out=[], add=(o,f)=>{ if(!out.some(x=
   if(free){ for(const o of S){ if(o.k==='e') add(L[o.i],o.e); else { add(L[o.i],'a'); add(L[o.i],'b'); } } return out; }
   const at=pt=>L.forEach(l=>{ for(const e of ['a','b']) if(Math.hypot(l[e].x-pt.x,l[e].y-pt.y)<5) add(l,e); });
   for(const o of S){ if(o.k==='e') at(L[o.i][o.e]); else { at(L[o.i].a); at(L[o.i].b); } } return out; }
-function planMove(q,p){ const E=planEd; if(q.t==='arc'){ lnArcMove(q,p); return; } if(q.t==='arcg'){ skArcMove(q,p); return; } E.L=JSON.parse(q.snap); if(q.snapSP!=null) E.SP=JSON.parse(q.snapSP);
+function planMove(q,p){ const E=planEd; if(q.t==='tdr'){ const w=toW(p.x,p.y); if(!q.moved&&Math.hypot(w.x-q.w0.x,w.y-q.w0.y)*view.scale<4) return; q.moved=true; const z=planSnap(p.x,p.y,null,()=>false); skAcq(z); (E.tdR=E.tdR||{})[q.key]={x:z.x,y:z.y}; E.tdN=E.L.length; redraw(); return; }
+  if(q.t==='mv'&&q.h&&q.h.k==='l') E._dragL=q.h.i; if(q.t==='arc'){ lnArcMove(q,p); return; } if(q.t==='arcg'){ skArcMove(q,p); return; } E.L=JSON.parse(q.snap); if(q.snapSP!=null) E.SP=JSON.parse(q.snapSP);
   if(q.t==='spp'){ const sp=toS(p), z=planSnap(p.x,p.y,null,(i,e)=>i===('sp'+q.j)); skAcq(z); E.SP[q.j].p[q.k]=z; q.moved=true; redraw(); return; }
   if(q.t==='mv'&&q.h.k==='sp'){ const w=toW(p.x,p.y), dx=Math.round((w.x-q.w0.x)/10)*10, dy=Math.round((w.y-q.w0.y)/10)*10; E.SP[q.h.i].p=E.SP[q.h.i].p.map(v=>skR3({x:v.x+dx,y:v.y+dy})); q.moved=true; redraw(); return; }
   let S=q.t==='mv'?[q.h]:q.S;
@@ -50,7 +51,8 @@ function lnArcMove(q,p){ const it=lnArcItems().find(i=>i.id===q.id); if(!it) ret
   if(q.k==='c') it.c=z; else if(q.k==='r') it.r=r3(Math.max(1,Math.hypot(z.x-o.c.x,z.y-o.c.y)));
   else { const a=q.k==='a'?z:o.a, b=q.k==='b'?z:o.b, m=q.k==='m'?z:q.m0; if(Math.hypot(b.x-a.x,b.y-a.y)<1) return; const bg=bulge3(a,b,m); if(Math.abs(bg)<1e-6) return; /* three points on a line — no arc */ it.a=a; it.b=b; it.bg=bg; }
   follow(); redraw(); }
-function planUp(q){ const E=planEd; if(q.t==='arcg'){ if(q.moved&&JSON.stringify(E.L)!==q.snap){ const now=E.L, nS=E.S; E.L=JSON.parse(q.snap); planHist(); E.L=now; E.S=nS; E._agK=null; } panelKey=''; syncPanel(); redraw(); return; }
+function planUp(q){ const E=planEd; E._dragL=null; if(q.t==='tdr'){ if(!q.moved){ if(E.tdR&&E.tdR[q.key]){ delete E.tdR[q.key]; toast('Размер снова до соседней линии'); } else toast('Тяните кружок размера к другой вершине или линии; касание цифры — ввести'); } else toast('Размер привязан к точке. Касание кружка — вернуть авто'); E.acq=[]; redraw(); return; }
+  if(q.t==='arcg'){ if(q.moved&&JSON.stringify(E.L)!==q.snap){ const now=E.L, nS=E.S; E.L=JSON.parse(q.snap); planHist(); E.L=now; E.S=nS; E._agK=null; } panelKey=''; syncPanel(); redraw(); return; }
   if(q.t==='arc'){ const it=lnArcItems().find(i=>i.id===q.id); if(!q.moved){ E.arc=q.id; E.S=[]; skSync(); if(it) toast(it.t==='circ'?'Окружность: тяните центр или ромб на окружности; R — коснитесь, чтобы ввести':'Дуга: тяните концы или ромб на дуге; R — коснитесь, чтобы ввести',true); return; }
     if(it){ const cur=JSON.stringify(it), o=JSON.parse(q.o); for(const k of Object.keys(it)) delete it[k]; Object.assign(it,o); { const now=E.L; if(q.L0!=null) E.L=JSON.parse(q.L0); planHist(); E.L=now; } pushUndo(); for(const k of Object.keys(it)) delete it[k]; Object.assign(it,JSON.parse(cur)); persist(); } E.arc=q.id; skSync(); return; }
   if(!q.moved){ if(q.t==='spp') return; if(q.t==='mv'){ const k=planKey(q.h), j=E.S.findIndex(o=>planKey(o)===k), g0=q.h.k==='l'?skArcOf(E,q.h.i):null; if(j>=0&&g0){ E.S=E.S.filter(o=>!(o.k==='l'&&g0.I.includes(o.i))); } /* the whole arc off */ else if(j>=0){ E.S.splice(j,1); if(q.h.k!=='e') E.S=E.S.filter(o=>!(o.k==='e'&&o.i===q.h.i)); } else { if(q.h.k==='e') E.S=E.S.filter(o=>o.k!=='e'); /* one vertex at a time: a new one replaces the old */ else if(E.k==='s') E.S=[]; /* «Выбор»: one segment — another one replaces it */ E.S.push(q.h); { const g=q.h.k==='l'?skArcOf(E,q.h.i):null; if(g){ if(E.k==='s') E.S=g.I.map(i=>({k:'l',i})); else { E.S=E.S.filter(o=>!(o.k==='l'&&g.I.includes(o.i))); E.S.push(...g.I.map(i=>({k:'l',i}))); } } } } E.arc=null; panelKey=''; syncPanel(); redraw(); } return; }
@@ -216,6 +218,7 @@ function planDown(p){ const E=planEd, m=E.k;
   if(SKPT.has(m)||(m==='af'&&E.pick.length===2)){ E.live=skSnap(p.x,p.y); E.ld=E.live; skAcq(E.live); redraw(); return {plL:true}; }
   if(m!=='s'&&m!=='sm') return null; const snapSP=JSON.stringify(E.SP||[]);
   /* control points of a selected spline */ for(const j of skSelSp()){ const P=E.SP[j].p; for(let k=0;k<P.length;k++){ const q=toS(P[k]); if(Math.hypot(q.x-p.x,q.y-p.y)<16) return {plD:{t:'spp',j,k,w0:toW(p.x,p.y),snap:JSON.stringify(E.L),snapSP}}; } }
+  if((m==='s'||m==='sm')&&E.tdH) for(const h of E.tdH){ if(Math.hypot(h.x-p.x,h.y-p.y)<16) return {plD:{t:'tdr',i:h.i,key:h.key,w0:toW(p.x,p.y)}}; } /* the round end of a temporary size: drag — another anchor, tap — automatic */
   { const g=skArcSel(E); if(g){ for(const hh of skArcH(g)){ const q=toS(hh.p); if(Math.hypot(q.x-p.x,q.y-p.y)<16) return {plD:{t:'arcg',g,k:hh.k,w0:toW(p.x,p.y),snap:JSON.stringify(E.L),snapSP}}; }
     /* the body of the selected arc: the whole arc moves (its neighbours' ends follow), as an arc in «Линии» does */ if(!g.closed&&g.I.some(i=>{ const l=E.L[i], a=toS(l.a), b=toS(l.b); return segDist(p.x,p.y,a,b)<14; })) return {plD:{t:'arcg',g,k:'body',w0:toW(p.x,p.y),snap:JSON.stringify(E.L),snapSP}}; } }
   if(isLnSk(E)){ const A=lnArcSel(); if(A) for(const hh of lnArcH(A)){ const q=toS(hh.p); if(Math.hypot(q.x-p.x,q.y-p.y)<16) return {plD:{t:'arc',id:A.id,k:hh.k,o:JSON.stringify(A),m0:A.t!=='circ'?arcAt(arcG(A),0.5):null,w0:toW(p.x,p.y)}}; } }
@@ -301,6 +304,22 @@ function skArcMove(q,p){ const E=planEd; E.L=JSON.parse(q.snap); E._agK=null; co
   if(q.k==='body'){ const d={x:Math.round((w.x-q.w0.x)/10)*10,y:Math.round((w.y-q.w0.y)/10)*10}, A0=g.P[0], B0=g.P[g.P.length-1], P2=g.P.map(o=>({x:o.x+d.x,y:o.y+d.y})); skArcPut(E,g,P2,[[A0,P2[0]],[B0,P2[P2.length-1]]]); redraw(); return; }
   const A0=g.P[0], B0=g.P[g.P.length-1], M0=skArcMid(g), A=q.k==='a'?z:A0, B=q.k==='b'?z:B0, M=q.k==='m'?z:M0; if(Math.hypot(B.x-A.x,B.y-A.y)<1||!arcCirc(A,M,B)) { E.S=g.I.map(i=>({k:'l',i})); E._agK=null; redraw(); return; } /* straight or zero arc: keep the original arc and its selection */
   skArcPut(E,g,arcSegs(A,M,B),[[A0,A],[B0,B]]); redraw(); }
+function skTdList(i){ const E=planEd, l=E&&E.L[i]; if(!l) return []; const d=skV(l.a,l.b), Ls=skL(d); if(Ls<1) return []; const t={x:d.x/Ls,y:d.y/Ls}, n={x:-t.y,y:t.x};
+  if(E.tdN!==E.L.length){ E.tdR={}; E.tdN=E.L.length; } /* the lines changed in number — anchors start over */
+  const out=[], near=(p,q)=>Math.hypot(p.x-q.x,p.y-q.y)<1;
+  for(const e of ['a','b']){ const key=i+e, P=l[e], man=E.tdR&&E.tdR[key]; let R=man||null;
+    if(!R){ for(let j=0;j<E.L.length&&!R;j++){ if(j===i) continue; const m=E.L[j]; for(const f of ['a','b']) if(near(m[f],P)){ const F=m[f==='a'?'b':'a']; if(Math.abs((F.x-P.x)*n.x+(F.y-P.y)*n.y)>=1){ R=F; break; } } } }
+    if(!R) continue; const dd=(R.x-l.a.x)*n.x+(R.y-l.a.y)*n.y; if(Math.abs(dd)<1) continue; out.push({key,e,R:{x:R.x,y:R.y},d:dd,n,t,man:!!man}); }
+  return out; }
+function skTdSet(i,o,v){ const E=planEd; if(!(v>0)){ toast('Не соответствует: нужно число больше 0'); return; } const l=E.L[i]; if(!l) return; const dl=o.d-Math.sign(o.d)*v; if(Math.abs(dl)<0.05) return;
+  planHist(); const pts=planPts([{k:'l',i}],false); for(const x of pts){ const q=x.o[x.f]; x.o[x.f]={x:r3(q.x+o.n.x*dl),y:r3(q.y+o.n.y*dl)}; } E._agK=null; skSync(); }
+function skTdDraw(i){ const E=planEd, l=E.L[i], T=skTdList(i); E.tdH=[]; if(!T.length) return; const mid={x:(l.a.x+l.b.x)/2,y:(l.a.y+l.b.y)/2};
+  const sa=toS(l.a), sb=toS(l.b), sl=Math.hypot(sb.x-sa.x,sb.y-sa.y)||1, ts={x:(sb.x-sa.x)/sl,y:(sb.y-sa.y)/sl};
+  for(const o of T){ const foot={x:o.R.x-o.n.x*o.d,y:o.R.y-o.n.y*o.d}, side=((foot.x-mid.x)*o.t.x+(foot.y-mid.y)*o.t.y)>=0?1:-1, Rs=toS(o.R), Fs=toS(foot), sh={x:ts.x*30*side,y:ts.y*30*side} /* 30 px outside the segment's end, on the screen of any plane */;
+    const A={x:Fs.x+sh.x,y:Fs.y+sh.y}, B={x:Rs.x+sh.x,y:Rs.y+sh.y};
+    ctx.save(); ctx.strokeStyle='#2f6fe4'; ctx.globalAlpha=.55; ctx.lineWidth=1; line(Fs,A); line(Rs,B); ctx.globalAlpha=1; ctx.setLineDash([6,4]); ctx.lineWidth=1.3; line(A,B); ctx.setLineDash([]);
+    ctx.fillStyle=o.man?'#f2c200':'#2f6fe4'; ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(B.x,B.y,6.5,0,7); ctx.fill(); ctx.stroke(); ctx.restore(); /* the round end of the size (blue; yellow — anchored by hand) */
+    const m=skLabAt(A,B,0), val=Math.abs(o.d); tmpBox(fmtU(val),m.x,m.y,m.r,true); E.lh.push({x:m.x,y:m.y,val,fn:v=>skTdSet(i,o,v)}); E.tdH.push({i,key:o.key,x:B.x,y:B.y}); } }
 function skLabAt(a,b,off){ let an=Math.atan2(b.y-a.y,b.x-a.x); if(an>=Math.PI/2-1e-6) an-=Math.PI; else if(an<-Math.PI/2-1e-6) an+=Math.PI; const n={x:Math.sin(an),y:-Math.cos(an)}, o=off==null?16:off; return {x:(a.x+b.x)/2+n.x*o,y:(a.y+b.y)/2+n.y*o,r:Math.hypot(b.x-a.x,b.y-a.y)<2?0:an}; }
 function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const S=E.S||[], selL=new Set(S.filter(o=>o.k!=='sp').map(o=>o.i)), selSp=new Set(skSelSp()), on=(i,e)=>S.some(o=>o.k==='e'&&o.i===i&&o.e===e), col=t=>t==='r'?'#d63fd6':t==='j'?'#2fae5a':'#9aa5b1', PK=new Set(E.pick.map(p=>p.i)); ctx.save();
   E.L.forEach((l,i)=>{ const a=toS(l.a), b=toS(l.b); if(selL.has(i)||PK.has(i)){ ctx.save(); ctx.strokeStyle=PK.has(i)?'#f59f00':'#4c9aff'; ctx.lineWidth=10; ctx.globalAlpha=.45; line(a,b); ctx.restore(); } ctx.strokeStyle=col(l.t); ctx.lineWidth=l.t==='c'?2:3; ctx.setLineDash(l.t==='j'?[8,6]:[]); line(a,b); ctx.setLineDash([]); });
@@ -311,7 +330,7 @@ function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const
     if(sel){ ctx.save(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=1; ctx.setLineDash([3,4]); ctx.beginPath(); Sp.p.forEach((v,k)=>{ const q=toS(v); k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); }); ctx.stroke(); ctx.restore(); for(const v of Sp.p){ const q=toS(v); ctx.beginPath(); ctx.arc(q.x,q.y,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } } });
   /* sizes you can tap and type: the selected segment / vertex (the other end stays), the segment just drawn */
   { const lab=(i,e,txt)=>{ const l=E.L[i]; if(!l) return; const a=toS(l.a), b=toS(l.b), m=skLabAt(a,b,-28), L=skL(skV(l.a,l.b)); /* far enough that a drag from the middle of the line takes the line, not the size */ tmpBox(fmtU(L),m.x,m.y,m.r,true); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skSetLen(i,e,v)}); };
-    const SL=S.filter(o=>o.k!=='sp'), SE=SL.filter(o=>o.k==='e'); /* one selected vertex wins even when its lines are selected too */ const selM=E.k==='s'||E.k==='sm'; /* sizes of the selection — only while selecting (a move / copy shows its own size) */ if(selM&&SE.length===1&&!E.live) lab(SE[0].i,SE[0].e); else if(selM&&SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
+    E.tdH=[]; if(E._dragL!=null&&E.L[E._dragL]&&!(S.length===1&&S[0].k==='l'&&S[0].i===E._dragL)) skTdDraw(E._dragL); /* the segment being dragged shows its sizes too */ const SL=S.filter(o=>o.k!=='sp'), SE=SL.filter(o=>o.k==='e'); /* one selected vertex wins even when its lines are selected too */ const selM=E.k==='s'||E.k==='sm'; /* sizes of the selection — only while selecting (a move / copy shows its own size) */ if(selM&&SE.length===1&&!E.live) lab(SE[0].i,SE[0].e); else if(selM&&SL.length===1&&!E.live){ const o=SL[0]; lab(o.i,o.k==='e'?o.e:'b'); if(o.k==='l'&&!skArcOf(E,o.i)) skTdDraw(o.i); } else if(E.lastI!=null&&E.L[E.lastI]&&!E.live&&(E.k==='ln'||E.k==='pl')) lab(E.lastI,'b'); }
     if(E.k==='mv'&&E.lastMv&&!E.pts.length){ const M=E.lastMv, a=toS(M.A), b=toS(M.B), m=skLabAt(a,b), L=skL(skV(M.A,M.B)); ctx.save(); ctx.strokeStyle='#2f6fe4'; ctx.lineWidth=1; ctx.setLineDash([4,4]); line(a,b); ctx.restore(); tmpBox(fmtU(L),m.x,m.y,m.r,true); E.lh.push({x:m.x,y:m.y,val:L,fn:v=>skMvAgain(v)}); }
   /* vertex circles only on the selected lines; the rest stay clean */
   for(const i of selL){ const l=E.L[i]; if(!l||AGI.has(i)) continue; for(const e of ['a','b']){ const q=toS(l[e]), se=on(i,e); ctx.beginPath(); ctx.arc(q.x,q.y,se?8:6,0,Math.PI*2); ctx.fillStyle=se?'#4c9aff':'#fff'; ctx.fill(); ctx.strokeStyle='#4c9aff'; ctx.lineWidth=2; ctx.stroke(); } }

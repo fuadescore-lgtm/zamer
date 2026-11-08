@@ -4891,5 +4891,7 @@
 "перенесено · касание выделенного — ещё раз, мимо — выход": "moved · tap the selection — again, elsewhere — exit",
 "список — уголок": "list — the corner",
 "точка захвата: на отрезке (вершина выделенного — переносится одна вершина": "grab point on the segment (a vertex of the selected segment moves that vertex only",
-"точка захвата: конец или середина отрезка": "grab point: an end or the middle of the segment"
+"точка захвата: конец или середина отрезка": "grab point: an end or the middle of the segment",
+"Размер снова до соседней линии": "The size goes to the joined line again",
+"Тяните кружок размера к другой вершине или линии; касание цифры — ввести": "Drag the size’s dot to another vertex or line; tap the number to type"
 }
