@@ -5396,7 +5396,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.79':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.80':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -6961,7 +6961,7 @@ function planMove(q,p){ const E=planEd; if(q.t==='tdr'){ const w=toW(p.x,p.y); i
   const pts=planPts(S,q.t!=='mv'), w=toW(p.x,p.y); /* «Выбор»: the taken vertex / line pulls the lines joined to it (the far ends stay); copy / rotate move only their own lines */ let dx=w.x-q.w0.x, dy=w.y-q.w0.y;
   if(q.t==='rot'){ const C=pts.reduce((m,x)=>({x:m.x+x.o[x.f].x/pts.length,y:m.y+x.o[x.f].y/pts.length}),{x:0,y:0}); let an=Math.atan2(w.y-C.y,w.x-C.x)-Math.atan2(q.w0.y-C.y,q.w0.x-C.x); an=Math.round(an/(Math.PI/12))*(Math.PI/12); const c=Math.cos(an), sn=Math.sin(an);
     for(const x of pts){ const v=x.o[x.f], X=v.x-C.x, Y=v.y-C.y; x.o[x.f]={x:r3(C.x+X*c-Y*sn),y:r3(C.y+X*sn+Y*c)}; } }
-  else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth],l0.t==='c'); skAcq(z); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; if(axisMode==='ortho'&&q.t==='mv'){ if(Math.abs(dx)>=Math.abs(dy)) dy=0; else dx=0; } /* Орто: a dragged segment goes straight along X or along Y */ }
+  else { if(S.length===1&&S[0].k==='e'){ const l0=E.L[S[0].i], v0=l0[S[0].e], oth=l0[S[0].e==='a'?'b':'a'], mine=new Set(pts.map(x=>E.L.indexOf(x.o)+x.f)), sp=toS({x:v0.x+dx,y:v0.y+dy}), z=planSnap(sp.x,sp.y,null,(i,e)=>mine.has(i+e),[oth],l0.t==='c'); skAcq(z); dx=z.x-v0.x; dy=z.y-v0.y; } /* a dragged end keeps Орто to its line's other end */ else { dx=Math.round(dx/10)*10; dy=Math.round(dy/10)*10; if(axisMode==='ortho'&&q.t==='mv'&&q.h&&q.h.k==='l'&&E.L[q.h.i]){ const l0=JSON.parse(q.snap)[q.h.i], v=skV(l0.a,l0.b), Lv=skL(v); if(Lv>1){ const n={x:-v.y/Lv,y:v.x/Lv}, k=Math.round(((w.x-q.w0.x)*n.x+(w.y-q.w0.y)*n.y)/10)*10; dx=n.x*k; dy=n.y*k; } } /* Орто: a segment moves only square to itself — a vertical one sideways, a horizontal one up and down; its joined lines keep their direction */ }
     for(const x of pts){ const v=x.o[x.f]; x.o[x.f]={x:r3(v.x+dx),y:r3(v.y+dy)}; } }
   q.moved=true; redraw(); }
 function lnArcMove(q,p){ const it=lnArcItems().find(i=>i.id===q.id); if(!it) return; const o=JSON.parse(q.o), w=toW(p.x,p.y); if(!q.moved&&Math.hypot(w.x-q.w0.x,w.y-q.w0.y)*view.scale<4) return; q.moved=true; if(q.L0==null&&planEd) q.L0=JSON.stringify(planEd.L);
