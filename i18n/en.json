@@ -4878,5 +4878,9 @@
 "Эскиз": "Sketch",
 "выдавливание": "extrusion",
 "глубина": "depth",
-"см": "cm"
+"см": "cm",
+"Кабель от панелей идёт по кровле — «Между устройствами» для него нет": "A cable from the panels runs over the roof — “Between devices” does not apply to it",
+"как нарисовано": "as drawn",
+"Пусто — на той высоте, где нарисован профиль": "Empty — at the height where the profile is drawn",
+"Нижняя точка профиля над уровнем, мм. Пусто — на той высоте, где нарисован профиль": "Lowest point of the profile above the level, mm. Empty — at the height where the profile is drawn"
 }
