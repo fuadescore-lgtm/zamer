@@ -4895,5 +4895,13 @@
 "Размер снова до соседней линии": "The size goes to the joined line again",
 "Тяните кружок размера к другой вершине или линии; касание цифры — ввести": "Drag the size’s dot to another vertex or line; tap the number to type",
 "Цвет линии": "Line colour",
-"Цвет, тип и толщина — по слою": "Colour, type and thickness — by layer"
+"Цвет, тип и толщина — по слою": "Colour, type and thickness — by layer",
+"Стиль": "Style",
+"Стиль линии": "Line style",
+"Стиль линии: цвет, тип, толщина": "Line style: colour, type, thickness",
+"по слою": "by layer",
+"центр поворота": "centre of rotation",
+"опорная точка: луч, от которого считается угол": "reference point: the ray the angle is measured from",
+"куда повернуть (касание; цифра угла — ввод": "where to turn (tap; tap the angle to type",
+"Сначала выберите линию или дугу: «Выбор»": "Select a line or an arc first: «Select»"
 }
