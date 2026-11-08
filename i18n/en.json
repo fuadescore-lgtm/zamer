@@ -4874,5 +4874,9 @@
 "Крыша по профилю (низ кровли": "Roof by profile (roof underside",
 "Крыша по профилю · правка": "Roof by profile · edit",
 "Введите число в мм": "Enter a number in mm",
-"Толщина кровли, мм": "Roof thickness, mm"
+"Толщина кровли, мм": "Roof thickness, mm",
+"Эскиз": "Sketch",
+"выдавливание": "extrusion",
+"глубина": "depth",
+"см": "cm"
 }
