@@ -5042,5 +5042,20 @@
 "Переместить: возьмите группу за любой угол и поставьте на нужную точку (магнит). Касание пустого места или ✓ — готово": "Move: grab the group by any corner and drop it on the point you need (snap). Tap an empty spot or ✓ — done",
 "Переместить: возьмите за любой угол и поставьте на точку": "Move: grab any corner and drop it on a point",
 "возьмите группу за любой угол и поставьте на нужную точку (магнит). Касание пустого места или ✓ — готово": "grab the group by any corner and drop it on the point you need (snap). Tap an empty spot or ✓ — done",
-"возьмите за любой угол и поставьте на точку": "grab any corner and drop it on a point"
+"возьмите за любой угол и поставьте на точку": "grab any corner and drop it on a point",
+"У этой точки уже есть своя трасса — уберите её в меню стринга": "This point already has its own route — remove it in the string menu",
+"по вашей трассе на кровле, спуск и ввод — по правилам": "along your route on the roof, descent and entry by the rules",
+"Трасса нарисована, но не доведена до главного кабеля": "The route is drawn but does not reach the main cable",
+"соседней группы или на главный кабель": "of the neighbouring group or on the main cable",
+"по главному кабелю к прибору": "along the main cable to the device",
+"Главный кабель": "Main cable",
+"от массива до": "from the array to",
+"К боксу": "To box",
+"боксу / инвертору по нарисованной трассе": "box / inverter along the drawn route",
+"Главный кабель этого стринга к": "Main cable of this string to the DC",
+"красная / чёрная), точки": "red / black), a point",
+"Коснитесь точки стринга": "Tap a string point",
+"на главный кабель или": "on the main cable or",
+"Главный кабель С": "Main cable S",
+"В проекте нет": "The project has no"
 }
