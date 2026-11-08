@@ -5023,5 +5023,16 @@
 "тап по": "tap",
 "группа": "group",
 "ваша": "yours",
-"доп": "add."
+"доп": "add.",
+"Стена развёрнута по соседней — ⇅ «Перевернуть», если не так": "Wall turned to match its neighbour — ⇅ «Flip» if not right",
+"Перевернуть стену: толщина на другую сторону линии": "Flip the wall: thickness to the other side of the line",
+"Стена перевёрнута: толщина на другую сторону": "Wall flipped: thickness to the other side",
+"Перевёрнуто стен": "Walls flipped",
+"Стена развёрнута по соседней": "Wall turned to match its neighbour",
+"Перевернуть": "Flip",
+"если не так": "if not right",
+"толщина на другую сторону линии": "thickness to the other side of the line",
+"толщина на другую сторону": "thickness to the other side",
+"Стена перевёрнута": "Wall flipped",
+"Перевернуть стену": "Flip the wall"
 }
