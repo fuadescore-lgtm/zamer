@@ -5416,7 +5416,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.104':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.105':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -11147,7 +11147,7 @@ function strPk(){ const R=strUI.R, pk=new Map(); const PL=(R&&R.allPL)||strPlane
    Data: D = {inv, sel, N, dev[], str:[{inv,m,pl,c:[[id,i,j],...]}], ...} — same structure as vedCfg().lay (c[0] = «+» end in wiring order). */
 var SW=null;
 const SWU=200; // undo depth
-function swDraftFrom(L){ const D=JSON.parse(JSON.stringify(L)); delete D.pin; D._n=1; if(!D.dev) D.dev=null; D.N=Math.max(D.N||1,...D.str.map(s=>(s.inv||0)+1)); return D; }
+function swDraftFrom(L){ const D=JSON.parse(JSON.stringify(L)); delete D.pin; D._n=1; if(!D.dev) D.dev=null; D.N=Math.max(1,...D.str.filter(s=>s.c&&s.c.length).map(s=>(s.inv||0)+1),doc.levels.reduce((a,Lv)=>a+Lv.items.filter(d=>d.t==='dev'&&d.k==='inv').length,0)); /* no empty inverter slots: as many as the strings use or stand on the plan */ return D; }
 function swSettings(){ const v=vedCfg(); return {inv:v.inv||'',invN:v.invN,smode:v.smode,stgt:v.stgt,plOff:v.plOff?[...v.plOff]:null,hmerge:v.hmerge}; }
 function swWithV(o,fn){ const v=vedCfg(), sv=swSettings(); try{ v.inv=o.inv; v.invN=o.invN; v.smode=o.smode; v.stgt=o.stgt; if(o.plOff) v.plOff=o.plOff; else delete v.plOff; if(o.hmerge===false) v.hmerge=false; else delete v.hmerge; return fn(); } finally{ v.inv=sv.inv; v.invN=sv.invN; v.smode=sv.smode; v.stgt=sv.stgt; if(sv.plOff) v.plOff=sv.plOff; else delete v.plOff; if(sv.hmerge===false) v.hmerge=false; else delete v.hmerge; } }
 // automatic layout with the window's settings (does not touch the project)
@@ -11258,7 +11258,7 @@ function swClose(force){ if(!SW) return; if((SW.dirty||SW.adirty)&&!force){ swAs
 function swApply(force){ const Ck=SW.ck; if(!force&&Ck&&Ck.lvl>=2){ const E=Ck.msg.filter(m=>m[0]>=2).slice(0,8).map(m=>'✖ '+m[1]); swAsk('Есть ошибки:\n'+E.join('\n')+(Ck.msg.filter(m=>m[0]>=2).length>8?'\n…':'')+'\n\nВсё равно применить?',[['Применить','y'],['Отмена','']],k=>{ if(k==='y') swApply(true); }); return; }
   { const D=SW.D, I=swI(); D.pare={}; for(let n=0;n<D.N;n++) for(let m=0;m<I.M.length;m++){ const pi=swParInfo(n,m); if(pi) D.pare[n+'.'+m]=pi.eff; } }
   const v=vedCfg(); if(ENT&&ENT.on&&ENT.mode==='view'){ pushUndo(); } undoS.length=Math.min(undoS.length,SW.u0); undoS.push(SW.snap); if(undoS.length>150) undoS.shift(); redoS=[]; try{ syncTop(); }catch(_){} /* один шаг ↶ — к проекту до окна */ for(const p of SW.pend){ const L=doc.levels[p.li]; if(L) L.items.push(p.o); } const D=JSON.parse(JSON.stringify(SW.D)); delete D._n; D.sig=strSig(SW.G.PL); D.arr=SW.G.PL.flatMap(pl=>pl.A.map(A=>A.it.id)); D.p=v.pmod; v.lay=D; v.lay._n=1;
-  v.inv=SW.set.inv; if(SW.set.invN!=null) v.invN=SW.set.invN; else delete v.invN; v.smode=SW.set.smode; v.stgt=SW.set.stgt; if(SW.set.plOff) v.plOff=SW.set.plOff; else delete v.plOff; if(SW.set.hmerge===false) v.hmerge=false; else delete v.hmerge;
+  v.inv=SW.set.inv||v.inv; if(SW.set.invN!=null) v.invN=SW.set.invN; else delete v.invN; v.smode=SW.set.smode; v.stgt=SW.set.stgt; if(SW.set.plOff) v.plOff=SW.set.plOff; else delete v.plOff; if(SW.set.hmerge===false) v.hmerge=false; else delete v.hmerge;
   strTouch(); strMapC=null; persist(); const n=SW.D.str.length; SW.dirty=false; SW.applied=true; swClose(true); toast(SW&&SW.adirty?'Применено: стринги и правки «Анализа»':'Стринги применены: '+n+' стр.',true); }
 // ---------- view transform (rotated top view) ----------
 function swRot(p){ const t=SW.G.th, c=Math.cos(t), s=Math.sin(t); return {x:p.x*c-p.y*s,y:p.x*s+p.y*c}; }
@@ -11634,7 +11634,7 @@ function swClick(e){ if(!SW) return; if(anClick(e)) return; if(SW.noClick&&Date.
   swRender(); }
 function swChange(e){ if(!SW) return; if(anChange(e)) return; const t=e.target;
   if(t.id==='swPol'){ SW.pol=t.checked; swDraw(); return; } if(t.id==='swN'){ const n=parseInt(t.value,10); SW.fN=n>0?n:''; return; } if(t.id==='swFs'){ SW.fs=t.value; return; }
-  if(t.id==='swInv'){ swPush(); SW.set.inv=t.value==='auto'?'':t.value; if(t.value!=='auto') SW.D.inv=t.value.startsWith('c:')||VINV.some(x=>x.n===t.value)?t.value:SW.D.inv; else { const r=swAuto(); if(r.L) SW.D.inv=r.L.inv; } swRefresh(); swMsg('Модель инвертора: '+swI().n+' — стринги не менялись, проверки пересчитаны. «Разложить всё автоматически» соберёт заново под эту модель'); swRender(); return; }
+  if(t.id==='swInv'){ swPush(); invSetProject(t.value); persist(); if(t.value==='auto'){ const r=swAuto(); if(r.L) SW.D.inv=r.L.inv; } swRefresh(); swMsg('Модель инвертора: '+swI().n+' — стринги не менялись, проверки пересчитаны. «Разложить всё автоматически» соберёт заново под эту модель'); swRender(); return; }
   if(t.id==='swInvN'){ SW.set.invN=+t.value||0; SW.dirty=true; return; } if(t.id==='swMode'){ SW.set.smode=t.value; SW.dirty=true; swRender(); return; } if(t.id==='swTgt'){ const n=parseNum(t.value); if(n>0) SW.set.stgt=n; SW.dirty=true; return; } if(t.id==='swHm'){ SW.set.hmerge=t.value==='0'?false:undefined; SW.dirty=true; return; }
   if(t.dataset.wpo!=null){ const s=new Set(SW.set.plOff||[]); if(t.checked) s.delete(t.dataset.wpo); else s.add(t.dataset.wpo); SW.set.plOff=[...s]; SW.dirty=true; return; } }
 // ===== Stage B: parallel connection of strings on one MPPT, cable estimate, «Исправить», moving strings =====
@@ -11975,7 +11975,7 @@ function anChange(e){ const t=e.target, c=t.dataset&&t.dataset.ac; if(!c||!SW||S
     if(c==='pe:on'){ anEdit(()=>{ const g=G(key); if(t.checked){ delete g.off; g.on=true; } else { g.off=true; g.on=false; } peGC=null; },t.checked?'PE включён — в ведомости':'PE отключён — в ведомость не входит'); return true; }
     if(c==='pe:brand'){ const v=t.value; anEdit(()=>{ const g=G(key); if(v==='__own') g.brand=g.brand&&!PE_BR.includes(g.brand)?g.brand:'Провод PE'; else if(v===PE_BR[0]) delete g.brand; else g.brand=v; peGC=null; }); return true; }
     if(c==='pe:brandT'){ const v=t.value.trim(); anEdit(()=>{ const g=G(key); if(v) g.brand=v; else delete g.brand; peGC=null; }); return true; } }
-  if(c==='inv'){ const v=t.value; anEdit(()=>{ const ve=vedCfg(); ve.inv=v==='auto'?'auto':v; for(const L of doc.levels) for(const d of L.items) if(d.t==='dev'&&d.k==='inv') d.m=v.startsWith('c:')?v:'auto'; SW.set.inv=v==='auto'?'':v; if(v!=='auto'&&(v.startsWith('c:')||VINV.some(x=>x.n===v))) SW.D.inv=v; else { const r=swAuto(); if(r.L) SW.D.inv=r.L.inv; } if(ve.lay) ve.lay.inv=SW.D.inv; },'Инвертор: '+(t.selectedOptions[0]||{}).textContent+' — проверки пересчитаны'); return true; }
+  if(c==='inv'){ const v=t.value; anEdit(()=>{ invSetProject(v); },'Инвертор: '+(t.selectedOptions[0]||{}).textContent+' — проверки пересчитаны'); return true; }
   if(c==='bat'&&it){ const v=t.value; anEdit(()=>{ it.m=v; vedCfg().cb=v; },v?'АКБ: '+(t.selectedOptions[0]||{}).textContent:'АКБ: модель не выбрана'); return true; }
   if(/^ccon:/.test(c)&&it&&t.value){ const k=c.slice(5), id=t.value; anEdit(()=>{ it[k]={id}; },'Кабель подключён'); return true; }
   if(/^lay:/.test(c)&&it){ const k=c.slice(4), v=t.value; anEdit(()=>{ it.lay=it.lay||{}; if(v===LAYD[k]) delete it.lay[k]; else it.lay[k]=v; if(!Object.keys(it.lay).length) delete it.lay; }); return true; }
@@ -12138,6 +12138,11 @@ function elecDef(){ const s=doc.settings; if(!s.elec) s.elec={res:10,term:300,z:
 function itemById(id){ for(let li=0;li<doc.levels.length;li++){ const it=doc.levels[li].items.find(i=>i.id===id); if(it) return {it,li}; } return null; }
 // габариты устройства (ш × в × г, мм): свои — или из паспорта каталога
 /* the model chosen on the inverter itself (card on the plan) is the project's inverter when all inverters agree — strings check, BOM, report, SLD use it */
+/* ONE inverter model for the whole project: the inverters on the plan, «Строки и MPPT», «Анализ» and «Ведомость» — change it anywhere, all of them follow */
+function invSetProject(val){ const v=vedCfg(), auto=!val||val==='auto', ok=!auto&&!!strInvSpec(val); v.inv=auto?'auto':val;
+  for(const Lv of doc.levels) for(const d of Lv.items) if(d.t==='dev'&&d.k==='inv') d.m=ok&&String(val).startsWith('c:')?val:'auto';
+  let id=ok?val:''; if(!id){ try{ const R=strRun(); if(R&&R.I) id=R.I.id||R.I.n; }catch(_){} } if(v.lay&&id) v.lay.inv=id;
+  if(typeof SW!=='undefined'&&SW&&SW.set){ SW.set.inv=auto?'':val; if(SW.D&&id) SW.D.inv=id; } strMapC=null; return id; }
 function invDevModel(){ const M=[...new Set(doc.levels.flatMap(L=>L.items).filter(i=>i.t==='dev'&&i.k==='inv'&&i.m&&i.m!=='auto'&&strInvSpec(i.m)).map(i=>i.m))]; return M.length===1?M[0]:''; }
 function devInvId(it){ return it&&it.m&&it.m!=='auto'?it.m:invIdAuto(); }
 /* inverter model when «Авто»: the project choice, else the one picked by the string layout (same as the single-line diagram) */
@@ -13969,7 +13974,7 @@ function elecPanelClick(e,sel){ if(!sel) return false; { const bd=e.target.close
   return false; }
 function elecPanelChange(t,sel){ if(!sel||(sel.t!=='dev'&&sel.t!=='cab')) return false; const set=(f)=>{ pushUndo(); f(); persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); return true; }, num=v=>{ const n=parseNum(v); return isFinite(n)?n:NaN; };
   if(sel.t==='dev'){ if(t.dataset.dvcp) return set(()=>{ sel.cp=sel.cp||{}; sel.cp[t.dataset.dvcp]=t.value; });
-    if(t.dataset.dvm) return set(()=>{ sel.m=t.value; delete sel.w; delete sel.h; delete sel.d; if(sel.k==='inv'){ const dm=invDevModel(); if(dm){ const v=vedCfg(); v.inv=dm; if(v.lay) v.lay.inv=dm; strMapC=null; } } });
+    if(t.dataset.dvm) return set(()=>{ sel.m=t.value; delete sel.w; delete sel.h; delete sel.d; if(sel.k==='inv') invSetProject(t.value); });
     if(t.dataset.dvp) return set(()=>{ sel[t.dataset.dvp]=t.value; }); if(t.dataset.dvc) return set(()=>{ sel[t.dataset.dvc]=t.checked; });
     const m={dvZ:['z',-5000,20000],dvN:['n',0,64],dvMI:['mi',6,630],dvIB:['ib',0,630],dvIL:['il',0,630],dvW:['w',50,3000],dvO:['cpo',0,2000],dvG:['cgap',0,300],dvH:['h',50,3000],dvD:['d',20,1500],dvQI:['qsI',1,630],dvQU:['qsU',100,2000],dvFI:['fuI',1,100],dvMF:['mf',1,100],dvSU:['spU',100,2000]}[t.id]; if(m){ const raw=t.value.trim(); if(raw===''&&m[0]!=='z') return set(()=>{ delete sel[m[0]]; }); const v=num(raw); if(!(v>=m[1]&&v<=m[2])){ toast('Не соответствует: '+m[1]+'…'+m[2]); panelKey=''; syncPanel(); return true; } return set(()=>{ sel[m[0]]=r1(v); }); } }
   if(sel.t==='cab'){ if(t.dataset.cbside) return set(()=>{ sel.cps=sel.cps||{}; if(t.value) sel.cps[t.dataset.cbside]=t.value; else delete sel.cps[t.dataset.cbside]; if(!Object.keys(sel.cps).length) delete sel.cps; }); if(t.dataset.cbs&&/^lay_/.test(t.dataset.cbs)) return set(()=>{ const k=t.dataset.cbs.slice(4); sel.lay=sel.lay||{}; if(t.value===LAYD[k]) delete sel.lay[k]; else sel.lay[k]=t.value; if(!Object.keys(sel.lay).length) delete sel.lay; }); if(t.dataset.cbs) return set(()=>{ sel[t.dataset.cbs]=t.dataset.cbs==='sec'?+t.value:t.value; if(t.dataset.cbs==='k') delete sel.sec; });
@@ -14173,7 +14178,7 @@ function openVed(){ const v=vedCfg(), st=vedStamp(), site=vedSite(), k=vedKind()
     sheet.addEventListener('change',e=>{ const el=e.target; if(!sheet.querySelector('.vedb')) return; const v=vedCfg();
       if(el.dataset.vrx){ if(!v.rpx) v.rpx={}; if(el.checked) delete v.rpx[el.dataset.vrx]; else v.rpx[el.dataset.vrx]=true; persist(); return; }
       if(el.dataset.vc){ const p=el.dataset.vc.split('.'); if(p.length===2) v[p[0]][p[1]]=el.checked; else v[p[0]]=el.checked; persist(); if(el.dataset.vc==='h.raft'||el.dataset.vc==='rp.eFac'||el.dataset.vc==='rp.mFac') openVed(); return; }
-      if(el.dataset.vs){ const k=el.dataset.vs; let val=el.value; if(k==='railL'||k==='invN') val=+val; if(k==='city') val=val||null; v[k]=val; if(k==='inv'){ /* the inverter chosen here is the project's inverter: the string layout and the devices on the plan take it too (else the layout's old model wins in the report and the single-line diagram) */ const on=val&&val!=='auto'&&strInvSpec(val); for(const Lv of doc.levels) for(const d of Lv.items) if(d.t==='dev'&&d.k==='inv') d.m=on&&String(val).startsWith('c:')?val:'auto'; if(v.lay){ if(on) v.lay.inv=val; else { try{ const R=strRun(); if(R&&R.I) v.lay.inv=R.I.id||R.I.n; }catch(_){} } } strMapC=null; } persist(); if(k==='city'||k==='pmod'||k==='inv'||k==='cb'||k==='smode'||k==='invN'||k==='rtype') openVed(); return; }
+      if(el.dataset.vs){ const k=el.dataset.vs; let val=el.value; if(k==='railL'||k==='invN') val=+val; if(k==='city') val=val||null; v[k]=val; if(k==='inv') invSetProject(val); persist(); if(k==='city'||k==='pmod'||k==='inv'||k==='cb'||k==='smode'||k==='invN'||k==='rtype') openVed(); return; }
       if(el.dataset.vn){ const p=el.dataset.vn.split('.'), raw=el.value.trim(); if(p.length===2){ v.own=v.own||{}; v.own[p[1]]=p[1]==='name'?raw:parseNum(raw); persist(); openVed(); return; }
         if(p[0]==='tmin'){ if(raw===''){ v.tmin=null; persist(); return; } const t=parseNum(raw); if(!isFinite(t)||t<-50||t>10){ toast('Не соответствует: −50…10 °C'); el.value=v.tmin==null?'':v.tmin; return; } v.tmin=t; persist(); return; }
         const n=raw===''?0:parseNum(raw); const lim={rstep:[300,1500],loss:[0,40],cabL:[1,200],pw:[0,800],pkg:[0,100],cbN:[0,64],stgt:[0,2000]}[p[0]]; if(raw!==''&&(!isFinite(n)||(lim&&(n<lim[0]||n>lim[1])))){ toast('Не соответствует: '+(lim?lim[0]+'…'+lim[1]:'число')); el.value=v[p[0]]||''; return; } v[p[0]]=n; persist(); return; }
