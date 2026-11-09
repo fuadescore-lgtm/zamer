@@ -5093,5 +5093,14 @@
 "подряд": "in a row",
 "Стринг": "String",
 "Инвер": "Inver",
-"тор": "ter"
+"тор": "ter",
+"Поставьте недостающий инвертор на план или перенесите строки в окне «Строки и": "Place the missing inverter on the plan or move the strings in the «Strings and",
+"Заземлены: рамы панелей и направляющие (С": "Earthed: panel frames and rails (S",
+"По раскладке строк нужно инверторов": "The string layout needs inverters",
+"на объекте поставлено": "placed on site",
+"бокса и инвертора": "box and inverter",
+"зелёный пунктир": "green dashed line",
+"ГЗШ щита": "panel main earth bar",
+"корпуса": "enclosures",
+"ГЗШ": "MEB"
 }
