@@ -64,7 +64,7 @@ jobs:
           sed "s/^package PKG;/package $PKG;/" ../native/CompassPlugin.java > "$D/CompassPlugin.java"
           sed "s/^package PKG;/package $PKG;/" ../native3d/MainActivity.java > "$MA"
           # BIMsketcher Pro (Google Play Billing): PRO=1 builds it in; PRO=0 leaves the app without billing
-          PRO=0
+          PRO=1
           if [ "$PRO" = "1" ]; then
             sed "s/^package PKG;/package $PKG;/" ../native3d/BillingPlugin.java > "$D/BillingPlugin.java"
             G=android/app/build.gradle
