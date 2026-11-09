@@ -5161,5 +5161,22 @@
 "Заземлитель": "Earth electrode",
 "Счётчик": "Meter",
 "Шина": "Busbar",
-"вх": "in"
+"вх": "in",
+"до оси стропила со шпилькой, слева — от карниза по скату до профиля, мм. От торца отложить размеры у карниза и у конька, отбить шнуром линии стропил": "to the axis of the rafter with a stud; on the left — from the eave along the slope to the rail, mm. Measure from the roof end at the eave and at the ridge and snap chalk lines along the rafters",
+"Однотипные кабели сложены; «К заказу» — округлено вверх до целого метра. Длины уже с запасом и разделкой концов": "Cables of the same type are added up; “To order” is rounded up to a whole metre. Lengths already include the reserve and end terminations",
+"скат развёрнут: карниз внизу, размеры — по скату": "slope unfolded: eave at the bottom, sizes along the slope",
+"Крепление направляющих профилей": "Mounting rails fixing",
+"Раскладка (план) по скатам": "Layout (plan) by slopes",
+"от карниза по скату, мм": "from the eave along the slope, mm",
+"Раскладка (план) · скат": "Layout (plan) · slope",
+"Снизу — от торца крыши": "At the bottom — from the roof end",
+"Раскладка (план": "Layout (plan",
+"Кабели к заказу": "Cables to order",
+"Кабель / провод": "Cable / wire",
+"АБВГДЕЖИКЛМН": "ABCDEFGHIKLM",
+"от торца, мм": "from the roof end, mm",
+"К заказу, м": "To order, m",
+"стропила": "rafters",
+"шпилька": "stud",
+"Марки": "Marks"
 }
