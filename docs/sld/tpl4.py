@@ -30,7 +30,7 @@ G=[]; L=[]
 for k,(n,mp,par,si,kind,sub) in enumerate(slots):
     y0=top+k*slotH+24; bh=slotH-34; ybar=y0+bh-30
     frame(xD0,y0,xD1-xD0,bh,f'DC-бокс =QD{n}')
-    S.t('строка 14×410 Вт',xCol+8,y0-18,11,False,GREY)
+    S.t('Строки: 14×410 Вт · H1Z2Z2-K 1×6 мм² · DC-бокс → ИНВ: ПуГВ 1×6 мм²',xCol+8,y0-18,11,False,BLUE)
     P=27; yy=y0+20; taps=[]; ins=[]
     for m,k2 in enumerate(mp,1):
         if par and k2>1:
@@ -40,6 +40,7 @@ for k,(n,mp,par,si,kind,sub) in enumerate(slots):
                 tick(xD0-26,ly,2); S.l(xPV+11,ly,fuX-14,ly); fuse(fuX,ly); S.t(f'FU{n}.{m}.{j+1}  25 А gPV  1000 В',fuX+20,ly-17,11,True); S.l(fuX+14,ly,busX,ly)
             S.l(busX,ys[0]-5,busX,ys[-1]+5,6)
             S.l(busX,ym,swX-22,ym); qf(swX,ym); S.t(f'QF{n}.{m}  {"63" if k2>=3 else "40"} А  1000 В',swX+28,ym-17,11,True); S.l(swX+22,ym,xI0,ym); tick(xI0-26,ym,2)
+            S.t('1×16' if k2>=3 else '1×10',xD1-8,ym-17,11,True,BLUE,anc='ra')   # exception: combined line carries k2 strings
             ins.append((ym,f'MPPT{m}')); taps.append((ym,f'FV{n}.{m}')); yy=ys[-1]+P+6
         else:
             ly=yy; pv(xPV,ly); S.t(f'С{si}–{si+k2-1}' if k2>1 else f'С{si}',xPV-18,ly-8,13,True,anc='ra')
@@ -51,11 +52,11 @@ for k,(n,mp,par,si,kind,sub) in enumerate(slots):
             ins.append((ly,f'MPPT{m}')); taps.append((ly,f'FV{n}.{m}')); si+=k2; yy+=P
     for i,(ly,lab) in enumerate(taps):
         x=spX0+i*40; S.dot(x,ly); S.l(x,ly,x,ybar-30,2); spdb(x,ybar-30); S.l(x,ybar-12,x,ybar,2,GRN); S.t(lab,x,ybar+8,10,True,anc='ma')
-    S.l(xD0+10,ybar,xD1-6,ybar,6,GRN); S.t('PE',xD0+16,ybar-20,11,True,GRN); dash(xCol+8,ybar,xD0+10,ybar); S.t('рамы панелей',xCol+10,ybar-17,10,False,GRN)
-    xdp=xD1-6; S.dot(xdp,ybar,GRN)
+    S.l(xD0+10,ybar,xD1-6,ybar,6,GRN); S.t('PE',xD0+16,ybar-20,11,True,GRN); dash(xCol+8,ybar,xD0+10,ybar); S.t('рамы панелей · PE 1×6 мм²',xCol+8,ybar-18,11,True,(20,90,35))
+    xdp=xD1-6; S.dot(xdp,ybar,GRN); S.t('1×10',xD1+5,ybar+7,10,True,GRN)
     # inverter + its own PE drop (enclosure) to the PE trunk
     d.rectangle((xI0,y0,xI1,y0+bh),outline=INK,width=3,fill='white'); S.l(xI0,y0+bh,xI1,y0,1,LG)
-    S.t('=',xI0+30,y0+bh-40,22,True); S.t('~',xI1-8,y0+bh-40,22,True,anc='ra')
+    S.t('=',xI0+10,y0+bh-40,22,True); S.t('PE 1×16',(xI0+xI1)//2+4,y0+bh-16,10,True,GRN,anc='ma'); S.t('~',xI1-8,y0+bh-40,22,True,anc='ra')
     for (iy,it) in ins: S.t(it,xI0+6,iy-6,10,False,GREY)
     # PE of the inverter enclosure (and battery) -> main panel ГЗШ via collector xPE
     cx=(xI0+xI1)//2; ype=y0+bh+9
@@ -71,11 +72,11 @@ for k,(n,mp,par,si,kind,sub) in enumerate(slots):
         d.rectangle((xa0,yb-26,xa1,yb+26),outline=INK,width=3,fill='white')
         bx=xa0+14; S.l(bx-6,yb-9,bx+6,yb-9,3); S.l(bx-3,yb-4,bx+3,yb-4,3); S.l(bx-6,yb+1,bx+6,yb+1,3); S.l(bx-3,yb+6,bx+3,yb+6,3)
         S.t(f'АКБ-{n}',xa0+26,yb-22,12,True); S.t('512 В',xa0+26,yb-6,10,False,GREY); S.t('30 кВт·ч',xa0+26,yb+8,10,False,GREY)
-        ax=(xa0+xa1)//2; S.dot(ax,yb+26,GRN); S.l(ax,yb+26,ax,ype,2,GRN); S.dot(ax,ype,GRN)
+        ax=(xa0+xa1)//2; S.dot(ax,yb+26,GRN); S.l(ax,yb+26,ax,ype,2,GRN); S.dot(ax,ype,GRN); S.t('1×10',ax+6,yb+32,10,True,GRN)
     # AC: GRID (and LOAD for hybrids)
     yc=y0+28
     S.t('GRID',xI1-6,yc-6,10,True,anc='ra') if False else None
-    tick(xI1+24,yc,5); S.t(f'КБ-{n}.1 5×25 8 м',xI1+36,yc-18,11,False,BLUE)
+    tick(xI1+24,yc,5); S.t(f'КБ-{n}.1 ВВГнг-LS {"5×25" if kind=="гибрид" else "5×16"} 8 м',xI1+36,yc-18,11,False,BLUE)
     xq=xGB-42
     if k>0 and kind=='гибрид' or (kind=='сетевой'): hop(xLB,yc,xI1,xq-22)
     else: S.l(xI1,yc,xq-22,yc)
@@ -83,7 +84,7 @@ for k,(n,mp,par,si,kind,sub) in enumerate(slots):
     S.t('GRID' if kind=='гибрид' else 'AC',xI1-6,yc-16,10,True,anc='ra') if False else None
     if kind=='гибрид':
         yl=y0+72; xl=xLB-42
-        S.l(xI1,yl,xl-22,yl); tick(xI1+24,yl,5); S.t(f'КБ-{n}.2 5×25 8 м',xI1+36,yl-18,11,False,BLUE)
+        S.l(xI1,yl,xl-22,yl); tick(xI1+24,yl,5); S.t(f'КБ-{n}.2 ВВГнг-LS 5×25 8 м',xI1+36,yl-18,11,False,BLUE)
         qf(xl,yl); S.t(f'QF3.{n}',xl,yl+12,11,True,anc='ma'); S.t('3P+N 125 А',xl,yl+27,10,True,anc='ma'); S.l(xl+22,yl,xLB,yl); S.dot(xLB,yl); L.append(yl)
         # port names inside the inverter box (right edge)
         d.rectangle((xI1-40,yc-8,xI1-3,yc+6),fill='white'); d.rectangle((xI1-40,yl-8,xI1-3,yl+6),fill='white'); S.t('GRID',xI1-6,yc-6,10,True,GREY,anc='ra'); S.t('LOAD',xI1-6,yl-6,10,True,GREY,anc='ra')
