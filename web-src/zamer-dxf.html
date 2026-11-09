@@ -5416,7 +5416,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 2.9.106':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 2.9.107':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -13339,7 +13339,7 @@ const DCBK=[63,80,100,125,160,200,250,315,400];
 // щит при гибридном инверторе (инвертор в разрыв после вводного): QF2 — GRID, QF3 — LOAD, QS4 — байпас 1-0-2
 /* hybrid with the whole house on LOAD: GRID and LOAD lines carry the house load (passthrough) + battery charging, not only the inverter power —
    size them to the main breaker QF1 (never below 1,25 × inverter current) */
-function pnlAC(pn,I){ const ac=I?invAC(I):null, ph3=!!ac&&ac.ph===3, hyb=!!ac&&invHyb(I), i0=ac?ac.I*1.25:0, ig=+pn.ib>0?+pn.ib:ac?BRK.find(x=>x>=Math.max(i0,hyb?+pn.mi||32:0))||BRK[BRK.length-1]:0, il=+pn.il>0?+pn.il:ig, byp=pn.byp!==false, bI=[40,63,80,100,125,160].find(x=>x>=Math.max(ig,il))||160; return {ac,ph3,ig,il,byp,bI,poles:ph3?'3P+N':'2P',bpPoles:ph3?'4P':'2P'}; }
+function pnlAC(pn,I){ const ac=I?invAC(I):null, ph3=!!ac&&ac.ph===3, hyb=!!ac&&invHyb(I), i0=ac?ac.I*1.25:0, nI=(()=>{ const L=vedCfg().lay; return L&&L.str&&L.str.length?Math.max(1,...L.str.filter(s0=>s0.c&&s0.c.length).map(s0=>(s0.inv||0)+1)):1; })() /* several inverters in parallel: each has its own GRID/LOAD breaker by its own current; the house goes through the bypass of the whole bus */, ig=+pn.ib>0?+pn.ib:ac?BRK.find(x=>x>=Math.max(i0,hyb&&nI===1?+pn.mi||32:0))||BRK[BRK.length-1]:0, il=+pn.il>0?+pn.il:ig, byp=pn.byp!==false, bI=[40,63,80,100,125,160,200,250,315,400].find(x=>x>=Math.max(ig,il,nI>1?Math.max(+pn.mi||32,nI*i0):0))||400; return {ac,ph3,ig,il,byp,bI,poles:ph3?'3P+N':'2P',bpPoles:ph3?'4P':'2P'}; }
 function acCabs(){ const r={grid:[],load:[]}; for(const L of doc.levels) for(const c of L.items){ if(c.t!=='cab'||cabKind(c)!=='ac') continue; const A=cabEnd(c,'a'), B=cabEnd(c,'b'); if(!A||!B||A.it.t!=='dev'||B.it.t!=='dev') continue; r[cabAcK(c)].push(c); } return r; }
 function batProt(bat,calc){ if(!bat||bat.bbrk) return null; const I=calc&&calc.I?calc.I*1.25:150; return DCBK.find(x=>x>=I)||DCBK[DCBK.length-1]; }
 function pnlOfInv(){ for(const L of doc.levels) for(const it of L.items) if(it.t==='dev'&&it.k==='pnl') return it; return null; }
@@ -13443,7 +13443,7 @@ function elecSLDPages(opt){ opt=opt||{}; const M=sldModel(); if(!M) return []; c
   const cOf=it=>it?C.find(o=>o.it===it):null, cBetween=(fa,fb,dev)=>C.find(o=>{ const a=cabEnd(o.it,'a'), b=cabEnd(o.it,'b'), ka=a?(a.it.t==='solar'?'arr':a.it.k):null, kb=b?(b.it.t==='solar'?'arr':b.it.k):null; if(!((ka===fa&&kb===fb)||(ka===fb&&kb===fa))) return false; return !dev||[a,b].some(e=>e&&e.it===dev); })||null;
   const nAC=ac&&ac.ph===3?5:3, single=N===1;
   // columns (мм)
-  const xPV=Math.max(15,cw*0.065), xD0=cw*0.17, xD1=cw*0.47, xI0=cw*0.505, xI1=cw*0.59, xP0=cw*0.715, xP1=cw-2, wp=xP1-xP0, xGB=xP0+wp*0.30, xLB=xP0+wp*0.47, xCol=4;
+  const xPV=Math.max(15,cw*0.065), xD0=cw*0.17, xD1=cw*0.47, xI0=cw*0.505, xI1=cw*0.59, xP0=cw*0.715, xP1=cw-2, wp=xP1-xP0, xGB=xP0+wp*0.28, xLB=xP0+wp*0.47, xCol=4;
   const fuX=xD0+(xD1-xD0)*0.10, busX=xD0+(xD1-xD0)*0.40, swX=xD0+(xD1-xD0)*0.58, fvX=xD1-9, swLw=fvX-1.5-(swX+3.6) /* breaker label room: the SPD column stays to the right of it */;
   // band heights for a given line pitch
   const nLn=(iv,g)=>iv.db&&g.fuOn?Math.max(1,g.rows.length):1 /* every string drawn only when it has its own fuse; else one line «×n» */, bandH=(iv,Pp)=>{ let hh=0; for(const g of iv.G){ const k2=nLn(iv,g); hh+=k2*Pp+(k2>1?1.6:0); } return 6.5+Math.max(hh+5,hyb?(invs.length===1?44:26):16); };
@@ -13498,7 +13498,7 @@ function elecSLDPages(opt){ opt=opt||{}; const M=sldModel(); if(!M) return []; c
       if(db) LP(xI0,yF-1.6,xD1-1,yF-1.6); else { LP(xI0,yF-1.6,xCol,yF-1.6); dot(xCol,yF-1.6,grn); } T('корпус',xI0-0.6,yF-2.2,1.5,'right',false,grn);
       // AC: GRID (+ LOAD)
       const yG=hyb?yi0+3.2:(yi0+yi1)/2, yLd=yi0+3.2+Math.min(12,(yi1-yi0)/2), nmG=single?'QF2':'QF2.'+iv.n, nmL=single?'QF3':'QF3.'+iv.n;
-      const acRow=(ly,cab,bus,nm,lab)=>{ L(xI1,ly,bus-10,ly); tick(xI1+3,ly,nAC); const co=cab?cOf(cab):null; if(co){ T(fit((co.it&&co.it.ex?'сущ. ':'')+'КБ-'+co.no+' · '+vFmt(vr(co.calc.len||0,1),1)+' м',xP0-xI1-6,1.8),xI1+5.5,ly-0.7,1.8,'left',false,blue); T(fit((co.calc.cab||'').replace('Кабель ',''),xP0-xI1-2,1.5),xI1+1,ly+2.4,1.5,'left',false,blue); } else if(lab) T(fit(lab,xP0-xI1-6,1.7),xI1+5.5,ly-0.7,1.7,'left',false,red); swc(bus-6.6,ly,true); T(xs(pn,single?nm:nm.replace(/\.\d+$/,''),nm+' '+(pa?pa.poles:'')+' C'+(nm.startsWith('QF3')&&pa?pa.il:pa?pa.ig:'')),bus-1.2,ly+2.8,1.7,'right',true); L(bus-3.2,ly,bus,ly); dot(bus,ly); };
+      const acRow=(ly,cab,bus,nm,lab)=>{ L(xI1,ly,bus-10,ly); tick(xI1+3,ly,nAC); const co=cab?cOf(cab):null; if(co){ T(fit((co.it&&co.it.ex?'сущ. ':'')+'КБ-'+co.no+' · '+vFmt(vr(co.calc.len||0,1),1)+' м',xP0-xI1-6,1.8),xI1+5.5,ly-0.7,1.8,'left',false,blue); T(fit((co.calc.cab||'').replace('Кабель ',''),xP0-xI1-2,1.5),xI1+1,ly+2.4,1.5,'left',false,blue); } else if(lab) T(fit(lab,xP0-xI1-6,1.7),xI1+5.5,ly-0.7,1.7,'left',false,red); swc(bus-6.6,ly,true); T(xs(pn,single?nm:nm.replace(/\.\d+$/,''),nm),bus-1.2,ly+2.6,1.7,'right',true); T((pa?pa.poles:'')+' C'+(nm.startsWith('QF3')&&pa?pa.il:pa?pa.ig:''),bus-1.2,ly+4.6,1.6,'right',true); /* two short lines — never across the next bus */ L(bus-3.2,ly,bus,ly); dot(bus,ly); };
       if(pn){ if(hyb){ T('GRID',xI1-0.6,yG-0.8,1.5,'right',true,grey); T('LOAD',xI1-0.6,yLd-0.8,1.5,'right',true,grey); acRow(yG,iv.grid,xGB,nmG); acRow(yLd,iv.load,xLB,nmL,'нет кабеля LOAD'); } else acRow(yG,iv.grid,xGB,nmG); }
       else { L(xI1,yG,xP1-2,yG); tick(xI1+3,yG,nAC); arrow(xP1,yG,'r'); }
       // battery feeder (shared battery bus at the end)
@@ -13512,8 +13512,8 @@ function elecSLDPages(opt){ opt=opt||{}; const M=sldModel(); if(!M) return []; c
     const yTop=TOP+1.5, yBot=yPE-5; let yGbar=null;
     if(pn){ frame(xP0,yTop+4,wp,yBot-yTop-4); T('Электрощит =ЩР1'+(pn.ex?' (сущ.)':'')+(first?'':' (продолжение)'),xP0,yTop+2.6,FS,'left',true,grey);
       const gs=bandsY.map(b=>b.yG), ls=bandsY.map(b=>b.yLd), yM0=hyb?Math.min(...gs)+6:(Math.min(...gs)+Math.max(...gs))/2, gTop=first?Math.min(...gs)-2:yTop+6, gBot=last?Math.max(Math.max(...gs),first?yM0:0)+2:yBot-6, lTop=first?Math.min(...ls)-2:yTop+6, lBot=last?Math.max(Math.max(...ls)+2,first&&pa&&pa.byp?Math.max(yM0,Math.min(...ls))+7:0):yBot-6;
-      L(xGB,gTop,xGB,gBot,0.6); if(first) T(hyb?'шина GRID':'шина AC',xGB+0.8,gBot+0.4,1.5,'left',true);
-      if(hyb){ L(xLB,lTop,xLB,lBot,0.6); if(first) T('шина LOAD',xLB-0.8,lBot+1.6,1.5,'right',true); }
+      L(xGB,gTop,xGB,gBot,0.6); { const yl=bandsY[0].yF+(list.length>1?2.6:3); T(hyb?'шина GRID':'шина AC',xGB-0.8,yl,1.5,'right',true); } /* in the gap under the first band — no wires there */
+      if(hyb){ L(xLB,lTop,xLB,lBot,0.6); T('шина LOAD',xLB-0.8,bandsY[0].yF+(list.length>1?2.6:3),1.5,'right',true); }
       if(!last){ arrow(xGB,gBot+1.8,'d',pur); if(hyb) arrow(xLB,lBot+1.8,'d',pur); T('▼ шины — на листе '+(pi+2),xLB+2,yBot-8,1.8,'left',true,pur); }
       if(!first) T('▲ шины — с листа '+pi,xLB+2,yTop+8,1.8,'left',true,pur);
       if(first){ const yM=yM0, xQ1=xGB+(xP1-xGB)*0.42; L(xGB,yM,xP1+1,yM); dot(xGB,yM); swc(xQ1,yM,true); T(xs(pn,'QF1','QF1 '+pnlMP(pn)+' '+(pn.mc||'C')+(pn.mi||32)),xQ1,yM+2.8,1.7,'center',true); arrow(xP1+1.6,yM,'r'); T('Сеть ~'+(ac&&ac.ph===3?'400':'230')+' В',xP1,yM-1.4,1.9,'right',true); T('через счётчик (двунапр.)',xP1,yM-3.8,1.5,'right',false,grey);
@@ -13522,7 +13522,7 @@ function elecSLDPages(opt){ opt=opt||{}; const M=sldModel(); if(!M) return []; c
           for(const q of [xc1,xc2]){ x.fillStyle='#fff'; x.strokeStyle=ink; x.lineWidth=X(0.22); x.beginPath(); x.arc(X(q),X(yS),X(0.5),0,Math.PI*2); x.fill(); x.stroke(); }
           L(xm,yS+5,xc1+0.3,yS+0.5); T('1',xc1-0.8,yS+0.6,1.5,'right',true); T('2',xc2+0.8,yS+0.6,1.5,'left',true); T(xs(pn,'QS4','QS4 байпас 1-0-2'),xm-1,yS+8,1.6,'right',true); T(pa.bpPoles+' '+pa.bI+' А',xm-1,yS+10.2,1.6,'right',true); yHb=yS+12; L(xm,yS+5,xm,yHb); }
         else if(hyb){ yHb=Math.max(yM,Math.min(...ls))+6; L(xLB,yHb,xLB+2,yHb); }
-        if(hyb){ const xh0=xLB-2, xh1=xP1-2; L(xh0,yHb,xh1,yHb,0.6); T('шина щита → существующие группы',xh0,yHb+2.4,1.5,'left',false,grey); if(pn.spa){ const xs2=xh1-3; spdS(xs2,yHb,yBot-3); T(xs(pn,'FV','FV AC'),xs2+1.2,yHb+3,1.5,'left',true); } }
+        if(hyb){ const xh0=xLB+2, xh1=xP1-2; L(xh0,yHb,xh1,yHb,0.6); T('шина щита → существующие группы',xh0,yHb+2.4,1.5,'left',false,grey); if(pn.spa){ const xs2=xh1-3; spdS(xs2,yHb,yBot-3); T(xs(pn,'FV','FV AC'),xs2+1.2,yHb+3,1.5,'left',true); } }
         else if(pn.spa){ const xs2=xGB+(xQ1-xGB)*0.75; spdS(xs2,yM,yBot-3); T(xs(pn,'FV','FV AC'),xs2+1.2,yM+3,1.5,'left',true); }
         // ГЗШ and the one earth electrode of the plant
         L(xP0+1,yBot-3,xP1-1,yBot-3,0.6,grn); T('PE / ГЗШ',xP1-1.4,yBot-3.8,1.7,'right',true,grn); L(xP1-4,yBot-3,xP1-4,yPE+1.6,0.3,grn); earth(xP1-4,yPE+1.6); LP(xP0+3,yBot-3,xP0+3,yPE); }
