@@ -5149,5 +5149,17 @@
 "вместо": "instead of",
 "на + и": "on + and",
 "боксе": "box",
-"шина": "bus"
+"шина": "bus",
+"Однолинейная схема СЭС · лист": "Single-line diagram of the PV plant · sheet",
+"Условные обозначения": "Legend",
+"к нагрузкам дома": "to house loads",
+"шины — на лист": "busbars — to sheet",
+"Строка панелей": "Panel string",
+"Число проводов": "Number of conductors",
+"встроен в АКБ": "built into battery",
+"заземлитель": "earth electrode",
+"Заземлитель": "Earth electrode",
+"Счётчик": "Meter",
+"Шина": "Busbar",
+"вх": "in"
 }
