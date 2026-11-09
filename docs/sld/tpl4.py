@@ -9,7 +9,7 @@ S.t('Однолинейная схема СЭС',sx0+10,sy0+12,17,True); S.t('И
 S.t('Лист',sx0+450,sy0+10,12,False,GREY); S.t('1',sx0+450,sy0+30,20,True); S.t('Листов',sx0+650,sy0+10,12,False,GREY); S.t('1',sx0+650,sy0+30,20,True)
 xPV=228; xD0=330; xD1=975; xI0=1010; xI1=1130; xP0=1345; xP1=W-45; xCol=142
 xLB=1450; xGB=1590
-fuX=xD0+40; busX=xD0+250; swX=xD0+300; spX0=xD0+505
+fuX=xD0+40; busX=xD0+250; swX=xD0+300; spX0=xD0+490
 top=56; slotH=262; pey=top+4*slotH+39; xPE=xP0+18
 def fuse(x,y): d.rectangle((x-14,y-6,x+14,y+6),fill='white',outline=INK,width=2); S.l(x-14,y,x+14,y,2)
 def qf(x,y): S.l(x-22,y,x-9,y); S.l(x-9,y,x+9,y-10); d.line((x+7,y-4,x+15,y+4),fill=INK,width=2); d.line((x+7,y+4,x+15,y-4),fill=INK,width=2); S.l(x+11,y,x+22,y)
@@ -51,14 +51,15 @@ for k,(n,mp,par,si,kind,sub) in enumerate(slots):
             ins.append((ly,f'MPPT{m}')); taps.append((ly,f'FV{n}.{m}')); si+=k2; yy+=P
     for i,(ly,lab) in enumerate(taps):
         x=spX0+i*40; S.dot(x,ly); S.l(x,ly,x,ybar-30,2); spdb(x,ybar-30); S.l(x,ybar-12,x,ybar,2,GRN); S.t(lab,x,ybar+8,10,True,anc='ma')
-    S.l(xD0+10,ybar,xD1-10,ybar,6,GRN); S.t('PE',xD0+16,ybar-20,11,True,GRN); dash(xCol,ybar,xD0+10,ybar); S.dot(xCol,ybar,GRN)
+    S.l(xD0+10,ybar,xD1-6,ybar,6,GRN); S.t('PE',xD0+16,ybar-20,11,True,GRN); dash(xCol+8,ybar,xD0+10,ybar); S.t('рамы панелей',xCol+10,ybar-17,10,False,GRN)
+    xdp=xD1-6; S.dot(xdp,ybar,GRN)
     # inverter + its own PE drop (enclosure) to the PE trunk
     d.rectangle((xI0,y0,xI1,y0+bh),outline=INK,width=3,fill='white'); S.l(xI0,y0+bh,xI1,y0,1,LG)
     S.t('=',xI0+30,y0+bh-40,22,True); S.t('~',xI1-8,y0+bh-40,22,True,anc='ra')
     for (iy,it) in ins: S.t(it,xI0+6,iy-6,10,False,GREY)
     # PE of the inverter enclosure (and battery) -> main panel ГЗШ via collector xPE
     cx=(xI0+xI1)//2; ype=y0+bh+9
-    S.dot(cx,y0+bh,GRN); S.l(cx,y0+bh,cx,ype,2,GRN); dash(cx,ype,xPE,ype); S.dot(xPE,ype,GRN)
+    S.dot(cx,y0+bh,GRN); S.l(cx,y0+bh,cx,ype,2,GRN); S.l(xdp,ybar,xdp,ype,2,GRN); dash(xdp,ype,xPE,ype); S.dot(cx,ype,GRN); S.dot(xPE,ype,GRN)
     if k==0: S.t('PE → ГЗШ',xP0-6,ype+5,10,True,GRN,anc='ra')
     S.t(f'ИНВ-{n}',xI1+12,y0+92,16,True); S.t(kind,xI1+12,y0+114,10,False,GREY); S.t(sub.split(', ')[0]+',',xI1+12,y0+127,10,False,GREY); S.t(sub.split(', ')[1],xI1+12,y0+140,10,False,GREY)
     if kind=='гибрид':
@@ -113,7 +114,7 @@ S.t('к нагрузкам дома',xh,yHs-22,12,True,anc='ra')
 # PE
 S.l(xP0+10,pey,xP1-10,pey,6,GRN); S.t('ГЗШ',xP1-14,pey-20,11,True,GRN,anc='ra')
 xe=xP1-60; S.l(xe,pey,xe,pey+24,2,GRN); S.earth(xe,pey+24); S.t('заземлитель',xe-30,pey+20,10,False,GRN,anc='ra')
-dash(xCol,top+20,xCol,pey); dash(xCol,pey,xP0+10,pey); S.l(xPE,top+slotH-1,xPE,pey,2,GRN,[10,5]); S.dot(xPE,pey,GRN)
+S.l(xPE,top+slotH-1,xPE,pey,2,GRN,[10,5]); S.dot(xPE,pey,GRN)
 # compact legend: one block, 2 rows x 5
 lx,ly=150,H-31-80; S.t('Условные обозначения',lx,ly,12,True)
 items=[('pv','Строка панелей'),('qf','Автомат'),('qs','Выключатель-разъединитель'),('fu','Предохранитель'),('spd','УЗИП'),
