@@ -5196,5 +5196,9 @@
 "Соединение дугой: коснитесь": "Arc connection: touch",
 "убрать точку": "remove the point",
 "Ровные линии": "Straight lines",
-"дуга": "arc"
+"дуга": "arc",
+"фигура сдвинута": "shape moved",
+"фигуре": "the shape",
+"Конец размера привязан к": "The dimension end is attached to",
+"стена сдвинута": "wall moved"
 }
