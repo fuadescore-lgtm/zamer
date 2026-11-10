@@ -5187,5 +5187,14 @@
 "ваши перемычки": "your jumpers",
 "сохранены": "kept",
 "Переключатель Сеть": "Changeover Grid",
-"А · Сеть": "A · Grid"
+"А · Сеть": "A · Grid",
+"затем (по желанию) точку изгиба, последний тап — на цель (обведена синим": "then (optional) the bend point, the last tap on the target (circled in blue",
+"дуга: тап — точка изгиба, последний тап — на цель (обведена синим": "arc: tap — the bend point, the last tap on the target (circled in blue",
+"тапами ставьте трассу, последний тап — на цель (обведена синим": "tap to set the route, the last tap on the target (circled in blue",
+"Соединение ровными линиями: коснитесь": "Straight-line connection: touch",
+"Заземление + — добавить точку": "Earth + — add a point",
+"Соединение дугой: коснитесь": "Arc connection: touch",
+"убрать точку": "remove the point",
+"Ровные линии": "Straight lines",
+"дуга": "arc"
 }
