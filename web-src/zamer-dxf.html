@@ -5433,7 +5433,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.5':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.6':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -11377,7 +11377,7 @@ function swClose(force){ if(!SW) return; if((SW.dirty||SW.adirty)&&!force){ swAs
   const el=$('#sw'); if(el) el.remove(); SW=null; document.body.classList.remove('swon','swan'); redraw(); viewRefresh(); try{ panelKey=''; syncPanel(); }catch(_){} }
 function swApply(force){ const Ck=SW.ck; if(!force&&Ck&&Ck.lvl>=2){ const E=Ck.msg.filter(m=>m[0]>=2).slice(0,8).map(m=>'✖ '+m[1]); swAsk('Есть ошибки:\n'+E.join('\n')+(Ck.msg.filter(m=>m[0]>=2).length>8?'\n…':'')+'\n\nВсё равно применить?',[['Применить','y'],['Отмена','']],k=>{ if(k==='y') swApply(true); }); return; }
   { const D=SW.D, I=swI(); D.pare={}; for(let n=0;n<D.N;n++) for(let m=0;m<I.M.length;m++){ const pi=swParInfo(n,m); if(pi) D.pare[n+'.'+m]=pi.eff; } }
-  const v=vedCfg(); if(ENT&&ENT.on&&ENT.mode==='view'){ pushUndo(); } undoS.length=Math.min(undoS.length,SW.u0); undoS.push(SW.snap); if(undoS.length>150) undoS.shift(); redoS=[]; try{ syncTop(); }catch(_){} /* один шаг ↶ — к проекту до окна */ for(const p of SW.pend){ const L=doc.levels[p.li]; if(L) L.items.push(p.o); } const D=JSON.parse(JSON.stringify(SW.D)); delete D._n; D.sig=strSig(SW.G.PL); D.arr=SW.G.PL.flatMap(pl=>pl.A.map(A=>A.it.id)); D.p=v.pmod; v.lay=D; v.lay._n=1;
+  const v=vedCfg(); if(ENT&&ENT.on&&ENT.mode==='view'){ pushUndo(); } undoS.length=Math.min(undoS.length,SW.u0); undoS.push(SW.snap); if(undoS.length>150) undoS.shift(); redoS=[]; try{ syncTop(); }catch(_){} /* один шаг ↶ — к проекту до окна */ for(const p of SW.pend){ const L=doc.levels[p.li]; if(L) L.items.push(p.o); } const D=JSON.parse(JSON.stringify(SW.D)); delete D._n; D.sig=strSig(SW.G.PL); D.tv=2; D.arr=SW.G.PL.flatMap(pl=>pl.A.map(A=>A.it.id)); D.p=v.pmod; v.lay=D; v.lay._n=1;
   v.inv=SW.set.inv||v.inv; if(SW.set.invN!=null) v.invN=SW.set.invN; else delete v.invN; v.smode=SW.set.smode; v.stgt=SW.set.stgt; if(SW.set.plOff) v.plOff=SW.set.plOff; else delete v.plOff; if(SW.set.hmerge===false) v.hmerge=false; else delete v.hmerge;
   strTouch(); strMapC=null; persist(); const n=SW.D.str.length; SW.dirty=false; SW.applied=true; swClose(true); toast(SW&&SW.adirty?'Применено: стринги и правки «Анализа»':'Стринги применены: '+n+' стр.',true); }
 // ---------- view transform (rotated top view) ----------
@@ -11449,7 +11449,7 @@ function swTlDel(si){ anLive(); const TK=strTerms().filter(t=>t.si===si).map(t=>
 function swDrawCab(x){ let TM=[]; try{ TM=strTerms(); }catch(_){ return; } if(!TM.length&&!SW.tl) return; const lin=(P,col,wd,dash)=>{ if(P.length<2) return; x.beginPath(); P.forEach((p,i)=>{ const q=swW2S(p); i?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y); }); x.strokeStyle=col; x.lineWidth=wd; x.setLineDash(dash||[]); x.lineCap='round'; x.lineJoin='round'; x.stroke(); x.setLineDash([]); };
   const own=strOwner(), MS=strMains(); for(const m of MS){ if(![...own.values()].includes(m.it)) continue; lin(m.it.pts,'#f08c00',3,[9,5]); const q=swW2S(mainT(m.it)), d=8; x.beginPath(); x.moveTo(q.x,q.y-d); x.lineTo(q.x+d,q.y); x.lineTo(q.x,q.y+d); x.lineTo(q.x-d,q.y); x.closePath(); x.fillStyle='#fff3bf'; x.fill(); x.strokeStyle='#d6336c'; x.lineWidth=2; x.stroke(); }
   for(const L of doc.levels) for(const c of L.items) if(isTail(c)){ lin(c.pts,tailPol(c)==='+'?'#e03131':tailPol(c)==='pe'?'#2f9e44':'#212529',3); if(c.jn){ const E=swW2S(c.pts[tailKey(c)==='a'?c.pts.length-1:0]), d=6; x.beginPath(); x.moveTo(E.x,E.y-d); x.lineTo(E.x+d,E.y); x.lineTo(E.x,E.y+d); x.lineTo(E.x-d,E.y); x.closePath(); x.fillStyle='#fff3bf'; x.fill(); x.strokeStyle='#d6336c'; x.lineWidth=1.6; x.stroke(); } }
-  const LYs=vedCfg().lay; if(LYs&&JSON.stringify(LYs.str)===JSON.stringify(SW.D.str)){ try{ for(const p of strPEPts()){ const d=SW.peDr&&SW.peDr.tk===p.tk?SW.peDr:p, q=swW2S(d), lk=p.kind==='link'; peIcon(x,q.x,q.y,lk?6:7.5); if(lk||p.root){ x.beginPath(); x.arc(q.x,q.y,lk?9:11,0,Math.PI*2); x.strokeStyle=SW.peDr&&SW.peDr.tk===p.tk?'#1c7ed6':'#2b8a3e'; x.lineWidth=lk?1.5:2.2; x.stroke(); } if(SW.tl&&SW.tl.link&&SW.tl.link.peerTk===p.tk){ x.beginPath(); x.arc(q.x,q.y,15,0,Math.PI*2); x.strokeStyle='#1c7ed6'; x.lineWidth=2.4; x.setLineDash([4,3]); x.stroke(); x.setLineDash([]); } } }catch(_){} } if(LYs&&JSON.stringify(LYs.str)===JSON.stringify(SW.D.str)) for(const t of TM){ const q=swW2S(t), man=strTailsOf(t.tk).length>0, col=t.pol==='+'?'#e03131':'#212529'; x.beginPath(); x.arc(q.x,q.y,5,0,Math.PI*2); x.fillStyle=man?col:'#fff'; x.fill(); x.strokeStyle=man?'#fff':col; x.lineWidth=2; x.stroke(); }
+  const LYs=vedCfg().lay; if(LYs&&JSON.stringify(LYs.str)===JSON.stringify(SW.D.str)){ try{ for(const p of strPEPts()){ const d=SW.peDr&&SW.peDr.tk===p.tk?SW.peDr:p, q=swW2S(d), lk=p.kind==='link'; peIcon(x,q.x,q.y,lk?6:7.5); if(lk||p.root){ x.beginPath(); x.arc(q.x,q.y,lk?9:11,0,Math.PI*2); x.strokeStyle=SW.peDr&&SW.peDr.tk===p.tk?'#1c7ed6':'#2b8a3e'; x.lineWidth=lk?1.5:2.2; x.stroke(); } if(SW.tl&&SW.tl.link&&SW.tl.link.peerTk===p.tk){ x.beginPath(); x.arc(q.x,q.y,15,0,Math.PI*2); x.strokeStyle='#1c7ed6'; x.lineWidth=2.4; x.setLineDash([4,3]); x.stroke(); x.setLineDash([]); } } }catch(_){} } if(LYs&&JSON.stringify(LYs.str)===JSON.stringify(SW.D.str)) for(const t of TM){ const q=swW2S(t), man=strTailsOf(t.tk).length>0, r=((SW.polH&&SW.polH[0]&&SW.polH[0].r)||12)+2; x.beginPath(); x.arc(q.x,q.y,r,0,Math.PI*2); x.strokeStyle=man?'#fab005':'#fff'; x.lineWidth=2.6; x.stroke(); } /* the cable point is the string's own «+» / «−»: a ring around it (yellow — a hand-drawn route) */
   const T=SW.tl; if(T){ const P=T.hov?[...T.pts,T.hov]:T.pts; lin(P,T.pol==='+'?'#e03131':T.pol==='pe'?'#2f9e44':'#212529',3.2,T.hov?[]:[]); const q=swW2S(T.pts[0]); x.beginPath(); x.arc(q.x,q.y,10,0,Math.PI*2); x.strokeStyle='#1c7ed6'; x.lineWidth=2.4; x.setLineDash([4,3]); x.stroke(); x.setLineDash([]); } }
 // ---------- «⊕⊖ Концы»: the user picks the «+» and «−» modules, the program finds one series path through all modules of the string ----------
 /* grid of the string's modules in its plane (скат): step to a neighbour (|di|+|dj|=1) or over one in a straight line (2,0)/(0,2); works across several fields of one plane */
@@ -11850,7 +11850,7 @@ const anTabs=()=>`<span class="seg swtabs" role="tablist"><button class="btn${(S
 function anLive(){ const v=vedCfg(); if(!(SW.dirty||SW.pend.length||!v.lay)) return; if(!SW.D.str.length&&!v.lay) return;
   for(const p of SW.pend){ const L=doc.levels[p.li]; if(L&&!L.items.includes(p.o)) L.items.push(p.o); } SW.pend=[];
   const D=JSON.parse(JSON.stringify(SW.D)); delete D._n; { const I=swI(); D.pare={}; for(let n=0;n<D.N;n++) for(let m=0;m<I.M.length;m++){ const pi=swParInfo(n,m); if(pi) D.pare[n+'.'+m]=pi.eff; } }
-  D.sig=strSig(SW.G.PL); D.arr=SW.G.PL.flatMap(pl=>pl.A.map(A=>A.it.id)); D.p=v.pmod; v.lay=D; v.lay._n=1; v.inv=SW.set.inv; if(SW.set.invN!=null) v.invN=SW.set.invN; v.smode=SW.set.smode;
+  D.sig=strSig(SW.G.PL); D.tv=2; D.arr=SW.G.PL.flatMap(pl=>pl.A.map(A=>A.it.id)); D.p=v.pmod; v.lay=D; v.lay._n=1; v.inv=SW.set.inv; if(SW.set.invN!=null) v.invN=SW.set.invN; v.smode=SW.set.smode;
   SW.live=true; anTouch(); }
 function anTouch(){ doc.updated=Date.now(); try{ peGC=null; strPEC=null; }catch(_){} try{ strTouch(); }catch(_){} strMapC=null; try{ cabCalcC.clear(); }catch(_){} invAutoC=null; VEDM=null; }
 function anPush(){ SW.AU=SW.AU||[]; SW.AR=[]; swUAdd('A'); SW.AU.push(JSON.stringify({s:snapshot(),v:JSON.stringify(doc.settings)})); if(SW.AU.length>SWU) SW.AU.shift(); }
@@ -13060,9 +13060,13 @@ function strTerms(){ const v=doc.settings&&doc.settings.ved, L=v&&v.lay; if(!L||
     /* outer short side of the end module, away from the next module; if another module sits there (end in the middle of a field) — the free long side */
     const busy=(q,self)=>{ for(const [k2,g2] of G){ if(k2===self) continue; const dx=q.x-g2.x, dy=q.y-g2.y, F2=g2.F; if(Math.abs(dx*F2.u.x+dy*F2.u.y)<(g2.hw||560)&&Math.abs(dx*F2.b.x+dy*F2.b.y)<(g2.hh||860)) return true; } return false; };
     const put=(c,nb,pol)=>{ const g=c.g, F=g.F; let d=nb?((g.x-nb.g.x)*F.u.x+(g.y-nb.g.y)*F.u.y):0; let sg=d>1?1:d<-1?-1:(pol==='+'?-1:1); if(!nb) sg=pol==='+'?-1:1; const hw=(g.hw||560)-110, hh=(g.hh||860)-110; /* box centre on the end module, 110 mm in from its edge — cables attach here */
-      const C4=[[F.u,hw*sg],[F.u,-hw*sg],[F.b,hh],[F.b,-hh]].map(([v,L])=>({x:g.x+v.x*L,y:g.y+v.y*L})), q=C4.find(p=>!busy(p,c.key))||C4[0]; out.push({tk:c.key+'|'+pol,si,pol,arr:c.arr,cell:c.key,li:g.li,F,x:q.x,y:q.y,cx:g.x,cy:g.y}); };
+      const C4=[[F.u,hw*sg],[F.u,-hw*sg],[F.b,hh],[F.b,-hh]].map(([v,L])=>({x:g.x+v.x*L,y:g.y+v.y*L})), q=C4.find(p=>!busy(p,c.key))||C4[0]; /* the old spot (before 3.0.6): PE washers keep their places by it */
+      const jb=strJBPlan({x:g.x,y:g.y},F,2*(g.hw||560),2*(g.hh||860)/(F.ca||1)), n=pol==='+'?jb.p:jb.m; /* the cable leaves from the module's own connector — where the big «+» / «−» is */
+      out.push({tk:c.key+'|'+pol,si,pol,arr:c.arr,cell:c.key,li:g.li,F,x:n.x,y:n.y,ox:q.x,oy:q.y,cx:g.x,cy:g.y}); };
     put(C[0],C[1],'+'); put(C[C.length-1],C[C.length-2],'-'); });
-  strTermC={k,v:out}; return out; }
+  strTermC={k,v:out}; if(L.tv!==2){ L.tv=2; strTermMove(out); } return out; }
+/* projects drawn before 3.0.6: a cable end at the old string point (edge of the end module) now starts at the module's connector; the old spot stays as its first bend */
+function strTermMove(TM){ let n=0; for(const Lv of doc.levels) for(const c of Lv.items){ if(c.t!=='cab'||!c.pts||c.pts.length<2) continue; for(const e of [0,1]){ const P=c.pts, i=e?P.length-1:0, q=P[i], t=TM.find(t=>Math.hypot(t.ox-q.x,t.oy-q.y)<5&&Math.hypot(t.x-q.x,t.y-q.y)>=5); if(!t) continue; const np={...q,x:r3(t.x),y:r3(t.y)}; if(e){ P.push(np); } else { P.unshift(np); } n++; } } if(n){ doc.updated=(+doc.updated||0)+1; strTermC=null; } return n; }
 function strTailsOf(tk){ const r=[]; for(const L of doc.levels) for(const c of L.items) if(isTail(c)&&c[tailKey(c)].tk===tk) r.push(c); return r; }
 function strMains(){ const r=[]; doc.levels.forEach((L,li)=>{ for(const c of L.items) if(isMainDC(c)) r.push({it:c,li}); }); return r; }
 function strPlaneOf(){ const m=new Map(); try{ for(const pl of strPlanes(vedArrays())) for(const A of pl.A) m.set(A.it.id,pl.key); }catch(_){} return m; }
@@ -13191,7 +13195,7 @@ function peCabName(key){ return 'Провод заземления '+peBrand(key
    «link» — on the profile nearest to the neighbour array of the same main cable on the same plane: a PE jumper joins the two arrays (no own PE to the box).
    Both may be moved (lay.peG / lay.peL); a main point keeps the old tk «cell|pe», so hand-drawn PE routes stay bound. */
 let strPEC=null;
-function peOldSpot(t){ const g=strGeo().m.get(t.cell); if(!g) return {x:t.x,y:t.y}; const F=g.F, du=(t.x-g.x)*F.u.x+(t.y-g.y)*F.u.y, db=(t.x-g.x)*F.b.x+(t.y-g.y)*F.b.y;
+function peOldSpot(t0){ const t=t0&&t0.ox!=null?{...t0,x:t0.ox,y:t0.oy}:t0; const g=strGeo().m.get(t.cell); if(!g) return {x:t.x,y:t.y}; const F=g.F, du=(t.x-g.x)*F.u.x+(t.y-g.y)*F.u.y, db=(t.x-g.x)*F.b.x+(t.y-g.y)*F.b.y;
   if(Math.abs(du)>Math.abs(db)){ const su=Math.sign(du)||1, hw=(g.hw||560)-110, hh=(g.hh||860)-140; return {x:g.x+F.u.x*hw*su+F.b.x*hh,y:g.y+F.u.y*hw*su+F.b.y*hh}; }
   const sb=Math.sign(db)||1, hw=(g.hw||560)-140, hh=(g.hh||860)-110; return {x:g.x+F.b.x*hh*sb+F.u.x*hw,y:g.y+F.b.y*hh*sb+F.u.y*hw}; }
 function peCellsOf(arr){ const r=[]; for(const [k,g] of strGeo().m) if(k.slice(0,k.indexOf(':'))===String(arr)) r.push({k,g}); return r; }
@@ -13217,7 +13221,7 @@ function strPEPts(){ const v=doc.settings&&doc.settings.ved, L=v&&v.lay; if(!L||
   const out=[]; strPEC={k,v:out,E:new Map()}; const G=strGeo().m, TM=strTerms().filter(t=>t.pol==='+'), PO=strPlaneOf(), own=strOwner(), done=new Set(), sTerm=si=>TM.find(t=>t.si===si);
   /* the tk of an array's main point: the «+» cell of its first string when it is on this array (old projects keep their binding), otherwise its first module there */
   const cellIn=(arr,S)=>{ const t=sTerm(S[0]); if(t&&t.arr===arr) return t.cell; const c=L.str[S[0]].c.find(c2=>c2[0]===arr); return c?c.join(':'):t.cell; };
-  const defIn=(arr,S)=>{ const t=sTerm(S[0]); if(t&&t.arr===arr) return peOldSpot(t); const g=G.get(cellIn(arr,S)); return g?peOnCell(g,t,110):{x:t.x,y:t.y}; };
+  const defIn=(arr,S)=>{ const t=sTerm(S[0]); if(t&&t.arr===arr) return peOldSpot(t); const g=G.get(cellIn(arr,S)); const to=t&&t.ox!=null?{x:t.ox,y:t.oy}:t; return g?peOnCell(g,to,110):{x:to.x,y:to.y}; }; /* PE washers: by the old string point — they keep their places */
   const mainPt=(gid,arr,S,def,root,it)=>{ const t=sTerm(S[0]), key=gid+'|'+arr, ov=(L.peG||{})[key]; let p=ov&&isFinite(ov.x)?{x:ov.x,y:ov.y}:null;
     if(!p&&!root&&L.peAt) for(const si of S){ const c=sTerm(si), o=c&&L.peAt[c.cell]; if(o&&isFinite(o.x)){ p={x:o.x,y:o.y}; break; } } /* earlier projects: ⏚ moved by hand */
     const man=!!p; if(!p) p=def; const sn=peSnapArr(arr,p), g=sn?sn.g:G.get(t.cell), o={kind:'main',si:S[0],strs:S,tk:cellIn(arr,S)+'|pe',key,cell:sn?sn.k:t.cell,arr,li:g?g.li:t.li,F:g?g.F:t.F,x:p.x,y:p.y,term:t,man,root:!!root,gid,main:it||null,cp:root?def:null};
