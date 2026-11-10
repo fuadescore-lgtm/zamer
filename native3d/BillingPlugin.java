@@ -44,8 +44,8 @@ import javax.crypto.SecretKey;
  *   currently grant access (active, trial-by-promo-code, grace period, cancelled-but-paid).
  *   Account hold / paused / expired are not returned; suspended ones are flagged and ignored.
  * - Every PURCHASED subscription is acknowledged (otherwise Google refunds it after 3 days).
- * - No trial on the device (3.0.7): a free trial is only Google Play's free-trial offer of the subscription;
- *   a subscription in its free phase comes back from Play as an active purchase like any other.
+ * - 14-day trial on the device (owner, 11.11.2026): no card, create and edit — but it never gives Pro (no export).
+ *   It starts on the first run; clearing data restarts it, which also deletes the projects, so it is not worth it.
  * - FAIL CLOSED: pro = true only from Play's own OK answer with a PURCHASED, not suspended purchase of
  *   bimsketcher_pro for this package, or from the signed cache of such an answer (≤ 7 days, offline only).
  *   Clock rollback is detected by remembering the latest time ever seen.
@@ -57,6 +57,7 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
     static final String PRODUCT = "bimsketcher_pro";
     static final long DAY = 24L * 3600 * 1000;
     static final long OFFLINE_MS = 7 * DAY;
+    static final long TRIAL_MS = 14 * DAY;
     private static final String PREFS = "bs_license";
     private static final String KEY_ALIAS = "bs_license_hmac";
 
@@ -118,6 +119,7 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
     /** Builds the answer for JS from Play purchases (or from the offline cache when Play is not reachable). */
     private JSObject answer(List<Purchase> purchases, boolean fromPlay) {
         long now = effNow();
+        long t0 = trialStart(now);
         JSObject o = new JSObject();
         boolean pro = false, pending = false, suspended = false, autoRenew = false;
         if (fromPlay && purchases != null) {
@@ -147,6 +149,8 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         o.put("suspended", suspended);
         o.put("autoRenew", autoRenew);
         o.put("now", now);
+        o.put("trialStart", t0);
+        o.put("trialLeft", Math.max(0, t0 + TRIAL_MS - now)); // editing only, never Pro
         return o;
     }
 
@@ -291,6 +295,13 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         return max;
     }
 
+
+    private long trialStart(long now) {
+        SharedPreferences sp = prefs();
+        long t0 = sp.getLong("t0", 0);
+        if (t0 <= 0 || t0 > now) { t0 = now; sp.edit().putLong("t0", t0).apply(); }
+        return t0;
+    }
 
     private void saveCache(boolean pro, long at) {
         String v = (pro ? "1" : "0") + ":" + at;
