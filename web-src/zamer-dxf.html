@@ -5417,7 +5417,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.2':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.3':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -11384,8 +11384,9 @@ function swDraw(){ if(SW&&SW.tab==='an') return anDraw(); const cv=SW&&SW.cv; if
   if(SW.hov){ const c=SW.G.cells.get(SW.hov); if(c){ poly(c.P); x.lineWidth=2; x.strokeStyle='#fab005'; x.stroke(); } }
   // polarity circles: blue «+» start, red «−» end
   SW.polH=[]; if(SW.pol){ const r0=(()=>{ const c=SW.G.cells.values().next().value; if(!c) return 9; const a=swW2S(c.P[0]), b=swW2S(c.P[1]), d=swW2S(c.P[3]); return Math.max(6,Math.min(11,Math.min(Math.hypot(a.x-b.x,a.y-b.y),Math.hypot(a.x-d.x,a.y-d.y))*0.27)); })();
-    SW.D.str.forEach((s,si)=>{ const E=swEnds(s); if(!E) return; for(const [k,plus] of [[E.p,1],[E.m,0]]){ const c=SW.G.cells.get(k.join(':')); if(!c) continue; const q0=swW2S(c.c), qc=swW2S(c.P[plus?0:2]), q={x:q0.x+(qc.x-q0.x)*0.55,y:q0.y+(qc.y-q0.y)*0.55}, off=0; /* в углу модуля: касание центра — сам модуль, касание кружка — поменять «+» и «−» */ x.beginPath(); x.arc(q.x,q.y+off,r0,0,Math.PI*2); x.fillStyle=plus?'#2563eb':'#e03131'; x.fill(); x.lineWidth=1.6; x.strokeStyle='#fff'; x.stroke(); x.fillStyle='#fff'; x.font='800 '+Math.round(r0*1.35)+'px '+FNUM; x.textAlign='center'; x.textBaseline='middle'; x.fillText(plus?'+':'−',q.x,q.y+0.5); SW.polH.push({x:q.x,y:q.y,r:r0+3,si,pol:plus?'+':'-'}); if(s.c.length<2) break; } }); }
+    SW.D.str.forEach((s,si)=>{ const E=swEnds(s); if(!E) return; for(const [k,plus] of [[E.p,1],[E.m,0]]){ const c=SW.G.cells.get(k.join(':')); if(!c) continue; const jb=strJBPlan(c.c,c.A.F,c.A.S.w,c.A.S.h), q=swW2S(plus?jb.p:jb.m); /* on the free connector of the end module: «+» of the first, «−» of the last (the small dot there is not drawn) */ SW.polH.push({x:q.x,y:q.y,r:r0+3,si,pol:plus?'+':'-'}); } }); }
   try{ swDrawJB(x); }catch(e){ console.warn(e); }
+  for(const h of SW.polH){ const r=h.r-3, plus=h.pol==='+'; x.beginPath(); x.arc(h.x,h.y,r,0,Math.PI*2); x.fillStyle=plus?'#2563eb':'#e03131'; x.fill(); x.lineWidth=1.6; x.strokeStyle='#fff'; x.stroke(); x.fillStyle='#fff'; x.font='800 '+Math.round(r*1.35)+'px '+FNUM; x.textAlign='center'; x.textBaseline='middle'; x.fillText(plus?'+':'−',h.x,h.y+0.5); } /* over the jumpers */
   try{ swDrawEndDrag(x); }catch(e){ console.warn(e); }
   try{ swDrawNums(x); }catch(e){ console.warn(e); }
   try{ swDrawCab(x); }catch(e){ console.warn(e); }
@@ -12991,7 +12992,7 @@ function swDrawJB(x){ const D=SW.D; if(!D||!D.str.length) return; let r0=0, rL=0
   const rd=Math.max(1.8,Math.min(3.6,r0*0.055)), lw=Math.max(1,Math.min(1.8,r0*0.025)), dash=[Math.max(3,r0*0.08),Math.max(2,r0*0.05)];
   D.str.forEach(s=>{ let O; try{ O=strOrd(s); }catch(_){ O=s.c; } const J=O.map(k=>{ const c=SW.G.cells.get(k.join(':')); if(!c) return null; const F=c.A.F, S=c.A.S, j=strJBPlan(c.c,F,S.w,S.h); return {p:swW2S(j.p),m:swW2S(j.m),c:swW2S(c.c),i:c.i,j:c.j,id:c.id}; });
     for(let i=1;i<J.length;i++){ const a=J[i-1], b=J[i]; if(!a||!b) continue; const nb=a.id===b.id&&Math.abs(a.i-b.i)+Math.abs(a.j-b.j)===1; jbStroke(x,jbCurve(a.m,b.p,nb?0:rL*0.17,nb?0:(i%2)*0.4),lw,dash); }
-    for(const q of J){ if(!q) continue; for(const [p,col] of [[q.p,'#e03131'],[q.m,'#111']]){ x.beginPath(); x.arc(p.x,p.y,rd,0,Math.PI*2); x.fillStyle=col; x.fill(); x.lineWidth=1; x.strokeStyle='#fff'; x.stroke(); } } }); }
+    J.forEach((q,qi)=>{ if(!q) return; for(const [p,col,fr] of [[q.p,'#e03131',qi===0],[q.m,'#111',qi===J.length-1]]){ if(fr&&SW.pol) continue; /* the string's own «+» / «−» stands there */ x.beginPath(); x.arc(p.x,p.y,rd,0,Math.PI*2); x.fillStyle=col; x.fill(); x.lineWidth=1; x.strokeStyle='#fff'; x.stroke(); } }); }); }
 /* ---------- report: «Схема перемычек» — one sheet per group (array): the 2 rows the DC cable comes to, ≤ 14 modules per row
    (start of the row + 3 last ones — the turn-back of «через одну»), the middle cut by a break line; the table counts every row */
 const JB_BRK='#8e2a8e';
