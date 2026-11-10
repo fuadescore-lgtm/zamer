@@ -3064,8 +3064,10 @@ function dimRef(P,ex){ let best=null,bd=Infinity;
     const o=isWall(W)?offs(W):{L:0,R:0}, sN=ob.s;
     const d=Math.min(Math.abs(sN-o.L),Math.abs(sN+o.R),Math.abs(sN),Math.abs(sN-(o.L-o.R)/2)); if(d<bd){ /* грань, линия стены или её ось (центр) */ bd=d; best={id:W.id,f:ob.L?ob.t/ob.L:0,o:r3(sN)}; } }
   if(best&&bd<2) return best;
-  for(const W of doc.items){ if(W.t!=='prim'||(ex&&ex.has(W.id))) continue; const SP=primSnapPts(W), si=SP.findIndex(s=>Math.hypot(s.p.x-P.x,s.p.y-P.y)<2); if(si<0) continue; const A=primAnc(W); if(!A) continue; return {id:W.id,si,sn:SP.length,ox:r3(P.x-A.x),oy:r3(P.y-A.y),rt:+W.rot||0}; } /* by its point number — follows a resize too */ /* a primitive: its corner, face middle, vertex or centre */
+  for(const W of doc.items){ if(W.t!=='prim'||(ex&&ex.has(W.id))) continue; const SP=primSnapPts(W), si=SP.findIndex(s=>Math.hypot(s.p.x-P.x,s.p.y-P.y)<2), A=primAnc(W); if(!A) continue; if(si>=0) return {id:W.id,si,sn:SP.length,ox:r3(P.x-A.x),oy:r3(P.y-A.y),rt:+W.rot||0};
+    if(primOnEdge(W,P)) return {id:W.id,ox:r3(P.x-A.x),oy:r3(P.y-A.y),rt:+W.rot||0}; } /* any point on its outline: rides with the shape */ /* by its point number — follows a resize too */ /* a primitive: its corner, face middle, vertex or centre */
   return null; }
+function primOnEdge(W,P){ let G; try{ G=primPlan(W,doc.curLv); }catch(_){ return false; } if(W.k==='cyl'&&W.p&&!G.ori) return Math.abs(Math.hypot(P.x-W.p.x,P.y-W.p.y)-(+W.r||500))<2; const B=W.k==='sweep'?(G.path||[]):G.base||[], n=B.length, cl=W.k!=='sweep'; for(let i=0;i<(cl?n:n-1);i++){ const a=B[i], b=B[(i+1)%n], dx=b.x-a.x, dy=b.y-a.y, L2=dx*dx+dy*dy; if(L2<1e-6) continue; const u=Math.max(0,Math.min(1,((P.x-a.x)*dx+(P.y-a.y)*dy)/L2)); if(Math.hypot(a.x+dx*u-P.x,a.y+dy*u-P.y)<2) return true; } return false; }
 function primAnc(W){ return W.p?{x:W.p.x,y:W.p.y}:W.pts&&W.pts[0]?{x:W.pts[0].x,y:W.pts[0].y}:null; }
 function refPt(r){ const W=doc.items.find(i=>i.id===r.id); if(W&&W.t==='prim'&&r.ox!=null){ if(r.si!=null){ const SP=primSnapPts(W); if(SP.length===r.sn&&SP[r.si]) return {...SP[r.si].p}; } const A=primAnc(W); if(!A) return null; const a=((+W.rot||0)-(r.rt||0))*Math.PI/180, c=Math.cos(a), s=Math.sin(a); return {x:r3(A.x+r.ox*c-r.oy*s),y:r3(A.y+r.ox*s+r.oy*c)}; } if(!W||W.t!=='line') return null; if(isArc(W)){ const P=arcAt(arcG(W),r.f,r.o); return {x:r3(P.x),y:r3(P.y)}; } const u=unit(W.a,W.b), n=lft(u), L=Math.hypot(W.b.x-W.a.x,W.b.y-W.a.y);
   return {x:r3(W.a.x+u.x*r.f*L+n.x*r.o),y:r3(W.a.y+u.y*r.f*L+n.y*r.o)}; }
@@ -3073,8 +3075,8 @@ function syncDims(){ for(const it of doc.items){ if(it.t!=='dim') continue;
     for(const k of ['a','b']){ const r=it['r'+k]; if(!r) continue; const P=refPt(r); if(!P){ delete it['r'+k]; continue; } it[k]=P; } } }
 function attachDim(it){ for(const k of ['a','b']){ const r=dimRef(it[k]); if(r) it['r'+k]=r; else delete it['r'+k]; } }
 // размер «активен» у выделенной стены (как в Revit): к ней привязан ровно один конец — цифру можно ввести, двигается эта стена
-function dimActW(d,W){ if(!d||d.t!=='dim'||!W||(W.t!=='line'&&W.t!=='prim')) return null; const a=d.ra&&d.ra.id===W.id, b=d.rb&&d.rb.id===W.id; return a!==b?(a?'a':'b'):null; }
-function dimActSel(d){ if(tool!=='select'||moveSel.size>1||!selId||selId===d.id) return null; const W=doc.items.find(i=>i.id===selId); return dimActW(d,W)?W:null; }
+function dimActW(d,W){ if(!d||d.t!=='dim'||!W||(W.t!=='line'&&W.t!=='prim')) return null; const a=!!(d.ra&&d.ra.id===W.id), b=!!(d.rb&&d.rb.id===W.id); return a!==b?(a?'a':'b'):null; }
+function dimActSel(d){ if(tool!=='select'||moveSel.size>1||!selId||selId===d.id) return null; const W=doc.items.find(i=>i.id===selId); if(W&&W.t==='prim'&&!dimActW(d,W)) for(const k of ['a','b']){ if(d['r'+k]) continue; const r=dimRef(d[k]); if(r&&r.id===W.id){ d['r'+k]=r; break; } } /* drawn before this version */ return dimActW(d,W)?W:null; }
 // концы нескольких стен/линий в одной точке — к какой привязать размер (стены первыми)
 function dimRefCands(P){ const L=[]; for(const W of doc.items){ if(W.t!=='line') continue; const ob=onBody(P,W); if(!ob) continue; const o=isWall(W)?offs(W):{L:0,R:0}, sN=ob.s, d=Math.min(Math.abs(sN-o.L),Math.abs(sN+o.R),Math.abs(sN),Math.abs(sN-(o.L-o.R)/2)); if(d<2) L.push({W,r:{id:W.id,f:ob.L?ob.t/ob.L:0,o:r3(sN)}}); } L.sort((x,y)=>(isWall(y.W)?1:0)-(isWall(x.W)?1:0)); return L; }
 function dimAskRefs(nd,ks){ const k=ks[0]; if(!k) return; const C=dimRefCands(nd[k]); if(C.length<2){ dimAskRefs(nd,ks.slice(1)); return; } const cur=nd['r'+k]&&nd['r'+k].id; const s=toS(nd[k]), cr=cv.getBoundingClientRect(), x=cr.left+s.x, y=cr.top+s.y;
@@ -5431,7 +5433,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.4':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.5':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent';
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
