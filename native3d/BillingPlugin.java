@@ -44,7 +44,10 @@ import javax.crypto.SecretKey;
  *   currently grant access (active, trial-by-promo-code, grace period, cancelled-but-paid).
  *   Account hold / paused / expired are not returned; suspended ones are flagged and ignored.
  * - Every PURCHASED subscription is acknowledged (otherwise Google refunds it after 3 days).
- * - The 14-day in-app trial (no card) starts on the first run and is stored on the device.
+ * - No trial on the device (3.0.7): a free trial is only Google Play's free-trial offer of the subscription;
+ *   a subscription in its free phase comes back from Play as an active purchase like any other.
+ * - FAIL CLOSED: pro = true only from Play's own OK answer with a PURCHASED, not suspended purchase of
+ *   bimsketcher_pro for this package, or from the signed cache of such an answer (≤ 7 days, offline only).
  *   Clock rollback is detected by remembering the latest time ever seen.
  * - The last successful Play answer is cached for offline use (max 7 days) and protected by an
  *   HMAC whose key lives in Android Keystore, so the cache cannot be edited by hand.
@@ -53,7 +56,6 @@ import javax.crypto.SecretKey;
 public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
     static final String PRODUCT = "bimsketcher_pro";
     static final long DAY = 24L * 3600 * 1000;
-    static final long TRIAL_MS = 14 * DAY;
     static final long OFFLINE_MS = 7 * DAY;
     private static final String PREFS = "bs_license";
     private static final String KEY_ALIAS = "bs_license_hmac";
@@ -116,12 +118,12 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
     /** Builds the answer for JS from Play purchases (or from the offline cache when Play is not reachable). */
     private JSObject answer(List<Purchase> purchases, boolean fromPlay) {
         long now = effNow();
-        long t0 = trialStart(now);
         JSObject o = new JSObject();
         boolean pro = false, pending = false, suspended = false, autoRenew = false;
         if (fromPlay && purchases != null) {
             for (Purchase p : purchases) {
                 if (!p.getProducts().contains(PRODUCT)) continue;
+                if (!getContext().getPackageName().equals(p.getPackageName())) continue;
                 int st = p.getPurchaseState();
                 if (st == Purchase.PurchaseState.PENDING) { pending = true; continue; }
                 if (st != Purchase.PurchaseState.PURCHASED) continue;
@@ -145,8 +147,6 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         o.put("suspended", suspended);
         o.put("autoRenew", autoRenew);
         o.put("now", now);
-        o.put("trialStart", t0);
-        o.put("trialLeft", Math.max(0, t0 + TRIAL_MS - now));
         return o;
     }
 
@@ -174,7 +174,7 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
                 JSArray plans = new JSArray();
                 List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
                 if (offers != null) for (ProductDetails.SubscriptionOfferDetails d : offers) {
-                    // Base plans only (offers come from promo codes / Play Console promotions)
+                    // One entry per base plan; its free-trial offer (if Play offers one to this user) is shown next to it
                     if (d.getOfferId() != null) continue;
                     List<ProductDetails.PricingPhase> ph = d.getPricingPhases().getPricingPhaseList();
                     if (ph.isEmpty()) continue;
@@ -185,6 +185,8 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
                     j.put("micros", last.getPriceAmountMicros());
                     j.put("currency", last.getPriceCurrencyCode());
                     j.put("period", last.getBillingPeriod());
+                    ProductDetails.SubscriptionOfferDetails tr = trialOffer(d.getBasePlanId());
+                    if (tr != null) j.put("trial", tr.getPricingPhases().getPricingPhaseList().get(0).getBillingPeriod());
                     plans.put(j);
                 }
                 JSObject o = new JSObject();
@@ -204,6 +206,8 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
             List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
             if (offers != null) for (ProductDetails.SubscriptionOfferDetails d : offers)
                 if (plan.equals(d.getBasePlanId()) && d.getOfferId() == null) token = d.getOfferToken();
+            ProductDetails.SubscriptionOfferDetails tr = trialOffer(plan);
+            if (tr != null) token = tr.getOfferToken(); // Play's free trial for an eligible user
             if (token == null) { call.reject("План не найден: " + plan); return; }
             BillingFlowParams fp = BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(Collections.singletonList(BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -230,7 +234,9 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
             client.queryPurchasesAsync(
                 QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
                 (r2, all) -> {
-                    JSObject o = answer(r2.getResponseCode() == BillingClient.BillingResponseCode.OK ? all : purchases, true);
+                    // fail closed: only Play's own full answer counts; otherwise fall back to the signed cache
+                    boolean ok = r2.getResponseCode() == BillingClient.BillingResponseCode.OK;
+                    JSObject o = ok ? answer(all, true) : answer(null, false);
                     if (c != null) c.resolve(o);
                     notifyListeners("change", o);
                 });
@@ -240,6 +246,17 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         JSObject o = new JSObject();
         if (code == BillingClient.BillingResponseCode.USER_CANCELED) { o.put("canceled", true); c.resolve(o); }
         else c.reject("Оплата не прошла (" + code + ")");
+    }
+
+    /** Play's free-trial offer of a base plan (first phase free), or null — Play returns it only to eligible users. */
+    private ProductDetails.SubscriptionOfferDetails trialOffer(String basePlan) {
+        if (details == null || details.getSubscriptionOfferDetails() == null) return null;
+        for (ProductDetails.SubscriptionOfferDetails d : details.getSubscriptionOfferDetails()) {
+            if (d.getOfferId() == null || !basePlan.equals(d.getBasePlanId())) continue;
+            List<ProductDetails.PricingPhase> ph = d.getPricingPhases().getPricingPhaseList();
+            if (!ph.isEmpty() && ph.get(0).getPriceAmountMicros() == 0) return d;
+        }
+        return null;
     }
 
     // ---------- Play Store pages ----------
@@ -274,12 +291,6 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         return max;
     }
 
-    private long trialStart(long now) {
-        SharedPreferences sp = prefs();
-        long t0 = sp.getLong("t0", 0);
-        if (t0 <= 0 || t0 > now) { t0 = now; sp.edit().putLong("t0", t0).apply(); }
-        return t0;
-    }
 
     private void saveCache(boolean pro, long at) {
         String v = (pro ? "1" : "0") + ":" + at;
