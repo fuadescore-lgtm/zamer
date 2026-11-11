@@ -5201,7 +5201,7 @@
 "фигуре": "the shape",
 "Конец размера привязан к": "The dimension end is attached to",
 "стена сдвинута": "wall moved",
-"Без подписки проекты можно открывать и смотреть. Чтобы рисовать, изменять и экспортировать — оформите подписку": "Without a subscription you can open and view projects. To draw, edit and export, subscribe",
+"Без подписки проекты можно открывать и смотреть. Чтобы рисовать, изменять и экспортировать — оформите подписку": "Without a subscription you can open and view projects. To draw, edit and export, subscribe to",
 "Пока проверка не завершена, экспорт и отправка файлов недоступны": "Until the check is complete, export and sending files are unavailable",
 "бесплатный пробный период, если он есть, даёт": "a free trial, if any, is given by",
 "нет связи, подтверждённой подписки в кэше нет": "offline, no confirmed subscription in the cache",
@@ -5248,5 +5248,8 @@
 "вход через": "sign-in with",
 "выполнен": "done",
 "Аккаунт": "Account",
-"Условия": "Terms"
+"Условия": "Terms",
+"первые": "the first",
+"бесплатно (пробный период": "free (Google Play",
+"бесплатно (пробный период Google Play).": "free (Google Play trial)."
 }
