@@ -32,3 +32,8 @@
 - Белый список (Firebase): план — Google-вход (Credential Manager) + Firestore `whitelist/{email}` {active:true, until?:Timestamp}, правила: чтение только своей записи, запись — только из консоли; кэш ≤ 7 дней в подписанных настройках. Подключение — после google-services.json от владельца.
 
 ## 3.0.8 (11.11.2026) — возвращён пробный период на устройстве (14 дней): рисовать можно, экспорт закрыт; после — просмотр. Pro (экспорт) — только подтверждённая подписка / белый список (fail closed 3.0.7 сохранён). Предложение Play с бесплатной фазой по-прежнему поддерживается, если владелец его создаст.
+
+## 3.0.9 (11.11.2026) — белый список подключён
+- native3d/WhitelistPlugin.java: вход Google (Credential Manager, web client id проекта bimsketcher) → Firebase Auth REST signInWithIdp → refresh token; проверка Firestore REST whitelist/{email}: active==true и until (если есть) в будущем. Без сети — подписанный кэш ≤ 7 дней. Любая ошибка / нет записи / 403 → нет доступа.
+- Конфиг (api key, project id, web client id) — из секрета GitHub GOOGLE_SERVICES_JSON в res/values/whitelist.xml при сборке; в публичный репозиторий и архив исходников не попадает. Без секрета — «Firebase не подключён».
+- Окно Pro: «Войти через Google (белый список)» / «Белый список: проверить · e-mail» / «Выйти».

@@ -70,11 +70,31 @@ jobs:
             G=android/app/build.gradle
             grep -q 'billingclient' $G || sed -i '0,/^dependencies {/s##dependencies {\n    implementation "com.android.billingclient:billing:9.1.0"#' $G
             grep -n 'billingclient' $G
+            # white list (Firebase REST + Google sign-in via Credential Manager)
+            sed "s/^package PKG;/package $PKG;/" ../native3d/WhitelistPlugin.java > "$D/WhitelistPlugin.java"
+            grep -q 'androidx.credentials:credentials:' $G || sed -i '0,/^dependencies {/s##dependencies {\n    implementation "androidx.credentials:credentials:1.5.0"\n    implementation "androidx.credentials:credentials-play-services-auth:1.5.0"\n    implementation "com.google.android.libraries.identity.googleid:googleid:1.1.1"#' $G
+            grep -n 'credentials\|googleid' $G
           else
-            sed -i '/registerPlugin(BillingPlugin.class);/d' "$MA"
+            sed -i '/registerPlugin(BillingPlugin.class);/d; /registerPlugin(WhitelistPlugin.class);/d' "$MA"
             ! grep -n 'BillingPlugin' "$MA"
           fi
           echo "package: $PKG"
+      - name: Firebase (белый список) из секрета GOOGLE_SERVICES_JSON
+        env:
+          GS: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          X=android/app/src/main/res/values/whitelist.xml
+          printf '%s' "$GS" | python3 -c "
+          import json,sys
+          from xml.sax.saxutils import escape as e
+          s=sys.stdin.read().strip(); k=p=w=''
+          if s:
+            j=json.loads(s); p=j['project_info']['project_id']
+            c=[c for c in j['client'] if c['client_info']['android_client_info']['package_name']=='com.bimsketcher.app'][0]
+            k=c['api_key'][0]['current_key']; w=[o['client_id'] for o in c.get('oauth_client',[]) if o.get('client_type')==3][0]
+          open(sys.argv[1],'w').write('<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n  <string name=\"wl_api_key\" translatable=\"false\">%s</string>\n  <string name=\"wl_project\" translatable=\"false\">%s</string>\n  <string name=\"wl_web_client\" translatable=\"false\">%s</string>\n</resources>\n'%(e(k),e(p),e(w)))
+          print('firebase:', p or 'не подключён')
+          " $X
       - name: Значок
         run: |
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
@@ -108,10 +128,10 @@ jobs:
           trap 'echo "::error::строка $LINENO: $BASH_COMMAND"' ERR
           V=${{ env.APP_VER }}; T=$RUNNER_TEMP/src; D=$T/BIMsketcher-android; rm -rf $T; mkdir -p $D
           ls -la; ls node_modules/@capacitor || true
-          tar --exclude=./node_modules --exclude=./android/app/build --exclude=./android/build --exclude=./android/.gradle --exclude=./android/capacitor-cordova-android-plugins/build --exclude=./android/local.properties --exclude='*.apk' --exclude='*.aab' --exclude='*.zip' -cf - . | tar -xf - -C $D
+          tar --exclude=./node_modules --exclude=./android/app/build --exclude=./android/build --exclude=./android/.gradle --exclude=./android/capacitor-cordova-android-plugins/build --exclude=./android/local.properties --exclude=./android/app/src/main/res/values/whitelist.xml --exclude='*.apk' --exclude='*.aab' --exclude='*.zip' -cf - . | tar -xf - -C $D
           mkdir -p $D/node_modules/@capacitor
           for p in android filesystem share; do (cd node_modules/@capacitor && tar --exclude=build --exclude=.gradle -cf - $p) | tar -xf - -C $D/node_modules/@capacitor; done
-          cp -r ../web-src ../i18n $D/; mkdir -p $D/native; cp ../native/CompassPlugin.java ../native3d/MainActivity.java ../native3d/BillingPlugin.java $D/native/; cp ../android-src/README.md $D/README.md
+          cp -r ../web-src ../i18n $D/; mkdir -p $D/native; cp ../native/CompassPlugin.java ../native3d/MainActivity.java ../native3d/BillingPlugin.java ../native3d/WhitelistPlugin.java $D/native/; cp ../android-src/README.md $D/README.md
           if [ -n "$(find $D -name '*.jks*')" ]; then echo "::error::ключ подписи попал в архив"; exit 1; fi
           (cd $T && zip -qr $GITHUB_WORKSPACE/app3d/BIMsketcher-android-src-$V.zip BIMsketcher-android); ls -la $GITHUB_WORKSPACE/app3d/*.zip
       - uses: actions/upload-artifact@v4

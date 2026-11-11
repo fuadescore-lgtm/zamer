@@ -25,6 +25,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(CompassPlugin.class);
         registerPlugin(BillingPlugin.class);
+        registerPlugin(WhitelistPlugin.class);
         super.onCreate(savedInstanceState);
         final View wv = getBridge().getWebView();
         ViewCompat.setOnApplyWindowInsetsListener(wv, (v, insets) -> {
