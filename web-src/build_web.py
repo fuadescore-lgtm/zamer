@@ -11,6 +11,21 @@ if '--i18n' in sys.argv:
     s = s[:i] + '<script id="i18n-en">window.__I18N_EN=' + json.dumps(d, ensure_ascii=False, separators=(',', ':')) + ';</script>\n' + s[j:]
     open(SRC, 'w', encoding='utf-8').write(s); print('i18n:', len(d), 'строк')
 src = open(SRC, encoding='utf-8').read()
+# fonts inside the app: no request to Google Fonts (privacy, works offline)
+UR = {'latin': 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD',
+      'latin-ext': 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF',
+      'cyrillic': 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116',
+      'cyrillic-ext': 'U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F'}
+FAM = [('barlow-condensed', 'Barlow Condensed'), ('ibm-plex-mono', 'IBM Plex Mono'), ('barlow', 'Barlow')]
+css = []
+for fn in sorted(os.listdir(P('fonts'))):
+    if not fn.endswith('-normal.woff2'): continue
+    base = fn[:-len('-normal.woff2')]
+    pre, fam = next(x for x in FAM if base.startswith(x[0] + '-'))
+    sub, w = base[len(pre) + 1:].rsplit('-', 1)
+    data = base64.b64encode(open(P('fonts', fn), 'rb').read()).decode()
+    css.append("@font-face{font-family:'%s';font-style:normal;font-weight:%s;font-display:swap;src:url(data:font/woff2;base64,%s) format('woff2');unicode-range:%s}" % (fam, w, data, UR[sub]))
+src = src.replace('<!--BS-FONTS-->', '<style id="bsfonts">' + ''.join(css) + '</style>', 1)
 b64 = base64.b64encode(open(P('zamerdwg.wasm.gz'), 'rb').read()).decode()
 js = open(P('dwgjs.js'), encoding='utf-8').read().replace("if(typeof module!=='undefined') module.exports={zdLoad};", "")
 i = src.index('<script>\n(function(){')
