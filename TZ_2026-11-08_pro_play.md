@@ -37,3 +37,5 @@
 - native3d/WhitelistPlugin.java: вход Google (Credential Manager, web client id проекта bimsketcher) → Firebase Auth REST signInWithIdp → refresh token; проверка Firestore REST whitelist/{email}: active==true и until (если есть) в будущем. Без сети — подписанный кэш ≤ 7 дней. Любая ошибка / нет записи / 403 → нет доступа.
 - Конфиг (api key, project id, web client id) — из секрета GitHub GOOGLE_SERVICES_JSON в res/values/whitelist.xml при сборке; в публичный репозиторий и архив исходников не попадает. Без секрета — «Firebase не подключён».
 - Окно Pro: «Войти через Google (белый список)» / «Белый список: проверить · e-mail» / «Выйти».
+
+## 3.0.11 — «Удалить аккаунт» (Delete account) в Параметрах: удаляет пользователя Firebase Auth (accounts:delete) и данные входа на устройстве; чертежи и подписка Play не затрагиваются; запись белого списка — разработчик по запросу. Соответствует п. 6 политики.

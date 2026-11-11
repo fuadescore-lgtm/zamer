@@ -129,6 +129,25 @@ public class WhitelistPlugin extends Plugin {
             });
     }
 
+    /** «Удалить аккаунт»: deletes the Firebase Auth user of this app (Google e-mail, uid) and everything kept on the device. */
+    @PluginMethod
+    public void deleteAccount(PluginCall call) {
+        String rt = prefs().getString("rt", null);
+        if (rt == null || !configured()) { prefs().edit().clear().apply(); JSObject o = no("вход не выполнен", false); o.put("deleted", false); call.resolve(o); return; }
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                JSONObject t = post("https://securetoken.googleapis.com/v1/token?key=" + apiKey, "application/x-www-form-urlencoded",
+                    "grant_type=refresh_token&refresh_token=" + URLEncoder.encode(rt, "UTF-8"));
+                JSONObject b = new JSONObject(); b.put("idToken", t.optString("id_token", ""));
+                post("https://identitytoolkit.googleapis.com/v1/accounts:delete?key=" + apiKey, "application/json", b.toString());
+                prefs().edit().clear().apply();
+                JSObject o = no("аккаунт удалён", false); o.put("deleted", true); call.resolve(o);
+            } catch (Exception e) {
+                JSObject o = no("не удалось удалить аккаунт: " + msg(e), true); o.put("deleted", false); call.resolve(o);
+            }
+        });
+    }
+
     @PluginMethod
     public void signOut(PluginCall call) {
         prefs().edit().remove("rt").remove("email").remove("cache").remove("cacheSig").apply();

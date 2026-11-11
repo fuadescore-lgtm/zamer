@@ -5233,5 +5233,19 @@
 "Белый список: доступ": "White list: access",
 "Войти через": "Sign in with",
 "нет доступа": "no access",
-"открыт": "granted"
+"открыт": "granted",
+"и идентификатор) и данные входа на этом устройстве. Чертежи на устройстве и подписка": "and ID) and the sign-in data on this device. Drawings on the device and the",
+"Запись в белом списке удаляет разработчик по запросу": "The white list record is deleted by the developer on request",
+"Точно удалить аккаунт? Нажмите ещё раз": "Delete the account? Tap again",
+"не затрагиваются; подписку отменяют в": "subscription are not affected; the subscription is cancelled in",
+"не выполнен (вход — в окне": "not signed in (sign in from the window",
+"Не удалось удалить аккаунт": "Could not delete the account",
+"Удаляет ваш аккаунт": "Deletes your account",
+"для белого списка": "for the white list",
+"Удалить аккаунт": "Delete account",
+"Аккаунт удалён": "Account deleted",
+"Вход через": "Signed in with",
+"вход через": "sign-in with",
+"выполнен": "done",
+"Аккаунт": "Account"
 }
