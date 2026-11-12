@@ -147,6 +147,7 @@ public class BillingPlugin extends Plugin implements PurchasesUpdatedListener {
         o.put("suspended", suspended);
         o.put("autoRenew", autoRenew);
         o.put("now", now);
+        o.put("debug", (getContext().getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0); // diagnostics line only in a debug build
         return o;
     }
 

@@ -120,11 +120,11 @@ public class WhitelistPlugin extends Plugin {
                         if (rt.isEmpty() || email.isEmpty()) throw new Exception("Firebase не вернул вход");
                         prefs().edit().putString("rt", rt).putString("email", email).remove("cache").remove("cacheSig").apply();
                         call.resolve(doCheck());
-                    } catch (Exception e) { call.resolve(no("вход: " + msg(e), true)); }
+                    } catch (Exception e) { call.resolve(no("ошибка входа: " + msg(e), true)); }
                 }
                 @Override
                 public void onError(GetCredentialException e) {
-                    call.resolve(no(e instanceof GetCredentialCancellationException ? "вход отменён" : "вход: " + msg(e), hasAccount()));
+                    call.resolve(no(e instanceof GetCredentialCancellationException ? "вход отменён" : "ошибка входа: " + msg(e), hasAccount()));
                 }
             });
     }
@@ -177,7 +177,7 @@ public class WhitelistPlugin extends Plugin {
             int code = h.getResponseCode();
             String txt = read(code < 400 ? h.getInputStream() : h.getErrorStream());
             if (code == 404) { clearCache(); return no("записи нет", true); }
-            if (code == 403) { clearCache(); return no("нет права читать запись (правила Firestore)", true); }
+            if (code == 403) { clearCache(); return no("нет права читать запись — проверьте правила Firestore", true); }
             if (code != 200) throw new IllegalStateException("Firestore " + code);
             JSONObject f = new JSONObject(txt).optJSONObject("fields");
             boolean act = f != null && f.optJSONObject("active") != null && f.getJSONObject("active").optBoolean("booleanValue", false);
@@ -208,7 +208,7 @@ public class WhitelistPlugin extends Plugin {
 
     private JSObject no(String err, boolean signedIn) {
         JSObject o = new JSObject();
-        o.put("active", false); o.put("err", err); o.put("signedIn", signedIn);
+        o.put("active", false); o.put("err", err); o.put("signedIn", signedIn); o.put("conf", configured());
         String em = prefs().getString("email", "");
         if (signedIn && !em.isEmpty()) o.put("email", em);
         return o;
