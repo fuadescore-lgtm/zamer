@@ -111,5 +111,7 @@ BIMsketcher: 3D, крыши, СЭС
 ## Графика
 
 - Баннер (Feature graphic): feature_1024x500.png
-- Скриншоты 1920 × 1080 (16:9), по порядку:
+- Телефон и планшет 7" — основной набор 1920 × 1080 (16:9):
   01_3d · 02_roofs · 03_plan · 04_pv · 05_strings · 06_sld · 07_reports · 08_export
+- Планшет 10" — набор для электрика и монтажа (папка tablet):
+  t1_electric · t2_cables · t3_board · t4_jumpers · t5_mount · t6_cut · t7_layout · t8_sheets
