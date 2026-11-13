@@ -5275,5 +5275,8 @@
 "Войдите через": "Sign in with",
 "чтобы проверить доступ от разработчика": "to check developer access",
 "ошибка входа": "sign-in error",
-"И": "INV"
+"И": "INV",
+"бокса, инвертора, АКБ и щита — проверка и правка кабелей, автоматов, моделей": "box, inverter, battery and panel board — check and edit cables, breakers and models",
+"Анализ: схема": "Analysis: diagram of the",
+"подобрать строки по паспорту инвертора, раскрасить панели": "match strings to the inverter datasheet and colour the panels"
 }
