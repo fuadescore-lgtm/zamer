@@ -5278,5 +5278,11 @@
 "И": "INV",
 "бокса, инвертора, АКБ и щита — проверка и правка кабелей, автоматов, моделей": "box, inverter, battery and panel board — check and edit cables, breakers and models",
 "Анализ: схема": "Analysis: diagram of the",
-"подобрать строки по паспорту инвертора, раскрасить панели": "match strings to the inverter datasheet and colour the panels"
+"подобрать строки по паспорту инвертора, раскрасить панели": "match strings to the inverter datasheet and colour the panels",
+"Аккаунта BIMsketcher нет: вход через Google не выполнялся, на сервере нет ваших данных. Данные входа на этом устройстве очищены": "There is no BIMsketcher account: you have not signed in with Google, so no data of yours is stored on the server. Sign-in data on this device has been cleared",
+"Удаление аккаунта доступно в приложении BIMsketcher": "Account deletion is available in the BIMsketcher app",
+"не выполнялся, на сервере нет ваших данных. Данные входа на этом устройстве очищены": "have not signed in, so no data of yours is stored on the server. Sign-in data on this device has been cleared",
+"Удаление аккаунта доступно в приложении": "Account deletion is available in the app",
+"Аккаунта": "There is no account",
+"нет: вход через": ": you"
 }
