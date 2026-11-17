@@ -2513,7 +2513,7 @@
 "добавить второй": "add a second",
 "Добавлен кабель": "Cable added",
 "аккумуляторы": "batteries",
-"не подключён": "not connected",
+"не подключён": "is not connected",
 "Нужен кабель": "A cable is needed",
 "Между устр": "Between dev",
 "Нет кабеля": "No cable",
@@ -5244,7 +5244,7 @@
 "для белого списка": "for the white list",
 "Удалить аккаунт": "Delete account",
 "Аккаунт удалён": "Account deleted",
-"Вход через": "Signed in with",
+"Вход через": "Sign-in with",
 "вход через": "sign-in with",
 "выполнен": "done",
 "Аккаунт": "Account",
@@ -5309,5 +5309,9 @@
 "Выбрать модель панели": "Choose panel model",
 "Весь каталог": "Whole catalogue",
 "Размеры панели": "Panel size",
-"модель…": "model…"
+"модель…": "model…",
+"Вход через Google недоступен в этой сборке: Firebase не подключён": "Sign-in with Google is not available in this build: Firebase is not connected",
+"недоступен в этой сборке": "is not available in this build",
+"Firebase не подключён": "Firebase is not connected",
+"Вход не выполнен:": "Not signed in:"
 }
