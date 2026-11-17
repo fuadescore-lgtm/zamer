@@ -3013,7 +3013,7 @@
 "Это уже точка эскиза": "This is already a sketch point",
 "линию": "line",
 "точку": "point",
-"Выбрать": "Select",
+"Выбрать": "Choose",
 "двигать": "move",
 "Разделить: точка на линии": "Split: point on a line",
 "коснитесь линии — в этом месте появится точка, линия разделится на две; точку можно тянуть": "tap a line — a point appears there and the line splits in two; the point can be dragged",
@@ -5298,5 +5298,16 @@
 "Вход…": "Signing in…",
 "не выполнен. Войдите, если разработчик дал вам доступ": "not done. Sign in if the developer gave you access",
 "Доступ от разработчика открыт": "Developer access granted",
-"Выйти из": "Sign out of"
+"Выйти из": "Sign out of",
+"и температурные коэффициенты — по даташиту. Модель станет панелью проекта: строки, предохранители, автоматы, кабели и ведомость считаются по ней": "and temperature coefficients are taken from the datasheet. The model becomes the project panel: strings, fuses, breakers, cables and schedules are calculated for it",
+"На модели уже есть панели другого размера: массивов": "The model already has panels of another size: arrays",
+"коэффициенты": "coefficients",
+"Каталог с даташитами: размеры": "Datasheet catalogue: size",
+"Поиск: модель или мощность": "Search: model or power",
+"двусторонняя": "bifacial",
+"Панель проекта": "Project panel",
+"Выбрать модель панели": "Choose panel model",
+"Весь каталог": "Whole catalogue",
+"Размеры панели": "Panel size",
+"модель…": "model…"
 }
