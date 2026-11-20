@@ -6,7 +6,7 @@
 :root{
   --paper:#f4f6f4; --surface:#ffffff; --ink:#1b2024; --muted:#646d6a; --rule:#d6dbd7;
   --grid:#e5e9e5; --grid2:#cfd6d0;
-  --wall:#c9d0cb; --tape:#f0b90b; --tape-ink:#1d1907; --dim:#c0392b; --ok:#2e8b57; --open:#1d6f8c; --sel:#2563eb;
+  --wall:#c9d0cb; --tape:#f0b90b; --tape-ink:#1d1907; --dim:#c0392b; --ok:#2e8b57; --open:#1d6f8c; --sel:#2563eb; --td:#9c36b5;
   --shadow:rgb(20 30 25 / .14);
   --f-ui:"Barlow Condensed","Arial Narrow",sans-serif;
   --f-body:"Barlow",system-ui,sans-serif;
@@ -15,13 +15,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --paper:#121517; --surface:#1b1f22; --ink:#e6eae7; --muted:#97a19c; --rule:#2c3337;
-    --grid:#1b2023; --grid2:#283035; --wall:#37403f; --tape:#f5c518; --tape-ink:#1a1606; --dim:#ff7b63; --ok:#5fd18f; --open:#5cc3e0; --sel:#6ea8ff;
+    --grid:#1b2023; --grid2:#283035; --wall:#37403f; --tape:#f5c518; --tape-ink:#1a1606; --dim:#ff7b63; --ok:#5fd18f; --open:#5cc3e0; --sel:#6ea8ff; --td:#d08cff;
     --shadow:rgb(0 0 0 / .5); color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --paper:#121517; --surface:#1b1f22; --ink:#e6eae7; --muted:#97a19c; --rule:#2c3337;
-  --grid:#1b2023; --grid2:#283035; --wall:#37403f; --tape:#f5c518; --tape-ink:#1a1606; --dim:#ff7b63; --ok:#5fd18f; --open:#5cc3e0; --sel:#6ea8ff;
+  --grid:#1b2023; --grid2:#283035; --wall:#37403f; --tape:#f5c518; --tape-ink:#1a1606; --dim:#ff7b63; --ok:#5fd18f; --open:#5cc3e0; --sel:#6ea8ff; --td:#d08cff;
   --shadow:rgb(0 0 0 / .5); color-scheme:dark;
 }
 html,body{height:100%}
@@ -1850,7 +1850,7 @@ function snapPoint(sx,sy,from,opt){ polarGuide=null; trackGuide=null;
 /* ---------- colors / sizing ---------- */
 function readColors(){
   const cs=getComputedStyle(document.documentElement), v=n=>cs.getPropertyValue(n).trim();
-  C={ok:v('--ok'),wall:v('--wall'),paper:v('--paper'),ink:v('--ink'),muted:v('--muted'),grid:v('--grid'),grid2:v('--grid2'),tape:v('--tape'),dim:v('--dim'),open:v('--open'),sel:v('--sel'),surface:v('--surface')};
+  C={ok:v('--ok'),wall:v('--wall'),paper:v('--paper'),ink:v('--ink'),muted:v('--muted'),grid:v('--grid'),grid2:v('--grid2'),tape:v('--tape'),dim:v('--dim'),open:v('--open'),sel:v('--sel'),surface:v('--surface'),td:v('--td')||v('--sel')};
 }
 function resize(){
   const r=stage.getBoundingClientRect(); DPR=window.devicePixelRatio||1; W=r.width; H=r.height;
@@ -3535,29 +3535,30 @@ function tempDimList(){
     if(!man&&m&&tw&&isWall(tw)&&!isArc(tw)&&B.items.every(i=>TD3.has(i.t)&&(i.t!=='line'||isWall(i)))){ const P=wallPoly(tw), c1=hz?P.aL.x:P.aL.y, c2=hz?P.aR.x:P.aR.y, par=hz?Math.abs(P.aL.x-P.bL.x)<0.5:Math.abs(P.aL.y-P.bL.y)<0.5;
       if(par&&(Math.abs(c1-t)<1||Math.abs(c2-t)<1)){ const o=Math.abs(c1-t)<1?c2:c1; t=m===1?(t+o)/2:o; } }
     const d=(t-e)*sg; if(d<0.5&&!man) continue;
-    out.push({dir,d,man,ref:man?ref:null,m,tw,A:hz?{x:e,y:at}:{x:at,y:e},B:hz?{x:t,y:at}:{x:at,y:t}});
+    const f0=tdNear(B,dir,0); out.push({dir,d,man,ref:man?ref:null,m,tw,A:hz?{x:e,y:at}:{x:at,y:e},B:hz?{x:t,y:at}:{x:at,y:t},F0:hz?{x:f0,y:at}:{x:at,y:f0}});
   }
   return out;
 }
 function drawTempDims(){
-  const L=tempDimList(); if(!L.length) return; const GH=tool==='hole'&&!!chimPrev;
+  const L=tempDimList(); if(!L.length) return; const GH=tool==='hole'&&!!chimPrev, TC=C.td||C.sel; /* temporary dimensions: violet, apart from the blue selection */
   const RA=new Set(); for(const d of doc.items){ if(d.t!=='dim'||!dimActSel(d)) continue; const g=dimGeom(d); RA.add(Math.abs(g.u.x)>=Math.abs(g.u.y)?'x':'y'); } // свой красный размер по этой оси — синий временный не дублирует
   for(const t of L){ if(RA.has(t.dir[1])) continue; const A=toS(t.A),B=toS(t.B); const hz=t.dir[1]==='x', act=!!(inlineH&&inlineH.kind==='td'&&inlineH.dir===t.dir);
-    if(act) actGlow(ctx,A,B); ctx.strokeStyle=act?ACT:C.sel; ctx.lineWidth=act?2.2:1; ctx.setLineDash([5,3]); line(A,B); ctx.setLineDash([]);
-    if(t.ref){ ctx.save(); ctx.setLineDash([3,3]); line(toS(t.ref),B); ctx.restore(); ctx.setLineDash([]); const R=toS(t.ref); ctx.fillStyle=C.sel; ctx.fillRect(R.x-3,R.y-3,6,6); }
+    if(act) actGlow(ctx,A,B); ctx.strokeStyle=act?ACT:TC; ctx.lineWidth=act?2.2:1; ctx.setLineDash([5,3]); line(A,B); ctx.setLineDash([]);
+    if(t.ref){ ctx.save(); ctx.setLineDash([3,3]); line(toS(t.ref),B); ctx.restore(); ctx.setLineDash([]); const R=toS(t.ref); ctx.fillStyle=TC; ctx.fillRect(R.x-3,R.y-3,6,6); }
     const tk=(P)=>hz?line({x:P.x,y:P.y-5},{x:P.x,y:P.y+5}):line({x:P.x-5,y:P.y},{x:P.x+5,y:P.y}); ctx.lineWidth=1.5; tk(A); tk(B);
     // ручки: дальний конец тянется к точке, ближний — выбор грани
-    if(!GH){ ctx.beginPath(); ctx.arc(B.x,B.y,6,0,Math.PI*2); ctx.fillStyle=t.man?C.sel:C.surface; ctx.fill(); ctx.strokeStyle=C.sel; ctx.lineWidth=1.5; ctx.stroke(); }
-    const AL=Math.hypot(B.x-A.x,B.y-A.y)||1, ko=Math.min(16,AL/3), NA={x:A.x+(B.x-A.x)/AL*ko,y:A.y+(B.y-A.y)/AL*ko};
-    if(!GH){ ctx.save(); ctx.fillStyle=t.m===2?'#2f9e44':t.m===1?C.sel:C.surface; ctx.strokeStyle=t.m===2?'#2f9e44':C.sel; ctx.lineWidth=1.5; ctx.fillRect(NA.x-4.5,NA.y-4.5,9,9); ctx.strokeRect(NA.x-4.5,NA.y-4.5,9,9); ctx.restore(); }
+    if(!GH){ ctx.beginPath(); ctx.arc(B.x,B.y,6,0,Math.PI*2); ctx.fillStyle=t.man?TC:C.surface; ctx.fill(); ctx.strokeStyle=TC; ctx.lineWidth=1.5; ctx.stroke(); }
+    const AL=Math.hypot(B.x-A.x,B.y-A.y)||1, uB={x:(B.x-A.x)/AL,y:(B.y-A.y)/AL}, F0=toS(t.F0||t.A), ko=16, NA={x:F0.x+uB.x*ko,y:F0.y+uB.y*ko}; /* the square stays by the near face */
+    { ctx.save(); ctx.strokeStyle=t.m===2?'#2f9e44':TC; ctx.lineWidth=3; ctx.lineCap='round'; const k=11; line({x:A.x-uB.y*k,y:A.y+uB.x*k},{x:A.x+uB.y*k,y:A.y-uB.x*k}); ctx.restore(); } /* tick: where it starts on the object — face, centre or outer face */
+    if(!GH){ ctx.save(); ctx.fillStyle=t.m===2?'#2f9e44':t.m===1?C.sel:C.surface; ctx.strokeStyle=t.m===2?'#2f9e44':TC; ctx.lineWidth=1.5; ctx.fillRect(NA.x-4.5,NA.y-4.5,9,9); ctx.strokeRect(NA.x-4.5,NA.y-4.5,9,9); ctx.restore(); }
     if(!GH) tdHits.push({kind:'far',dir:t.dir,x:B.x,y:B.y,man:t.man},{kind:'near',dir:t.dir,x:NA.x,y:NA.y});
     if(Math.hypot(B.x-A.x,B.y-A.y)<14) continue;
     const wm={x:(t.A.x+t.B.x)/2+(hz?0:-12/view.scale),y:(t.A.y+t.B.y)/2+(hz?12/view.scale:0)}, m=toS(wm);
     if(!GH) labelHits.push({id:selId,kind:'td',dir:t.dir,w:wm,x:m.x,y:m.y,val:t.d});
     ctx.save(); ctx.translate(m.x,m.y); if(!hz) ctx.rotate(-Math.PI/2);
     ctx.font='600 12px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle';
-    const tx=fmtU(t.d), w=ctx.measureText(tx).width; ctx.fillStyle=act?ACT:C.surface; ctx.fillRect(-w/2-4,-9,w+8,18); ctx.strokeStyle=act?ACT:C.sel; ctx.lineWidth=act?2:1; ctx.strokeRect(-w/2-4,-9,w+8,18);
-    ctx.fillStyle=act?'#fff':C.sel; ctx.fillText(tx,0,0); ctx.restore();
+    const tx=fmtU(t.d), w=ctx.measureText(tx).width; ctx.fillStyle=act?ACT:C.surface; ctx.fillRect(-w/2-4,-9,w+8,18); ctx.strokeStyle=act?ACT:TC; ctx.lineWidth=act?2:1; ctx.strokeRect(-w/2-4,-9,w+8,18);
+    ctx.fillStyle=act?'#fff':TC; ctx.fillText(tx,0,0); ctx.restore();
     // замочек: зафиксировать это расстояние между стенами (ограничение геометрии)
     const sw=!GH&&doc.items.find(i=>i.id===selId); if(t.tw&&sw&&t.tw.id!==sw.id&&!moveSel.size&&lockable(sw)&&lockable(t.tw)&&lockAxOk(sw,hz?'x':'y')&&lockAxOk(t.tw,hz?'x':'y')){ const on=!!findLock(sw.id,t.tw.id), sgL=t.dir[0]==='+'?1:-1, k={x:m.x+(hz?sgL*(w/2+18):0),y:m.y+(hz?0:-sgL*(w/2+18))};
       drawLock(k.x,k.y,on); lockHits.push({x:k.x,y:k.y,a:sw.id,b:t.tw.id,ax:hz?'x':'y',on}); } }
@@ -5544,7 +5545,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.26':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.27':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
