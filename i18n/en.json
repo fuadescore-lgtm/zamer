@@ -5313,5 +5313,6 @@
 "Вход через Google недоступен в этой сборке: Firebase не подключён": "Sign-in with Google is not available in this build: Firebase is not connected",
 "недоступен в этой сборке": "is not available in this build",
 "Firebase не подключён": "Firebase is not connected",
-"Вход не выполнен:": "Not signed in:"
+"Вход не выполнен:": "Not signed in:",
+"Синие числа — расстояние до стен; двойное касание — размеры дымохода": "Blue numbers are distances to the walls; double tap for the chimney size"
 }
