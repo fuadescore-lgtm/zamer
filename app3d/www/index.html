@@ -587,7 +587,7 @@ const U_ID=new Set('pgS shW shH shD inLen inW mvLen pW1 pW2 pHW pHH pHR pHS pCH 
 const U_IDR=/^(?:le\d+|lh\d+|v3_(?:ins|cr|td)_\w+|\w*g_[a-z]+_(?!da$)\w+)$/;
 function uIsLen(i){ if(i.type&&i.type!=='text'&&i.type!=='number'&&i.type!=='search'&&i.type!=='tel') return false; if(i.id==='v3_ins_dsl'||i.id==='v3_dsl') return false; return U_ID.has(i.id)||U_IDR.test(i.id)||i.classList.contains('cabnum')||i.classList.contains('evin')||i.id==='inlineEd'||i.dataset.vn==='rstep'; }
 // поля, где единицы зависят от того, что редактируется (угол или длина)
-function uOffNow(i){ try{ if(i.id==='inlineEd') return !inlineH||/^(tx|ang|rfA|dsl)$/.test(inlineH.kind); if(i.classList.contains('evin')) return !EV||EV.inK==='rA'; }catch(e){ return true; } return false; }
+function uOffNow(i){ try{ if(i.id==='inlineEd') return !inlineH||/^(tx|ang|rfA|dsl|adim|jang)$/.test(inlineH.kind); if(i.classList.contains('evin')) return !EV||EV.inK==='rA'; }catch(e){ return true; } return false; }
 function uOut(v){ const s=String(v==null?'':v).trim(); if(UNIT==='mm'||!/^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(s)) return String(v==null?'':v); return fmtU(+s); }
 function uIn(d){ if(UNIT==='mm') return d; const s=String(d||'').replace(/,/g,'.').replace(/\s/g,'').replace(/−/g,'-'); if(!s||!/^[-+]?\d*\.?\d+([-+]\d*\.?\d+)*$/.test(s)) return d; const v=(s.match(/[-+]?\d*\.?\d+/g)||[]).reduce((a,b)=>a+parseFloat(b),0); return String(Math.round(v*UF[UNIT]*1000)/1000); }
 function uMark(i){ if(i._um||!uIsLen(i)) return; i._um=1; const raw=ivR(i);
@@ -2233,12 +2233,18 @@ function adArc(V,d1,d2,Rpx,col,txt,dash,act,thick){ const v=toS(V), a1=Math.atan
 const angDeg=(d1,d2)=>Math.acos(Math.max(-1,Math.min(1,d1.x*d2.x+d1.y*d2.y)))*180/Math.PI;
 const fmtDeg=a=>{ const t=(Math.round(a*10)/10).toFixed(1).replace(/\.0$/,''); return (EN?t:t.replace('.',','))+'°'; };
 /* while a wall vertex is dragged: the angle at the other (fixed) end — to the wall joined there, or to the horizontal */
-function drawJointAngles(){ if(!(press&&press.joint&&press.joint.started&&selJoint)) return; const P=selJoint;
+function drawJointAngles(){ const live=!!(press&&press.joint&&press.joint.started&&selJoint), still=!press&&tool==='select'&&!!selJoint&&!editLine; if(!(live||still)) return; const P=selJoint;
   const L=doc.items.filter(it=>it.t==='line'&&!isArc(it)&&!vHidP(it));
   for(const W of L){ const k=near(W.a,P,1)?'a':near(W.b,P,1)?'b':null; if(!k) continue; const Q=k==='a'?W.b:W.a; if(Math.hypot(P.x-Q.x,P.y-Q.y)<1) continue; const uW=unit(Q,P);
     const N=L.find(o=>o.id!==W.id&&(near(o.a,Q,1)||near(o.b,Q,1))); let d2;
     if(N){ const O=near(N.a,Q,1)?N.b:N.a; d2=unit(Q,O); } else d2={x:uW.x>=0?1:-1,y:0};
-    adArc(Q,uW,d2,46,C.td||C.sel,fmtDeg(angDeg(uW,d2)),true,false); } }
+    const on=!!(inlineH&&inlineH.kind==='jang'&&inlineH.wid===W.id), q=adArc(Q,uW,d2,58,on?ACT:(C.td||C.sel),fmtDeg(angDeg(uW,d2)),true,on);
+    if(still) labelHits.push({id:W.id,kind:'jang',wid:W.id,Q:{...Q},nid:N?N.id:null,w:toW(q.x,q.y),x:q.x,y:q.y,val:Math.round(angDeg(uW,d2)*10)/10,one:true}); } }
+/* type the angle at the fixed end: the wall turns about it, the selected vertex slides along its other wall */
+function jangSet(h,deg){ const W=doc.items.find(i=>i.id===h.wid); if(!W||!(deg>0&&deg<180)){ if(W) toast('Угол — больше 0 и меньше 180°',true); redraw(); return; } const Q=h.Q, P=near(W.a,Q,1)?W.b:W.a, uW=unit(Q,P);
+  const N=h.nid&&doc.items.find(i=>i.id===h.nid); let d2; if(N){ const O=near(N.a,Q,1)?N.b:N.a; d2=unit(Q,O); } else d2={x:uW.x>=0?1:-1,y:0};
+  const sg=(d2.x*uW.y-d2.y*uW.x)>=0?1:-1, t=sg*deg*Math.PI/180, un={x:d2.x*Math.cos(t)-d2.y*Math.sin(t),y:d2.x*Math.sin(t)+d2.y*Math.cos(t)}, delta=Math.atan2(uW.x*un.y-uW.y*un.x,uW.x*un.x+uW.y*un.y);
+  if(Math.abs(delta)<1e-7){ redraw(); return; } pushUndo(); const nf=turnWall(W,{...Q},delta); if(selJoint&&near(selJoint,P,1)) selJoint={...nf}; syncDims(); persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); toast('Угол '+fmtDeg(deg)); }
 /* angular dimension {t:'adim', e1:{id,o}, e2:{id,o}, s1,s2, R}: two faces (offset o from the wall line); s1/s2 pick the quarter */
 function adFace(e){ const W=doc.items.find(i=>i.id===e.id); if(!W||W.t!=='line'||isArc(W)) return null; const u=unit(W.a,W.b), n=lft(u); return {P:{x:W.a.x+n.x*e.o,y:W.a.y+n.y*e.o},d:u,W}; }
 function lnX(P1,d1,P2,d2){ const cr=d1.x*d2.y-d1.y*d2.x; if(Math.abs(cr)<1e-6) return null; const t=((P2.x-P1.x)*d2.y-(P2.y-P1.y)*d2.x)/cr; return {x:P1.x+d1.x*t,y:P1.y+d1.y*t}; }
@@ -2262,17 +2268,19 @@ function drawADims(){ for(const A of doc.items){ if(A.t!=='adim'||vHidP(A)) cont
   if(tool==='dim'&&AD&&AD.e1){ for(const e of [AD.e1,AD.e2]){ if(!e) continue; const f=adFace(e); if(!f) continue; const W=f.W, n=lft(f.d); ctx.save(); ctx.strokeStyle=C.dim; ctx.lineWidth=3; ctx.globalAlpha=.6; line(toS({x:W.a.x+n.x*e.o,y:W.a.y+n.y*e.o}),toS({x:W.b.x+n.x*e.o,y:W.b.y+n.y*e.o})); ctx.restore(); }
     if(AD.e2&&AD.q){ const S=adSides(AD.e1,AD.e2,AD.q); if(S){ const a=adFace(AD.e1), b=adFace(AD.e2), d1={x:a.d.x*S.s1,y:a.d.y*S.s1}, d2={x:b.d.x*S.s2,y:b.d.y*S.s2}; adArc(S.V,d1,d2,Math.max(18,S.R*view.scale),C.dim,fmtDeg(angDeg(d1,d2)),true,false); } } } }
 /* set the angle: the selected wall (otherwise the second face) turns about the common corner; its far end slides along the wall joined there */
+/* turn wall W about its end piv by delta; the far end slides along the wall joined there (else keeps the length); returns the new far end */
+function turnWall(W,piv,delta){ const far={...(near(W.a,piv,1)?W.b:W.a)}, uW=unit(piv,far), uN={x:uW.x*Math.cos(delta)-uW.y*Math.sin(delta),y:uW.x*Math.sin(delta)+uW.y*Math.cos(delta)};
+  const G2=doc.items.find(o=>o.t==='line'&&!isArc(o)&&o.id!==W.id&&(near(o.a,far,1)||near(o.b,far,1)));
+  let nf=null; if(G2){ const X=lnX(piv,uN,G2.a,unit(G2.a,G2.b)); if(X&&((X.x-piv.x)*uN.x+(X.y-piv.y)*uN.y)>50) nf={x:r3(X.x),y:r3(X.y)}; }
+  if(!nf){ const Ln=Math.hypot(far.x-piv.x,far.y-piv.y); nf={x:r3(piv.x+uN.x*Ln),y:r3(piv.y+uN.y*Ln)}; }
+  moveCoincident(far,nf,null); return nf; }
 function adSet(A,deg){ const G=adGeom(A); if(!G) return; if(!(deg>0&&deg<180)){ toast('Угол — больше 0 и меньше 180°',true); return; }
   const mvE=(selId===A.e1.id&&selId!==A.e2.id)?'e1':'e2', W=(mvE==='e1'?G.f1:G.f2).W, Fx=(mvE==='e1'?G.f2:G.f1).W, dF=mvE==='e1'?G.d2:G.d1, dM=mvE==='e1'?G.d1:G.d2;
   const sg=(dF.x*dM.y-dF.y*dM.x)>=0?1:-1, t=sg*deg*Math.PI/180, dMn={x:dF.x*Math.cos(t)-dF.y*Math.sin(t),y:dF.x*Math.sin(t)+dF.y*Math.cos(t)};
   const delta=Math.atan2(dM.x*dMn.y-dM.y*dMn.x,dM.x*dMn.x+dM.y*dMn.y); if(Math.abs(delta)<1e-7) return;
   const rot=(P,C0)=>({x:r3(C0.x+(P.x-C0.x)*Math.cos(delta)-(P.y-C0.y)*Math.sin(delta)),y:r3(C0.y+(P.x-C0.x)*Math.sin(delta)+(P.y-C0.y)*Math.cos(delta))});
   pushUndo(); const shared=[W.a,W.b].find(P=>near(P,Fx.a,1)||near(P,Fx.b,1));
-  if(shared){ const piv={...shared}, far={...(near(W.a,piv,1)?W.b:W.a)}, uW=unit(piv,far), uN={x:uW.x*Math.cos(delta)-uW.y*Math.sin(delta),y:uW.x*Math.sin(delta)+uW.y*Math.cos(delta)};
-    const G2=doc.items.find(o=>o.t==='line'&&!isArc(o)&&o.id!==W.id&&(near(o.a,far,1)||near(o.b,far,1)));
-    let nf=null; if(G2){ const X=lnX(piv,uN,G2.a,unit(G2.a,G2.b)); if(X&&((X.x-piv.x)*uN.x+(X.y-piv.y)*uN.y)>50) nf={x:r3(X.x),y:r3(X.y)}; }
-    if(!nf){ const Ln=Math.hypot(far.x-piv.x,far.y-piv.y); nf={x:r3(piv.x+uN.x*Ln),y:r3(piv.y+uN.y*Ln)}; }
-    moveCoincident(far,nf,null); }
+  if(shared){ turnWall(W,{...shared},delta); }
   else { const oa={...W.a}, ob={...W.b}; moveCoincident(oa,rot(oa,G.V),null); moveCoincident(ob,rot(ob,G.V),null); }
   syncDims(); persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); const g2=adGeom(A); toast('Угол '+(g2?fmtDeg(g2.ang):fmtDeg(deg))); }
 function drawSelTemp(){ const o=C.sel; C.sel=C.td||o; try{ drawSelTemp0(); } finally{ C.sel=o; } } /* the wall's own length and angle: violet and dashed, like all temporary dimensions */
@@ -3053,7 +3061,7 @@ function placeInline(){ if(!inlineH) return; if(planEd&&planEd.skv&&inlineH.kind
   if(ied._home&&ied.parentNode!==ied._home){ ied._home.appendChild(ied); ied.style.position=''; ied.style.zIndex=''; } const p=toS(inlineH.w); ied.style.left=p.x+'px'; ied.style.top=p.y+'px'; }
 function openInline(h){
   setTimeout(()=>inlineKeep(h),90); // план не прыгает: сдвиг — только если ввод закроет клавиатура, ровно настолько и плавно
-  inlineH=h; selId=h.mvW||h.id; selJoint=null; panelKey=''; syncPanel();
+  inlineH=h; if(h.kind!=='jang'){ selId=h.mvW||h.id; selJoint=null; } panelKey=''; syncPanel(); /* a vertex angle: the vertex stays selected */
   ied.inputMode=h.kind==='tx'?'text':(KP.touch?'none':'decimal'); if(h.kind==='tx') delete ied.dataset.num; else ied.dataset.num='1'; ied.style.width=h.kind==='tx'?'min(260px,70vw)':'';
   ied.value=h.kind==='tx'?String(h.val):h.kind==='ang'||h.kind==='rfH'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
   inlineOpenT=Date.now(); ied.focus(); ied.select();
@@ -3062,6 +3070,7 @@ function closeInline(apply){
   if(!inlineH) return; const h=inlineH; inlineH=null; ied.hidden=true;
   if(!apply) {redraw();return;}
   if(h.kind==='sk'){ const v=parseNum(ied.value); if(planEd&&isFinite(v)) h.fn(v); else redraw(); return; }
+  if(h.kind==='jang'){ const v=parseNum(ied.value); if(!isFinite(v)||Math.abs(v-h.val)<0.05){ redraw(); return; } jangSet(h,v); return; }
   if(h.kind==='adim'){ const v=parseNum(ied.value), A=doc.items.find(i=>i.id===h.id); if(!A||!isFinite(v)||Math.abs(v-h.val)<0.05){ redraw(); return; } adSet(A,v); return; }
   if(h.kind==='arr'){ const v=parseNum(ied.value); if(!isFinite(v)||Math.abs(v-h.val)<0.05){ redraw(); return; } h.fn(v); persist(); panelKey=''; syncPanel(); redraw(); return; }
   if(h.kind==='chs'){ const v=parseNum(ied.value); if(!(v>=25)||Math.abs(v-h.val)<0.05){ redraw(); return; } pushUndo(); h.fn(v); persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); return; }
@@ -3610,18 +3619,23 @@ function tempDimList(){
   for(const sg of segs){ if(sg.k==='aux') continue;
     if(Math.abs(sg.a.x-sg.b.x)<0.5){ const x=sg.a.x, lo=Math.min(sg.a.y,sg.b.y), hi=Math.max(sg.a.y,sg.b.y), ol=Math.max(lo,y0), oh=Math.min(hi,y1);
       if(ol>oh+0.5) continue; const at=(ol+oh)/2;
-      if(x>x1+0.5&&(!best['+x']||x<best['+x'].t)) best['+x']={t:x,at,it:sg.it};
-      if(x<x0-0.5&&(!best['-x']||x>best['-x'].t)) best['-x']={t:x,at,it:sg.it}; }
+      if(x>x1+0.5&&(!best['+x']||x<best['+x'].t)) best['+x']={t:x,at,lo:ol,hi:oh,it:sg.it};
+      if(x<x0-0.5&&(!best['-x']||x>best['-x'].t)) best['-x']={t:x,at,lo:ol,hi:oh,it:sg.it}; }
     else if(Math.abs(sg.a.y-sg.b.y)<0.5){ const y=sg.a.y, lo=Math.min(sg.a.x,sg.b.x), hi=Math.max(sg.a.x,sg.b.x), ol=Math.max(lo,x0), oh=Math.min(hi,x1);
       if(ol>oh+0.5) continue; const at=(ol+oh)/2;
-      if(y>y1+0.5&&(!best['+y']||y<best['+y'].t)) best['+y']={t:y,at,it:sg.it};
-      if(y<y0-0.5&&(!best['-y']||y>best['-y'].t)) best['-y']={t:y,at,it:sg.it}; } }
+      if(y>y1+0.5&&(!best['+y']||y<best['+y'].t)) best['+y']={t:y,at,lo:ol,hi:oh,it:sg.it};
+      if(y<y0-0.5&&(!best['-y']||y>best['-y'].t)) best['-y']={t:y,at,lo:ol,hi:oh,it:sg.it}; } }
   const out=[];
   for(const dir of ['+x','-x','+y','-y']){ if(only&&dir[1]!==only) continue;
-    const hz=dir[1]==='x', sg=dir[0]==='+'?1:-1, m=(sel.tface&&sel.tface[dir])||0, e=tdNear(B,dir,m);
+    const hz=dir[1]==='x', sg=dir[0]==='+'?1:-1, m=(sel.tface&&sel.tface[dir])||0; let e=tdNear(B,dir,m), eF0=null;
     let ref=(tdDrag&&tdDrag.dir===dir)?tdDrag.pt:trefPt(sel.tref&&sel.tref[dir]); let t=null, at=null, man=false;
     if(ref){ const rt=hz?ref.x:ref.y; if((rt-(hz?(sg>0?x1:x0):(sg>0?y1:y0)))*sg>0.5){ t=rt; at=hz?Math.max(y0,Math.min(y1,ref.y)):Math.max(x0,Math.min(x1,ref.x)); man=true; } }
     let tw=null; if(t===null&&best[dir]){ t=best[dir].t; at=best[dir].at; tw=best[dir].it||null; }
+    /* a slanted wall: the dimension sits at the middle of the wall and starts on the chosen face line (near / centre / far) — it never hangs in the air */
+    if(t!==null&&B.items.length===1&&isWall(sel)&&!isArc(sel)){ const u=unit(sel.a,sel.b), ua=hz?u.y:u.x; if(Math.abs(ua)>1e-6&&Math.abs(hz?u.x:u.y)>1e-6){
+      if(!man&&best[dir]){ const mid=hz?(sel.a.y+sel.b.y)/2:(sel.a.x+sel.b.x)/2; at=Math.max(best[dir].lo,Math.min(best[dir].hi,mid)); }
+      const n=lft(u), o=offs(sel), cAt=off=>{ const P={x:sel.a.x+n.x*off,y:sel.a.y+n.y*off}, k=((hz?at:at)-(hz?P.y:P.x))/ua; return hz?P.x+u.x*k:P.y+u.y*k; };
+      const F=[cAt(o.L),cAt(-o.R)].sort((p,q)=>(q-p)*sg), cen=cAt((o.L-o.R)/2); e=m===1?cen:m===2?F[1]:F[0]; eF0=F[0]; } }
     else if(man){ for(const sg2 of segs){ if(!sg2.it) continue; const vx=Math.abs(sg2.a.x-sg2.b.x)<0.5, vy=Math.abs(sg2.a.y-sg2.b.y)<0.5; if(hz?!vx:!vy) continue; const c=hz?sg2.a.x:sg2.a.y; if(Math.abs(c-t)>1) continue; const lo=Math.min(hz?sg2.a.y:sg2.a.x,hz?sg2.b.y:sg2.b.x)-1, hi=Math.max(hz?sg2.a.y:sg2.a.x,hz?sg2.b.y:sg2.b.x)+1, rq=hz?ref.y:ref.x; if(rq<lo||rq>hi) continue; tw=sg2.it; break; }
       if(tw&&!(tdDrag&&tdDrag.dir===dir)&&sel.tref&&sel.tref[dir]&&!sel.tref[dir].id){ const R=trefMake(ref,S); if(R.id) for(const it2 of B.items) if(it2.tref&&it2.tref[dir]) it2.tref[dir]=R; } }
     if(t===null) continue;
@@ -3629,7 +3643,7 @@ function tempDimList(){
     if(!man&&m&&tw&&isWall(tw)&&!isArc(tw)&&B.items.every(i=>TD3.has(i.t)&&(i.t!=='line'||isWall(i)))){ const P=wallPoly(tw), c1=hz?P.aL.x:P.aL.y, c2=hz?P.aR.x:P.aR.y, par=hz?Math.abs(P.aL.x-P.bL.x)<0.5:Math.abs(P.aL.y-P.bL.y)<0.5;
       if(par&&(Math.abs(c1-t)<1||Math.abs(c2-t)<1)){ const o=Math.abs(c1-t)<1?c2:c1; t=m===1?(t+o)/2:o; } }
     const d=(t-e)*sg; if(d<0.5&&!man) continue;
-    const f0=tdNear(B,dir,0); out.push({dir,d,man,ref:man?ref:null,m,tw,A:hz?{x:e,y:at}:{x:at,y:e},B:hz?{x:t,y:at}:{x:at,y:t},F0:hz?{x:f0,y:at}:{x:at,y:f0}});
+    const f0=eF0!=null?eF0:tdNear(B,dir,0); out.push({dir,d,man,ref:man?ref:null,m,tw,A:hz?{x:e,y:at}:{x:at,y:e},B:hz?{x:t,y:at}:{x:at,y:t},F0:hz?{x:f0,y:at}:{x:at,y:f0}});
   }
   return out;
 }
@@ -5644,7 +5658,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.29':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.30':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
