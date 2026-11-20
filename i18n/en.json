@@ -5314,5 +5314,19 @@
 "недоступен в этой сборке": "is not available in this build",
 "Firebase не подключён": "Firebase is not connected",
 "Вход не выполнен:": "Not signed in:",
-"Синие числа — расстояние до стен; двойное касание — размеры дымохода": "Blue numbers are distances to the walls; double tap for the chimney size"
+"Синие числа — расстояние до стен; двойное касание — размеры дымохода": "Blue numbers are distances to the walls; double tap for the chimney size",
+"От внешней грани первого до внешней грани последнего, мм": "From the outer edge of the first to the outer edge of the last, mm",
+"Размер между копиями": "Distance between copies",
+"общ": "total",
+"Шаг: от центра до центра": "Step: centre to centre",
+"Сначала укажите количество больше": "First set a count greater than",
+"Массив копий: количество, шаг, общая длина": "Array of copies: count, step, overall length",
+"Зазор: от грани до грани": "Gap: edge to edge",
+"Общая длина по": "Overall length along",
+"От центра первого до центра последнего, мм": "From the centre of the first to the centre of the last, mm",
+"Ц–Ц": "C–C",
+"общая": "overall",
+"Указать общую длину — копии встанут равномерно": "Set the overall length: copies are spaced evenly",
+"Общая длина": "Overall length",
+"Не помещается: общая длина меньше": "Does not fit: the overall length is less than"
 }
