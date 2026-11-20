@@ -2224,13 +2224,14 @@ function actGlow(c,A,B){ c.save(); c.setLineDash([]); c.strokeStyle='rgba(77,171
 function tmpBox(txt,x,y,rot,act){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.font='600 12px '+FNUM; const w=ctx.measureText(txt).width+12, col=act?ACT:C.sel;
   ctx.fillStyle=act?ACT:C.surface; ctx.strokeStyle=col; ctx.lineWidth=act?2:1.2; ctx.beginPath(); ctx.roundRect?ctx.roundRect(-w/2,-10,w,20,4):ctx.rect(-w/2,-10,w,20); ctx.fill(); ctx.stroke();
   ctx.fillStyle=act?'#fff':col; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt,0,0.5); ctx.restore(); }
-function drawSelTemp(){ const it=tmpTarget(); if(!it) return; const len=lineLen(it); if(len<1) return;
+function drawSelTemp(){ const o=C.sel; C.sel=C.td||o; try{ drawSelTemp0(); } finally{ C.sel=o; } } /* the wall's own length and angle: violet and dashed, like all temporary dimensions */
+function drawSelTemp0(){ const it=tmpTarget(); if(!it) return; const len=lineLen(it); if(len<1) return;
   const u=unit(it.a,it.b), n=lft(u), sd=isWall(it)?(it.side||0):0, sg=sd>0?-1:1, o=isWall(it)?offs(it):{L:0,R:0}, ext=sg>0?o.L:o.R;
   const k=1/view.scale, off=ext+26*k, P=(q,f)=>({x:q.x+n.x*sg*f,y:q.y+n.y*sg*f});
   const A=P(it.a,off), B=P(it.b,off);
   ctx.save(); ctx.strokeStyle=C.sel; ctx.lineWidth=1;
   line(toS(P(it.a,ext+4*k)),toS(P(it.a,off+6*k))); line(toS(P(it.b,ext+4*k)),toS(P(it.b,off+6*k)));
-  line(toS({x:A.x-u.x*6*k,y:A.y-u.y*6*k}),toS({x:B.x+u.x*6*k,y:B.y+u.y*6*k}));
+  ctx.setLineDash([5,3]); line(toS({x:A.x-u.x*6*k,y:A.y-u.y*6*k}),toS({x:B.x+u.x*6*k,y:B.y+u.y*6*k})); ctx.setLineDash([]);
   for(const Q of [A,B]){ const t=toS(Q), d={x:(u.x+n.x)*4,y:-(u.y+n.y)*4}; line({x:t.x-d.x,y:t.y-d.y},{x:t.x+d.x,y:t.y+d.y}); }
   // длина
   const wm=P({x:(it.a.x+it.b.x)/2,y:(it.a.y+it.b.y)/2},off+12*k), m=toS(wm);
@@ -3531,7 +3532,7 @@ function tdBox(){
   if(!pr.length) return null;
   let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity; for(const q of pr){x0=Math.min(x0,q.x);x1=Math.max(x1,q.x);y0=Math.min(y0,q.y);y1=Math.max(y1,q.y);}
   let cx=(x0+x1)/2, cy=(y0+y1)/2;
-  if(items.length===1&&items[0].t==='line'){ cx=(items[0].a.x+items[0].b.x)/2; cy=(items[0].a.y+items[0].b.y)/2; }
+  if(items.length===1&&items[0].t==='line'&&!isWall(items[0])){ cx=(items[0].a.x+items[0].b.x)/2; cy=(items[0].a.y+items[0].b.y)/2; } /* a wall keeps the box centre — the middle of its thickness */
   else if(items.length===1&&items[0].t==='circ'){ cx=items[0].c.x; cy=items[0].c.y; }
   else if(items.length===1&&(items[0].t==='chim'||items[0].t==='dev'||items[0].t==='fnd'&&items[0].p)){ cx=items[0].p.x; cy=items[0].p.y; }
   else if(items.length===1&&items[0].t==='prim'){ const c=primCen(items[0]); if(c){ cx=c.x; cy=c.y; } } /* «от центра» — from the centre of the shape */
@@ -3587,7 +3588,9 @@ function tempDimList(){
   }
   return out;
 }
-function drawTempDims(){
+function drawTempDims(){ const o=C.sel; SELB=o; C.sel=C.td||o; try{ drawTempDims0(); } finally{ C.sel=o; } }
+let SELB=null;
+function drawTempDims0(){
   const L=tempDimList(); if(!L.length) return; const GH=tool==='hole'&&!!chimPrev, TC=C.td||C.sel; /* temporary dimensions: violet, apart from the blue selection */
   const RA=new Set(); for(const d of doc.items){ if(d.t!=='dim'||!dimActSel(d)) continue; const g=dimGeom(d); RA.add(Math.abs(g.u.x)>=Math.abs(g.u.y)?'x':'y'); } // свой красный размер по этой оси — синий временный не дублирует
   for(const t of L){ if(RA.has(t.dir[1])) continue; const A=toS(t.A),B=toS(t.B); const hz=t.dir[1]==='x', act=!!(inlineH&&inlineH.kind==='td'&&inlineH.dir===t.dir);
@@ -3598,7 +3601,7 @@ function drawTempDims(){
     if(!GH){ ctx.beginPath(); ctx.arc(B.x,B.y,6,0,Math.PI*2); ctx.fillStyle=t.man?TC:C.surface; ctx.fill(); ctx.strokeStyle=TC; ctx.lineWidth=1.5; ctx.stroke(); }
     const AL=Math.hypot(B.x-A.x,B.y-A.y)||1, uB={x:(B.x-A.x)/AL,y:(B.y-A.y)/AL}, F0=toS(t.F0||t.A), ko=16, NA={x:F0.x+uB.x*ko,y:F0.y+uB.y*ko}; /* the square stays by the near face */
     { ctx.save(); ctx.strokeStyle=t.m===2?'#2f9e44':TC; ctx.lineWidth=3; ctx.lineCap='round'; const k=11; line({x:A.x-uB.y*k,y:A.y+uB.x*k},{x:A.x+uB.y*k,y:A.y-uB.x*k}); ctx.restore(); } /* tick: where it starts on the object — face, centre or outer face */
-    if(!GH){ ctx.save(); ctx.fillStyle=t.m===2?'#2f9e44':t.m===1?C.sel:C.surface; ctx.strokeStyle=t.m===2?'#2f9e44':TC; ctx.lineWidth=1.5; ctx.fillRect(NA.x-4.5,NA.y-4.5,9,9); ctx.strokeRect(NA.x-4.5,NA.y-4.5,9,9); ctx.restore(); }
+    if(!GH){ ctx.save(); ctx.fillStyle=t.m===2?'#2f9e44':t.m===1?(SELB||C.sel):C.surface; ctx.strokeStyle=t.m===2?'#2f9e44':TC; ctx.lineWidth=1.5; ctx.fillRect(NA.x-4.5,NA.y-4.5,9,9); ctx.strokeRect(NA.x-4.5,NA.y-4.5,9,9); ctx.restore(); }
     if(!GH) tdHits.push({kind:'far',dir:t.dir,x:B.x,y:B.y,man:t.man},{kind:'near',dir:t.dir,x:NA.x,y:NA.y});
     if(Math.hypot(B.x-A.x,B.y-A.y)<14) continue;
     const wm={x:(t.A.x+t.B.x)/2+(hz?0:-12/view.scale),y:(t.A.y+t.B.y)/2+(hz?12/view.scale:0)}, m=toS(wm);
@@ -5593,7 +5596,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.27':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.28':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
