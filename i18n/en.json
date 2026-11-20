@@ -5328,5 +5328,8 @@
 "общая": "overall",
 "Указать общую длину — копии встанут равномерно": "Set the overall length: copies are spaced evenly",
 "Общая длина": "Overall length",
-"Не помещается: общая длина меньше": "Does not fit: the overall length is less than"
+"Не помещается: общая длина меньше": "Does not fit: the overall length is less than",
+"От внутренней грани первого до внутренней грани последнего, мм": "From the inner edge of the first to the inner edge of the last, mm",
+"объект сдвинут": "object moved",
+"Не помещается: копии налезут друг на друга": "Does not fit: the copies would overlap"
 }
