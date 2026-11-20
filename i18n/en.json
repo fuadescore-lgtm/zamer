@@ -5334,5 +5334,20 @@
 "Не помещается: копии налезут друг на друга": "Does not fit: the copies would overlap",
 "грань — грань": "face to face",
 "внешние грани": "outer faces",
-"центр — центр": "centre to centre"
+"центр — центр": "centre to centre",
+"Угловой размер": "Angular dimension",
+"Коснитесь второй грани": "Tap the second face",
+"Выделите стену и коснитесь числа — угол можно задать": "Select a wall and tap the number to set the angle",
+"Теперь коснитесь второй грани": "Now tap the second face",
+"Угловой": "Angular",
+"Угловой размер: коснитесь грани стены или линии": "Angular dimension: tap a wall face or a line",
+"Линейный размер": "Linear dimension",
+"Вид размера": "Dimension type",
+"Ведите к нужному углу и коснитесь — размер встанет": "Move to the angle you need and tap to place it",
+"Угловой размер: коснитесь первой грани": "Angular dimension: tap the first face",
+"Линейный": "Linear",
+"и меньше": "and less than",
+"Угол — больше": "The angle must be more than",
+"Угловой размер: две грани, затем четверть": "Angular dimension: two faces, then the quarter",
+"Грани параллельны — угла нет": "The faces are parallel: there is no angle"
 }
