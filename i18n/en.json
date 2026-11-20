@@ -5331,5 +5331,8 @@
 "Не помещается: общая длина меньше": "Does not fit: the overall length is less than",
 "От внутренней грани первого до внутренней грани последнего, мм": "From the inner edge of the first to the inner edge of the last, mm",
 "объект сдвинут": "object moved",
-"Не помещается: копии налезут друг на друга": "Does not fit: the copies would overlap"
+"Не помещается: копии налезут друг на друга": "Does not fit: the copies would overlap",
+"грань — грань": "face to face",
+"внешние грани": "outer faces",
+"центр — центр": "centre to centre"
 }
