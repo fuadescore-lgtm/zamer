@@ -5377,5 +5377,12 @@
 "Вверх или вниз": "Up or down",
 "перепад": "rise",
 "опорной грани": "the kept edge",
-"Насколько противоположный край выше (+) или ниже": "How much higher (+) or lower"
+"Насколько противоположный край выше (+) или ниже": "How much higher (+) or lower",
+"верха": "top",
+"верх плиты": "top of the slab",
+"плиты от выбранного нуля («от»), мм": "of the slab from the chosen zero («from»), mm",
+"низа": "bottom",
+"Отметка": "Elevation",
+"Отметка — по низу или верху плиты": "Elevation — by the bottom or top of the slab",
+"низ плиты": "bottom of the slab"
 }
