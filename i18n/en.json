@@ -5360,5 +5360,10 @@
 "Сразу на": "Right away by",
 "ведите — объекты поворачиваются; касание — зафиксировать": "move: the objects turn; tap to fix",
 "коснитесь опорной точки: вершина, середина грани или центр": "tap the base point: a vertex, a face middle or a centre",
-"угол": "corner"
+"угол": "corner",
+"Повернуть выделенные": "Rotate the selection",
+"Сколько копий: каждая следующая повёрнута ещё на тот же угол": "How many copies: each next one turned by the same angle again",
+"Исходные остаются, появляются повёрнутые копии": "The originals stay; rotated copies appear",
+"Копий": "Copies",
+"Повернуть или копировать": "Rotate or copy"
 }
