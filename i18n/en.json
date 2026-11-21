@@ -5374,5 +5374,8 @@
 "Уклон перекрытия — до": "Slab slope: up to",
 "Единицы уклона": "Slope units",
 "на грани — задать уклон": "on an edge: set a slope",
-"Вверх или вниз": "Up or down"
+"Вверх или вниз": "Up or down",
+"перепад": "rise",
+"опорной грани": "the kept edge",
+"Насколько противоположный край выше (+) или ниже": "How much higher (+) or lower"
 }
