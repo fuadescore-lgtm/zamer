@@ -1090,7 +1090,7 @@ function fndSlabHouse(){ const W=doc.items.filter(isWall); if(!W.length){ toast(
 /* ---------- «Переместить»: точки привязки (центр, углы / четверти), магнит к точкам соседей и выравнивание по X/Y пунктиром ---------- */
 let mvB=null, mvGuide=null, mvAx0=null, mvSelId=null;
 function mvExit(){ if(!mvB) return; mvB=false; mvGuide=null; mvSelId=null; if(mvAx0){ setAxis(mvAx0); mvAx0=null; } panelKey=''; syncPanel(); redraw(); }
-const MVT=it=>!!it&&!isHole(it)&&['chim','beam','fnd','tree','prim','dev','circ','text','stair','img','skyl','dorm'].includes(it.t)||isHole(it)||(!!it&&it.t==='line');
+const MVT=it=>!!it&&!isHole(it)&&['chim','beam','fnd','tree','prim','dev','circ','text','stair','img','skyl','dorm','roof'].includes(it.t)||isHole(it)||(!!it&&it.t==='line');
 function gripsOf(it){ const G=[]; try{
   if(it.t==='chim'){ G.push({...it.p,k:'c'}); if(chimRound(it)){ const r=it.w/2; G.push({x:it.p.x+r,y:it.p.y},{x:it.p.x-r,y:it.p.y},{x:it.p.x,y:it.p.y+r},{x:it.p.x,y:it.p.y-r}); } else G.push(...chimCorners(it)); }
   else if(it.t==='prim'){ G.push(...primGrips(it)); }
@@ -1105,6 +1105,8 @@ function gripsOf(it){ const G=[]; try{
       const add=q=>{ if(!G.some(g=>Math.hypot(g.x-q.x,g.y-q.y)<1)) G.push(q); };
       let F=[]; try{ F=wallFootprint(it,-1e6,1e6)||[]; }catch(_){} for(const q of F) add({x:r3(q.x),y:r3(q.y)});
       for(const q of [A1,B1,A2,B2,M(A1,B1),M(A2,B2),M(A1,A2),M(B1,B2)]) add(q); } } }
+  else if(it.t==='roof'&&it.pts){ /* roof: corners and edge middles of the wall outline and of the eave */ const add=(P,mid)=>{ const n=P.length; for(let i=0;i<n;i++){ const A=P[i],B=P[(i+1)%n]; if(!G.some(g=>Math.hypot(g.x-A.x,g.y-A.y)<1)) G.push({x:A.x,y:A.y}); if(mid) G.push({x:(A.x+B.x)/2,y:(A.y+B.y)/2}); } };
+    add(it.pts,true); let O=null; try{ const li=doc.levels.findIndex(L=>L.items.includes(it)); O=(roofGeom(it,li<0?doc.curLv:li)||{}).O; }catch(_){} if(O&&O.length>2) add(O,true); }
   else if(it.p) G.push({...it.p,k:'c'});
   else if(it.pts) G.push(...it.pts);
   }catch(_){} return G; }
@@ -3227,7 +3229,7 @@ function buildRefs(attach,SEL,all){ SEL=SEL||moveSel; if(!all&&[...SEL].some(id=
     if(it.t==='prim'){ if(it.k==='sweep'&&it.pts) it.pts.forEach((q,i)=>{ refs.push({it,k:i,arr:true,o:{...q}}); }); else add(it,'p'); for(const s2 of doc.items) if(s2.t==='solar'&&s2.prim===it.id&&!SEL.has(s2.id)){ add(s2,'p'); if(s2.fq) add(s2,'fq'); } continue; }
     if(it.t==='tree'||it.t==='fnd'&&it.p){ add(it,'p'); continue; }
     if(it.t==='fnd'&&it.col) continue;
-    if(it.t==='stair'||it.t==='roof'||it.t==='slab'||it.t==='rail'||it.t==='cab'){ it.pts.forEach((q,i)=>{ const r={it,k:i,arr:true,o:{...q}}; refs.push(r); }); continue; }
+    if(it.t==='stair'||it.t==='roof'||it.t==='slab'||it.t==='rail'||it.t==='cab'){ it.pts.forEach((q,i)=>{ const r={it,k:i,arr:true,o:{...q}}; refs.push(r); }); if(it.t==='roof'&&it.plan&&Array.isArray(it.plan.L)) for(const l of it.plan.L) for(const k of ['a','b']) if(l[k]) refs.push({it:l,k,o:{...l[k]}}); /* «План кровли» lines move with the roof */ continue; }
     if(it.t==='text'||it.t==='chim'||it.t==='img'||it.t==='dev'||isIns(it)){ add(it,'p'); if(it.fq) add(it,'fq'); } else if(it.t==='circ') add(it,'c'); else { add(it,'a'); add(it,'b'); if(it.t==='line'&&(!it.g||it.g===editGrp)){ pts.push({...it.a,g:it.g,W:it,k:'a'},{...it.b,g:it.g,W:it,k:'b'}); if(!it.g) movL.push(it); } } }
   if(attach){
     for(const it of doc.items){ if(SEL.has(it.id)||(it.t!=='line'&&it.t!=='dim')) continue;
@@ -4168,7 +4170,7 @@ function arrDef(){ if(!doc.settings.arr) doc.settings.arr={nx:3,dx:1500,ny:1,dy:
 function arrAxes(items){ const ins=items.length&&items.every(isIns)&&items.every(i=>i.roof===items[0].roof); if(ins){ const F=insFrame(items[0]); if(F) return {roof:true,ax:F.u,ay:{x:F.b.x*F.ca,y:F.b.y*F.ca}}; }
   const a=(arrDef().ang||0)*Math.PI/180; return {roof:false,ax:{x:Math.cos(a),y:Math.sin(a)},ay:{x:-Math.sin(a),y:Math.cos(a)}}; }
 function arrOffsets(items){ const d=arrDef(), A=arrAxes(items), out=[]; for(let j=0;j<Math.max(1,d.ny|0);j++) for(let i=0;i<Math.max(1,d.nx|0);i++){ if(!i&&!j) continue; out.push({x:A.ax.x*d.dx*i+A.ay.x*d.dy*j,y:A.ax.y*d.dx*i+A.ay.y*d.dy*j}); } return out; }
-function shiftItem(it,dx,dy){ for(const k of ['a','b','p','c','fq']) if(it[k]&&typeof it[k].x==='number') it[k]={x:r3(it[k].x+dx),y:r3(it[k].y+dy)}; if(Array.isArray(it.pts)) it.pts=it.pts.map(q=>({x:r3(q.x+dx),y:r3(q.y+dy)})); if(Array.isArray(it.holes)) it.holes=it.holes.map(H=>H.map(q=>({x:r3(q.x+dx),y:r3(q.y+dy)}))); if(it.ld&&it.ld.pt) it.ld.pt={x:r3(it.ld.pt.x+dx),y:r3(it.ld.pt.y+dy)}; if(it.t==='roof'){ it.src='manual'; delete it.seed; delete it.wk; delete it.pk; } }
+function shiftItem(it,dx,dy){ for(const k of ['a','b','p','c','fq']) if(it[k]&&typeof it[k].x==='number') it[k]={x:r3(it[k].x+dx),y:r3(it[k].y+dy)}; if(Array.isArray(it.pts)) it.pts=it.pts.map(q=>({x:r3(q.x+dx),y:r3(q.y+dy)})); if(Array.isArray(it.holes)) it.holes=it.holes.map(H=>H.map(q=>({x:r3(q.x+dx),y:r3(q.y+dy)}))); if(it.ld&&it.ld.pt) it.ld.pt={x:r3(it.ld.pt.x+dx),y:r3(it.ld.pt.y+dy)}; if(it.t==='roof'){ if(it.plan&&Array.isArray(it.plan.L)) for(const l of it.plan.L) for(const k of ['a','b']) if(l[k]) l[k]={...l[k],x:r3(l[k].x+dx),y:r3(l[k].y+dy)}; /* «План кровли»: ridges and joints go with the outline */ it.src='manual'; delete it.seed; delete it.wk; delete it.pk; } }
 
 // ---------- фильтр выбора и общая правка группы одной категории ----------
 // ---------- «⧉ N»: выбор среди наложенных элементов (план, 3D, фасады) ----------
@@ -4772,8 +4774,7 @@ function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.cu
       ${IB('bndEd','bnd','Редактировать эскиз')}${sel.type==='prc'?'':ridgeFld(sel)+rmBtn(sel,'data-act="rfRm"')+(isPR(sel)?'':ridgeFix(sel))}${(()=>{ if(sel.type==='prc') return ''; const H=ridgeSelOf(sel); if(!H) return ''; const G=ridgeGroup(sel,H.key); return G?`<button class="btn" data-act="rgSplit" title="Разъединить коньки" style="color:#d33b2c">⛓ Объединены ✕</button>`:`<button class="btn" data-act="rgJoin" aria-pressed="${!!(ridgePick&&ridgePick.id===sel.id)}" title="Объединить с другим коньком на той же оси: затем коснитесь второго конька">⛓ Объединить</button>`; })()}`
       :`${ICOPY()}${IDEL()}${IB('rfEd','pen','Изменить крышу: контур, скаты, свесы (двойное касание)')}${IB('bndEd','bnd',isExt(sel)?'Редактировать эскиз: профиль на фасаде':'Редактировать эскиз')}${lvSel(sel)}
       ${ridgeFld(sel)}${rmBtn(sel,'data-act="rfRm"')}${sel.type!=='flat'&&sel.type!=='prc'&&!isExt(sel)?'<button class="btn" data-act="rfWalk" title="На объекте: касание ската — ввод замеренного уклона (или датчиком телефона); остальные скаты строятся по первому">⟲ Обход скатов</button>':''}${(()=>{ const BL=roofBaseLevel(sel,doc.curLv), off=r1(roofBase(sel,doc.curLv)-BL.elev); return `<div class="fld inl"><label for="rfB" title="Смещение низа крыши от её уровня, мм">Низ</label><input class="inp xs" id="rfB" inputmode="decimal" value="${off}"></div>`; })()}
-      ${sel.type!=='flat'?`<div class="seg" role="group" aria-label="Высота края h — по низу или верху кровли"><button data-act="rhBot" aria-pressed="${!doc.settings.rhTop}" title="h — низ кровли у края (дальномер снизу)">h низ</button><button data-act="rhTop" aria-pressed="${!!doc.settings.rhTop}" title="h — верх кровли у края">h верх</button></div>${zRefSel('rfZ')}`:''}
-      ${IB('v3d','box','Показать в 3D')}`;
+      ${sel.type!=='flat'?`<div class="seg" role="group" aria-label="Высота края h — по низу или верху кровли"><button data-act="rhBot" aria-pressed="${!doc.settings.rhTop}" title="h — низ кровли у края (дальномер снизу)">h низ</button><button data-act="rhTop" aria-pressed="${!!doc.settings.rhTop}" title="h — верх кровли у края">h верх</button></div>${zRefSel('rfZ')}`:''}`;
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='dev'&&!moveSel.size){ h=HDEV[sel.k]?devPanelH(sel):devPanel(sel);
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='cab'&&!moveSel.size){ h=cabPanel(sel);
   } else if((tool==='select'||tool==='move')&&sel&&sel.t==='rail'&&!moveSel.size){ const k=sel.kind||'bal', li=doc.curLv;
@@ -5706,7 +5707,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.35':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.36':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -7256,7 +7257,7 @@ function roofPlan(r){ if(isExt(r)){ const g=roofGeom(r), ridges=[], arrows=[], F
     arrows.push({c,i:pl.i,d:{x:-pl.dn.x,y:-pl.dn.y},a:g.prc?pl.a:g.E[pl.i].a,...(g.prc||(r.main!=null&&isPR(r)&&pl.i!==r.main)?{ro:true}:{}),...(r.main===pl.i&&isPR(r)?{mn:true}:{}),...(CN?{rng:[CN.amin,CN.amax]}:{})}); }
   return {g,ridges,arrows}; }
 function roofBadges(r){ const P=r.pts, n=P.length, sg=polyArea2(P)>0?1:-1; let CS=[]; if(isPR(r)){ try{ const G=planG(r); CS=G&&G.cones||[]; }catch(e){} }
-  return P.map((A,i)=>{ const B=P[(i+1)%n], u=unit(A,B), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+B.x)/2,y:(A.y+B.y)/2}, ov=roofOv(r,i), t=0.3; return {i,p:m,out,ov,s:toS({x:m.x+u.x*Math.hypot(B.x-A.x,B.y-A.y)*t+out.x*ov/2,y:m.y+u.y*Math.hypot(B.x-A.x,B.y-A.y)*t+out.y*ov/2})}; }).filter(b=>!(r.edges&&r.edges[b.i]&&r.edges[b.i].stp)&&!CS.some(C=>C.ks.includes(b.i)&&b.i!==C.mid)); } // the step between the halves of a gable stays a gable — no slope/gable badge
+  return P.map((A,i)=>{ const B=P[(i+1)%n], u=unit(A,B), out={x:u.y*sg,y:-u.x*sg}, m={x:(A.x+B.x)/2,y:(A.y+B.y)/2}, ov=roofOv(r,i), t=0.23; return {i,p:m,out,ov,s:toS({x:m.x+u.x*Math.hypot(B.x-A.x,B.y-A.y)*t+out.x*ov,y:m.y+u.y*Math.hypot(B.x-A.x,B.y-A.y)*t+out.y*ov})}; }).filter(b=>!(r.edges&&r.edges[b.i]&&r.edges[b.i].stp)&&!CS.some(C=>C.ks.includes(b.i)&&b.i!==C.mid)); } // the step between the halves of a gable stays a gable — no slope/gable badge
 let roofEdge=null, roofEd=null, stEd=null, roofSk=null, roofSkLive=null;
 /* «План кровли»: drawing ridges (k='r') and joints (k='j') on a roof, or picking lines (k='s') */
 /* «План кровли» — an editor of plain lines: contour (t:'c'), ridges ('r'), joints ('j'). Every line draws exactly like «Линии»: chain, the segment under the finger,
@@ -8374,8 +8375,9 @@ function drawRoof(it,sel){ if(planEd&&planEd.id===it.id) return; /* being edited
     for(let i=0;i<n;i++){ const A=P[i],B=P[(i+1)%n], o=VS.find(v=>v.i===i); if(o){ dia(toS({x:(A.x+o.X.x)/2,y:(A.y+o.X.y)/2})); dia(toS({x:(B.x+o.X.x)/2,y:(B.y+o.X.y)/2})); continue; } dia(toS({x:(A.x+B.x)/2,y:(A.y+B.y)/2})); }
     ctx.restore(); }
   if(sel&&tool==='select'&&!moveSel.size&&!isExt(it)&&!(roofWalk&&roofWalk.id===it.id)&&roofEd!==it.id) drawRoofEdgeH(it); // edit mode (double tap): heights hidden — they covered the overhang labels
-  if(sel&&!isExt(it)){ for(const b of roofBadges(it)){ const on=g.E[b.i]&&g.E[b.i].s, cur=!!(roofEdge&&roofEdge.id===it.id&&roofEdge.i===b.i); ctx.beginPath(); ctx.arc(b.s.x,b.s.y,cur?13:11,0,Math.PI*2); ctx.fillStyle=on?C.sel:C.surface; ctx.fill(); ctx.lineWidth=cur?3:1.5; ctx.strokeStyle=C.sel; ctx.stroke();
-      ctx.fillStyle=on?'#fff':C.sel; ctx.font='700 11px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(on?'⟋':'—',b.s.x,b.s.y+0.5); } }
+  if(sel&&!isExt(it)){ for(const b of roofBadges(it)){ const on=!!(g.E[b.i]&&g.E[b.i].s), cur=!!(roofEdge&&roofEdge.id===it.id&&roofEdge.i===b.i); /* slope / gable switch: a «∠» chip on the eave line, as on the slab */
+      ctx.save(); ctx.font='700 12px '+FNUM; const t='∠', w=Math.max(14,ctx.measureText(t).width), bg=cur?'#f5c518':on?C.sel:C.surface; ctx.fillStyle=bg; ctx.strokeStyle=cur?'#f5c518':C.sel; ctx.lineWidth=1.5; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(b.s.x-w/2-8,b.s.y-11,w+16,22,11); else ctx.rect(b.s.x-w/2-8,b.s.y-11,w+16,22); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=cur?'#111':on?'#fff':C.sel; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(t,b.s.x,b.s.y+0.5); ctx.restore(); } }
   ctx.restore(); }
 // ---- перекрытие (бетонная плита): контур по точкам, верх = уровень + смещение, толщина вниз ----
 function slabDef(){ if(!doc.settings.slab) doc.settings.slab={th:200,off:0}; return doc.settings.slab; }
