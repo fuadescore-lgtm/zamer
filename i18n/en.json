@@ -5384,5 +5384,12 @@
 "низа": "bottom",
 "Отметка": "Elevation",
 "Отметка — по низу или верху плиты": "Elevation — by the bottom or top of the slab",
-"низ плиты": "bottom of the slab"
+"низ плиты": "bottom of the slab",
+"Граница": "Boundary",
+"Грани с уклоном поднимаются, дальний край на месте": "Sloped edges go up, the far side stays",
+"Грани с уклоном опускаются, дальний край на месте": "Sloped edges go down, the far side stays",
+"Разуклонка": "Slope split",
+"Грани с уклоном — вниз или вверх": "Sloped edges — down or up",
+"Убрать уклон этой грани": "Remove the slope of this edge",
+"Разница между самой высокой и самой низкой точкой верха": "Difference between the highest and the lowest point of the top"
 }
