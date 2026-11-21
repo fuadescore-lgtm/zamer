@@ -5659,7 +5659,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.39':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.40':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -7216,15 +7216,16 @@ let roofEdge=null, roofEd=null, stEd=null, roofSk=null, roofSkLive=null;
    the app's Орто and guides; points attract but never glue. Nothing of the roof is shown while editing; ✓ builds the roof from the lines. */
 let planEd=null;
 function planRoof(){ return planEd&&planEd.id?doc.items.find(i=>i.id===planEd.id&&i.t==='roof'):null; }
-function planFrom(r){ const li=roofLi(r); let R=null; try{ R=onLvG(li,()=>roofPlan(r)); }catch(e){ return []; } const g=R.g, zE=roofBase(r,li), P=r.pts, L=[];
-  const clip=(a,b)=>{ /* keep the part inside the contour (both ends may lie out on the overhang) */ const ins=q=>inPoly(P,q)||segDistPoly(P,q)<2, T=[]; if(ins(a)) T.push(0); if(ins(b)) T.push(1); const v={x:b.x-a.x,y:b.y-a.y};
+function skClip(P,a,b){ /* keep the part inside the contour (both ends may lie out on the overhang) */ const ins=q=>inPoly(P,q)||segDistPoly(P,q)<2, T=[]; if(ins(a)) T.push(0); if(ins(b)) T.push(1); const v={x:b.x-a.x,y:b.y-a.y};
     for(let k=0;k<P.length;k++){ const A=P[k],B=P[(k+1)%P.length], w={x:B.x-A.x,y:B.y-A.y}, den=v.x*w.y-v.y*w.x; if(Math.abs(den)<1e-9) continue; const t=((A.x-a.x)*w.y-(A.y-a.y)*w.x)/den, u=((A.x-a.x)*v.y-(A.y-a.y)*v.x)/den; if(t>=-1e-6&&t<=1+1e-6&&u>=-1e-6&&u<=1+1e-6) T.push(Math.min(1,Math.max(0,t))); }
-    if(T.length<2) return null; const t0=Math.min(...T), t1=Math.max(...T); if(t1-t0<1e-6) return null; const at=t=>({x:a.x+v.x*t,y:a.y+v.y*t}); return [at(t0),at(t1)]; };
+    if(T.length<2) return null; const t0=Math.min(...T), t1=Math.max(...T); if(t1-t0<1e-6) return null; const at=t=>({x:a.x+v.x*t,y:a.y+v.y*t}); return [at(t0),at(t1)]; }
+function planFrom(r){ const li=roofLi(r); let R=null; try{ R=onLvG(li,()=>roofPlan(r)); }catch(e){ return []; } const g=R.g, zE=roofBase(r,li), P=r.pts, L=[];
+  const clip=(a,b)=>skClip(P,a,b);
   for(const [a0,b0] of R.ridges){ const c=clip(a0,b0); if(!c) continue; const [a,b]=c; if(Math.hypot(b.x-a.x,b.y-a.y)<50) continue; const za=g.H(a), zb2=g.H(b), lvl=Math.abs(za-zb2)<20; L.push({a:{x:r3(a.x),y:r3(a.y)},b:{x:r3(b.x),y:r3(b.y)},t:lvl?'r':'j',h:lvl?r1((za+zb2)/2-zE):undefined}); }
   return L; }
 function planOpen(r){ /* r: a roof to edit (its contour and plan become lines), or null: a new roof */ const L=[];
   if(r){ if(polyArea2(r.pts)<0){ r.pts.reverse(); if(r.edges&&r.edges.length===r.pts.length){ const E=r.edges, n=r.pts.length; r.edges=r.pts.map((_,k)=>E[(n-2-k+n)%n]); } }
-    const P=r.pts; if(r.sk&&r.sk.h===skHash(r)) for(const l of r.sk.L) L.push({...l,a:{...l.a},b:{...l.b}}); else for(let k=0;k<P.length;k++) L.push({a:{...P[k]},b:{...P[(k+1)%P.length]},t:'c'}); const pl=r.plan&&r.plan.L?r.plan.L:planFrom(r); for(const l of pl) L.push({...l,a:{...l.a},b:{...l.b}}); }
+    const P=r.pts; if(r.sk&&r.sk.h===skHash(r)) for(const l of r.sk.L) L.push({...l,a:{...l.a},b:{...l.b}}); else for(let k=0;k<P.length;k++) L.push({a:{...P[k]},b:{...P[(k+1)%P.length]},t:'c'}); let pl=r.plan&&r.plan.L?r.plan.L:planFrom(r); if(r.plan&&r.plan.L){ /* the sketch shows the lines as the roof uses them: extended to the contour (a short stub runs on to the edges), clipped to it */ let g=null; try{ g=planG(r); }catch(_){} const S=g&&g.planS; if(S) pl=pl.map((l,k)=>{ const q=S[k]; if(!q||!q.a||!q.b) return l; const c=skClip(P,q.a,q.b); return c&&Math.hypot(c[1].x-c[0].x,c[1].y-c[0].y)>=50?{...l,a:{x:r3(c[0].x),y:r3(c[0].y)},b:{x:r3(c[1].x),y:r3(c[1].y)}}:l; }); } for(const l of pl) L.push({...l,a:{...l.a},b:{...l.b}}); }
   planEd=skState({id:r?r.id:null,L,SP:r&&r.sk&&r.sk.h===skHash(r)?JSON.parse(JSON.stringify(r.sk.SP)):[],acq:[],k:r?'s':'pl',t:'c',a:null,live:null,S:[],H:[]}); roofEd=null; roofEdge=null; if(!r){ setTool('select'); selId=null; }
   panelKey=''; syncPanel(); syncModeBtns(); redraw(); toast(r?'Эскиз крыши: правьте линии; ✓ — построить':'План кровли: тип «Контур» — рисуйте (полилиния, прямоугольник, подобрать стены…), затем тип «Конёк» и «Стык»; ✓ — построить',true); }
 function planStart(r){ if(!r||r.t!=='roof'||isExt(r)||r.type==='prc') return; planOpen(r); }
