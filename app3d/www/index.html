@@ -3064,7 +3064,7 @@ function openInline(h){
   setTimeout(()=>inlineKeep(h),90); // план не прыгает: сдвиг — только если ввод закроет клавиатура, ровно настолько и плавно
   inlineH=h; if(h.kind!=='jang'&&h.kind!=='rota'){ selId=h.mvW||h.id; selJoint=null; } panelKey=''; syncPanel(); /* a vertex angle: the vertex stays selected */
   ied.inputMode=h.kind==='tx'?'text':(KP.touch?'none':'decimal'); if(h.kind==='tx') delete ied.dataset.num; else ied.dataset.num='1'; ied.style.width=h.kind==='tx'?'min(260px,70vw)':'';
-  ied.value=h.kind==='tx'?String(h.val):h.kind==='ang'||h.kind==='rfH'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
+  ied.value=h.kind==='tx'?String(h.val):h.kind==='ang'||h.kind==='rfH'||h.kind==='slH'?String(h.val):String(Math.round(h.val*10)/10); ied.hidden=false; placeInline(); redraw();
   inlineOpenT=Date.now(); ied.focus(); ied.select();
 }
 function closeInline(apply){
@@ -3103,6 +3103,8 @@ function closeInline(apply){
   if(it0&&it0.t==='roof'&&h.kind==='rfS'){ const v=parseNum(ied.value); if(isNaN(v)||Math.abs(v-h.val)<0.05){ redraw(); return; } if(!(v>=100)){ toast('Не соответствует: сторона не короче 100 мм'); redraw(); return; } editBegin();
     if(roofChange(it0,r=>{ const P=r.pts, n=P.length, A=P[h.i], j=(h.i+1)%n, u=unit(A,P[j]); P[j]={x:r3(A.x+u.x*v),y:r3(A.y+u.y*v)}; r.src='manual'; })) toast('Сторона '+(h.i+1)+': '+fmt(v)+' мм');
     return; }
+  if(it0&&it0.t==='slab'&&h.kind==='slH'){ let v=parseNum(ied.value); if(isNaN(v)||Math.abs(v-h.val)<0.0005){ redraw(); return; } if(Math.abs(v)<100) v*=1000; /* the slab mark: bottom or top (h низ / h верх) from the chosen zero — sets the slab height */
+    const L=doc.levels[doc.curLv], top=doc.settings.rhTop?v+zRefE():v+zRefE()+(it0.th||200), off=r1(top-L.elev); if(!(Math.abs(off)<=20000)){ toast('Не соответствует: смещение ±20000 мм',true); redraw(); return; } pushUndo(); it0.off=off; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); return; }
   if(it0&&it0.t==='roof'&&h.kind==='rfH'&&h.e==='rg'&&isPR(it0)&&it0.main!=null){ toast('Высоту конька задаёт главный скат ★ — его уклон и длина по скату',true); redraw(); return; }
   if(it0&&it0.t==='roof'&&h.kind==='rfH'&&h.e==='rg'&&it0.plan&&it0.plan.L&&it0.plan.L.length){ let v=parseNum(ied.value); if(isNaN(v)||Math.abs(v-h.val)<0.0005){ redraw(); return; } if(Math.abs(v)<100) v*=1000; const Z=v+zRefE()-(doc.settings.rhTop?roofThV(it0):0), li=roofLi(it0), zE=roofBase(it0,li), H=ridgeList(it0).find(q=>q.key===h.key);
     if(!H||!(Z-zE>50)){ toast('Не соответствует: конёк выше карниза'); redraw(); return; } pushUndo(); let c=0; for(const l of it0.plan.L) if(l.t==='r'&&segDistW({x:(l.a.x+l.b.x)/2,y:(l.a.y+l.b.y)/2},H.seg[0],H.seg[1])<5){ l.h=r1(Z-zE); c++; } planSync(it0); persist(); toast(c?'Конёк '+fmtElev(v):'Конёк не найден',true); panelKey=''; syncPanel(); redraw(); viewRefresh(); return; }
@@ -5710,7 +5712,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.42':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.43':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -7642,7 +7644,7 @@ function skTdDraw(i){ const E=planEd, l=E.L[i], T=skTdList(i); E.tdH=[]; if(!T.l
     const m=skLabAt(A,B,0), val=Math.abs(o.d); tmpBox(fmtU(val),m.x,m.y,m.r,true); E.lh.push({x:m.x,y:m.y,val,fn:v=>skTdSet(i,o,v)}); E.tdH.push({i,key:o.key,x:B.x,y:B.y}); } }
 /* a size label lies along its line (read left to right or bottom to top), beside the line */
 function skLabAt(a,b,off){ let an=Math.atan2(b.y-a.y,b.x-a.x); if(an>=Math.PI/2-1e-6) an-=Math.PI; else if(an<-Math.PI/2-1e-6) an+=Math.PI; const n={x:Math.sin(an),y:-Math.cos(an)}, o=off==null?16:off; return {x:(a.x+b.x)/2+n.x*o,y:(a.y+b.y)/2+n.y*o,r:Math.hypot(b.x-a.x,b.y-a.y)<2?0:an}; }
-function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const S=E.S||[], selL=new Set(S.filter(o=>o.k!=='sp').map(o=>o.i)), selSp=new Set(skSelSp()), on=(i,e)=>S.some(o=>o.k==='e'&&o.i===i&&o.e===e), rf=!isLnSk(E)&&!(E.cfg&&E.cfg.kind), col=t=>t==='r'?'#d63fd6':t==='j'?'#2fae5a':t==='c'&&rf?'#e03131':'#9aa5b1', PK=new Set(E.pick.map(p=>p.i)); ctx.save();
+function drawPlanEd(){ const E=planEd; if(!E) return; skState(E); E.lh=[]; const S=E.S||[], selL=new Set(S.filter(o=>o.k!=='sp').map(o=>o.i)), selSp=new Set(skSelSp()), on=(i,e)=>S.some(o=>o.k==='e'&&o.i===i&&o.e===e), rf=!isLnSk(E)&&!(E.cfg&&E.cfg.kind), col=t=>t==='r'?'#d63fd6':t==='j'?'#2fae5a':t==='c'&&rf?'#e03131':E.cfg&&E.cfg.kind==='slab'?(C.td||'#9c36b5'):'#9aa5b1', /* slab sketch: violet lines */ PK=new Set(E.pick.map(p=>p.i)); ctx.save();
   const lnS=isLnSk(E), LVi=lnS?(doc.levels[E.cfg.li]||{items:[]}).items:null, DASH={dash:[10,6],dot:[2,5],dashdot:[10,4,2,4]}, stOf=l=>{ const it=lnS&&l.id?LVi.find(x=>x.id===l.id):l; return it||{}; };
   E.L.forEach((l,i)=>{ const a=toS(l.a), b=toS(l.b), st=stOf(l); if(selL.has(i)||PK.has(i)){ ctx.save(); ctx.strokeStyle=PK.has(i)?'#f59f00':'#4c9aff'; ctx.lineWidth=10; ctx.globalAlpha=.45; line(a,b); ctx.restore(); } ctx.strokeStyle=lnS&&st.lc?st.lc:col(l.t); ctx.lineWidth=l.t==='c'?(rf?3:2):3; ctx.setLineDash(l.t==='j'?[8,6]:lnS&&DASH[st.lt]?DASH[st.lt]:[]); line(a,b); ctx.setLineDash([]); });
   if(lnS) for(const it of lnArcItems()){ ctx.save(); ctx.strokeStyle=it.lc||col('l'); ctx.lineWidth=3; ctx.setLineDash(DASH[it.lt]||[]); ctx.beginPath(); if(it.t==='circ'){ const c=toS(it.c), e=toS({x:it.c.x+it.r,y:it.c.y}); ctx.arc(c.x,c.y,Math.hypot(e.x-c.x,e.y-c.y),0,7); } else { arcPts(arcG(it),0,0,1).map(toS).forEach((q,k)=>k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)); } ctx.stroke(); ctx.restore(); } /* arcs and circles of «Линии» — as thick as its lines */
@@ -8425,6 +8427,12 @@ function slHitAt(sx,sy){ let b=null,bd=18; for(const h of slHits){ if(h.id!==roo
 function slabSetEdge(it,e){ pushUndo(); const o=it.sl||{a:5,u:'deg'}; it.sl={...o,e,a:o.a||5}; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); toast('Уклон от грани '+(e+1)+': '+slabAngTxt(it)); }
 function slabSetAng(it,v,unitPct){ const s=it.sl||{e:0,a:5,u:'deg'}, sg=v<0?-1:v>0?1:Math.sign(s.a||1), deg=unitPct?Math.atan(Math.abs(v)/100)*180/Math.PI:Math.abs(v); if(deg>=60){ toast('Уклон перекрытия — до 60°',true); return; }
   pushUndo(); if(!deg){ delete it.sl; } else it.sl={...s,a:r3(sg*deg)}; persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); }
+/* the slab height mark, as on the roof: a dot on an edge (the kept edge of a sloped slab, else the lowest on screen), «h» = bottom or top from the chosen zero; tap — type */
+function slabMark(it){ const n=it.pts.length, G=slabSlopeG(it); let e=G?G.e:0, by=-1e9; if(!G) for(let i=0;i<n;i++){ const A=it.pts[i],B=it.pts[(i+1)%n], m=toS({x:(A.x+B.x)/2,y:(A.y+B.y)/2}); if(m.y>by+0.5){ by=m.y; e=i; } }
+  const A=it.pts[e],B=it.pts[(e+1)%n], M={x:(A.x+B.x)/2,y:(A.y+B.y)/2}, c0=it.pts.reduce((m,q)=>({x:m.x+q.x/n,y:m.y+q.y/n}),{x:0,y:0}), Z=slabZ(it,doc.curLv), z=doc.settings.rhTop?Z.z1:Z.z0, zr=zRefE(), tx='h '+fmtElev(z-zr).replace('+','');
+  const c=toS(M), cc=toS(c0), dl=Math.hypot(c.x-cc.x,c.y-cc.y)||1, ux=(c.x-cc.x)/dl, uy=(c.y-cc.y)/dl; ctx.font='600 12px '+FNUM; const bw=ctx.measureText(tx).width/2+6, off=14+Math.abs(ux)*bw+Math.abs(uy)*10, x=c.x+ux*off, y=c.y+uy*off;
+  ctx.save(); ctx.fillStyle='#d6336c'; ctx.beginPath(); ctx.arc(c.x,c.y,3.5,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#d6336c'; ctx.lineWidth=1; line(c,{x,y}); ctx.restore();
+  const act=!!(inlineH&&inlineH.kind==='slH'&&inlineH.id===it.id); tmpBox(tx,x,y,0,act); labelHits.push({id:it.id,kind:'slH',one:true,w:toW(x,y),x,y,val:r3((z-zr)/1000)}); }
 function drawSlab(it,sel){ const P=it.pts.map(toS); if(P.length<3) return; ctx.save(); const HS=(it.holes||[]).map(H=>H.map(toS)), path=()=>{ ctx.beginPath(); for(const R of [P,...HS]){ ctx.moveTo(R[0].x,R[0].y); for(let i=1;i<R.length;i++) ctx.lineTo(R[i].x,R[i].y); ctx.closePath(); } };
   path(); ctx.fillStyle=it.fc||'#c9c6bf'; ctx.globalAlpha=.35; ctx.fill('evenodd'); ctx.globalAlpha=.45; ctx.fillStyle=hatchPattern(it.hp&&it.hp!=='none'?it.hp:'conc',it.lc||C.muted); path(); ctx.fill('evenodd'); ctx.globalAlpha=1;
   ctx.strokeStyle=sel?C.sel:(it.lc||C.ink); ctx.lineWidth=sel?2:lwPx(it,1.2); ctx.setLineDash([]); poly(P); ctx.stroke();
@@ -8433,6 +8441,7 @@ function drawSlab(it,sel){ const P=it.pts.map(toS); if(P.length<3) return; ctx.s
   /* подпись перекрытия не налезает на текст пользователя в том же месте — сдвиг вверх/вниз */ let dyS=0; try{ const k=Math.hypot(toS({x:1000,y:0}).x-toS({x:0,y:0}).x,toS({x:1000,y:0}).y-toS({x:0,y:0}).y)/1000, w2=ctx.measureText(sTx).width/2+4, TB=doc.items.filter(t=>t.t==='text'&&t.p&&t.s).map(t=>{ const q=toS(t.p), hh=Math.max(8,(t.h||200)*k), ww=String(t.s).length*hh*0.62; return {x0:q.x-ww*0.6,x1:q.x+ww*0.6,y0:q.y-hh*1.1,y1:q.y+hh*1.1}; }), hit=dy=>TB.some(b=>cs.x-w2<b.x1&&cs.x+w2>b.x0&&cs.y+dy-8<b.y1&&cs.y+dy+8>b.y0);
     if(hit(0)) for(const d of [18,-18,32,-32,46,-46]){ if(!hit(d)){ dyS=d; break; } } }catch(_){}
   void sTx; void dyS; /* no «Перекрытие» caption on the plan */
+  if(sel&&tool==='select'&&!moveSel.size&&roofEd!==it.id&&!planEd) slabMark(it);
   if(sel&&roofEd===it.id){ ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; for(const q of P){ ctx.beginPath(); ctx.rect(q.x-6,q.y-6,12,12); ctx.fill(); ctx.stroke(); }
     ctx.fillStyle=C.sel; const n=P.length; for(let i=0;i<n;i++){ const A=it.pts[i],B=it.pts[(i+1)%n], m=toS({x:(A.x+B.x)/2,y:(A.y+B.y)/2}); ctx.beginPath(); ctx.moveTo(m.x,m.y-7); ctx.lineTo(m.x+7,m.y); ctx.lineTo(m.x,m.y+7); ctx.lineTo(m.x-7,m.y); ctx.closePath(); ctx.fill();
       const L=Math.hypot(B.x-A.x,B.y-A.y); if(L*view.scale>60){ const u=unit(A,B), sg=polyArea2(it.pts)>0?1:-1, o={x:u.y*sg,y:-u.x*sg}, q=toS({x:(A.x+B.x)/2+o.x*0,y:(A.y+B.y)/2}), so=toS({x:0,y:0}), od=toS(o), ol=Math.hypot(od.x-so.x,od.y-so.y)||1, lp={x:q.x+(od.x-so.x)/ol*16,y:q.y+(od.y-so.y)/ol*16}; tmpBox(fmtU(L),lp.x,lp.y,0); } } }
