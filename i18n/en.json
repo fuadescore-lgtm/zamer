@@ -843,7 +843,7 @@
 "Кухня": "Kitchen",
 "Дверь": "Door",
 "Проём": "Opening",
-"центр": "center",
+"центр": "centre",
 "конец": "end",
 "копия": "copy",
 "выйти": "exit",
@@ -5349,5 +5349,16 @@
 "и меньше": "and less than",
 "Угол — больше": "The angle must be more than",
 "Угловой размер: две грани, затем четверть": "Angular dimension: two faces, then the quarter",
-"Грани параллельны — угла нет": "The faces are parallel: there is no angle"
+"Грани параллельны — угла нет": "The faces are parallel: there is no angle",
+"орто": "ortho",
+"середина грани": "face middle",
+"Вторая точка должна отличаться от опорной": "The second point must differ from the base point",
+"Сначала выделите объекты": "Select objects first",
+"на линии": "on line",
+"коснитесь угла или поля — введите точнее": "tap the angle or the field to type an exact value",
+"вторая точка — направление отсчёта: орто или точка": "second point: the reference direction, ortho or a point",
+"Сразу на": "Right away by",
+"ведите — объекты поворачиваются; касание — зафиксировать": "move: the objects turn; tap to fix",
+"коснитесь опорной точки: вершина, середина грани или центр": "tap the base point: a vertex, a face middle or a centre",
+"угол": "corner"
 }
