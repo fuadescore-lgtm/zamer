@@ -5365,5 +5365,14 @@
 "Сколько копий: каждая следующая повёрнута ещё на тот же угол": "How many copies: each next one turned by the same angle again",
 "Исходные остаются, появляются повёрнутые копии": "The originals stay; rotated copies appear",
 "Копий": "Copies",
-"Повернуть или копировать": "Rotate or copy"
+"Повернуть или копировать": "Rotate or copy",
+"Опускается от опорной грани": "Falls from the kept edge",
+"Уклон от грани": "Slope from edge",
+"без уклона": "no slope",
+"Вернуть перекрытие в горизонталь": "Make the slab level again",
+"Поднимается от опорной грани": "Rises from the kept edge",
+"Уклон перекрытия — до": "Slab slope: up to",
+"Единицы уклона": "Slope units",
+"на грани — задать уклон": "on an edge: set a slope",
+"Вверх или вниз": "Up or down"
 }
