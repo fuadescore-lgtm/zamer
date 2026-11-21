@@ -2758,7 +2758,7 @@ cv.addEventListener('pointermove',e=>{
   if(press.tdh){ const T=press.tdh; if(!press.moved||T.kind!=='far') return; if(!T.started){ T.started=true; pushUndo(); }
     snapAllRoofs=true; let pt; try{ pt=snapPoint(p.x,p.y,null,{exclude:selIds()}); } finally{ snapAllRoofs=false; } tdDrag={dir:T.dir,pt}; snapMark={p:pt,k:liveSnap||'end'}; redraw(); return; }
   if(press.arrH){ const D=press.arrH; if(!press.moved) return; if(!D.started){ D.started=true; }
-    const d=arrDef(), A=arrAxes(arrItems()), ax=D.axis==='x'?A.ax:A.ay, w=toW(p.x,p.y), t=w.x*ax.x+w.y*ax.y, st=Math.round((t-D.E.mx)/(D.n-1)/10)*10;
+    const d=arrDef(), A=arrAxes(arrItems()), ax=D.axis==='x'?A.ax:A.ay, w=toW(p.x,p.y), t=w.x*ax.x+w.y*ax.y, c0=(D.E.mn+D.E.mx)/2, st=Math.round((t-(t>=c0?D.E.mx:D.E.mn))/(D.n-1)/10)*10; /* drag past the original — copies go the other way */
     if(D.axis==='x') d.dx=st; else d.dy=st; redraw(); return; }
   if(press.chH){ const D=press.chH; if(!press.moved) return; if(!D.started){ D.started=true; pushUndo(); } chimHDrag(D,p.x,p.y); redraw(); return; }
   if(press.wit){ const Wt=press.wit; if(!press.moved) return; if(!Wt.started){ Wt.started=true; pushUndo(); }
@@ -2822,7 +2822,7 @@ function endPtr(e,cancel){ if(copyHi&&press&&press.moved&&(press.sd||press.mv||p
   if(pr.mvEmpty&&pr.sd&&!pr.sd.started&&!pr.moved&&!cancel&&selMode==='mv'){ moveDelta=null; snapMark=null; selMode='pick'; syncSelLbl(); selId=null; moveSel.clear(); selJoint=null; copyHi=null; detailSel=null; panelKey=''; syncPanel(); redraw(); return; } /* «Сдвиг» группы: касание пустого места — снять выбор */
   if(pr.adTap){ if(!pr.moved&&!cancel){ const q=pos(e); adTap(q.x,q.y); } return; }
   if(pr.arrL&&!pr.moved&&pr.arrL.k==='tot'){ const h=pr.arrL; openInline({kind:'arr',axis:h.axis,id:selId,w:h.w,val:h.val,fn:v=>arrSetTotal(h.axis,v)}); return; }
-  if(pr.arrL&&!pr.moved){ const h=pr.arrL, d=arrDef(), ee=d.m==='ee'; openInline({kind:'arr',axis:h.axis,id:selId,w:h.w,val:h.val,fn:v=>{ const st=ee?v+h.ext:v; if(h.axis==='x') d.dx=r1(st); else d.dy=r1(st); }}); return; }
+  if(pr.arrL&&!pr.moved){ const h=pr.arrL, d=arrDef(), ee=d.m==='ee'; openInline({kind:'arr',axis:h.axis,id:selId,w:h.w,val:h.val,fn:v=>{ const st=ee?Math.sign(v||1)*(Math.abs(v)+h.ext):v; if(h.axis==='x') d.dx=r1(st); else d.dy=r1(st); }}); return; } /* a minus sign sends the copies the other way */
   if(pr.arrH){ if(pr.arrH.started){ persist(); panelKey=''; syncPanel(); } redraw(); return; }
   if(pr.chH){ snapMark=null; liveSnap=null; if(pr.chH.started){ persist(); viewRefresh(); } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.rwT){ if(!pr.moved&&!cancel) rwTap(pr.sx,pr.sy); return; }
@@ -4048,38 +4048,35 @@ function arrExt(items,ax){ let mn=Infinity,mx=-Infinity; for(const it of items) 
 function arrItems(){ const S=selIds(); return doc.items.filter(i=>S.has(i.id)&&!isHole(i)); }
 /* dimensions between the copies (centre–centre or edge–edge), the mode square, the drag point */
 let arrHits=[];
+/* the object the array dimensions hold on to: the outermost one toward the dimension line */
+function arrRefItem(items,axis,A){ const ay=axis==='x'?A.ay:{x:-A.ax.x,y:-A.ax.y}; let best=null,bv=-Infinity; for(const it of items){ const P=arrExt([it],ay), v=axis==='x'?P.mx:P.mx; if(v>bv){ bv=v; best=it; } } return best?[best]:items; }
 function drawArrayDims(){ arrHits=[]; if(!(tool==='select'&&arrayOn)) return; const items=arrItems(); if(!items.length) return; const d=arrDef(), A=arrAxes(items), ee=d.m==='ee';
-  const run=(axis,n,step,ax,ay)=>{ if(n<2) return; const E=arrExt(items,ax), P=arrExt(items,ay), off=30/view.scale, at=axis==='x'?P.mx+off:P.mn-off, gap=step-E.e;
+  const run=(axis,n,step,ax,ay)=>{ if(n<2||!step) return; const RI=arrRefItem(items,axis,A), E=arrExt(RI,ax), P=arrExt(RI,ay), off=30/view.scale, at=P.mx+off, sg=step<0?-1:1, as=Math.abs(step), gap=as-E.e, c0=(E.mn+E.mx)/2;
     const W=(t,u)=>({x:ax.x*t+ay.x*u,y:ax.y*t+ay.y*u}), act=!!(inlineH&&inlineH.kind==='arr'&&inlineH.axis===axis);
+    const hiE=sg>0?E.mx:E.mn, loE=sg>0?E.mn:E.mx; /* faces toward / away from the copies */
+    const dimSeg=(t0,t1,txt,on)=>{ const a=toS(W(t0,at)), b=toS(W(t1,at)); ctx.strokeStyle=on?ACT:C.sel; ctx.lineWidth=on?2.2:1.2; if(on) actGlow(ctx,a,b); ctx.setLineDash([5,3]); line(a,b); ctx.setLineDash([]);
+      const nrm={x:b.y-a.y,y:a.x-b.x}, nl=Math.hypot(nrm.x,nrm.y)||1; for(const q of [a,b]) line({x:q.x-nrm.x/nl*6,y:q.y-nrm.y/nl*6},{x:q.x+nrm.x/nl*6,y:q.y+nrm.y/nl*6});
+      ctx.save(); ctx.setLineDash([2,3]); ctx.lineWidth=1; line(a,toS(W(t0,P.mx))); line(b,toS(W(t1,P.mx))); ctx.restore();
+      const m={x:(a.x+b.x)/2,y:(a.y+b.y)/2}, hz=Math.abs(b.x-a.x)>=Math.abs(b.y-a.y);
+      ctx.save(); ctx.translate(m.x,m.y); if(!hz) ctx.rotate(-Math.PI/2); ctx.font='600 12px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; const w=ctx.measureText(txt).width;
+      ctx.translate(0,-11); ctx.fillStyle=on?ACT:C.surface; ctx.fillRect(-w/2-5,-9,w+10,18); ctx.strokeStyle=on?ACT:C.sel; ctx.lineWidth=1; ctx.strokeRect(-w/2-5,-9,w+10,18); ctx.fillStyle=on?'#fff':C.sel; ctx.fillText(txt,0,0); ctx.restore();
+      return {a,b,lp:hz?{x:m.x,y:m.y-11}:{x:m.x-11,y:m.y}}; };
+    ctx.save();
     if(d.tot){ /* one overall dimension: centre–centre → inner faces (blue square) → outer faces (green square) */
-      const tm=d.tm||'cc', c0=(E.mn+E.mx)/2, t0=tm==='in'?E.mx:tm==='out'?E.mn:c0, t1=(n-1)*step+(tm==='in'?E.mn:tm==='out'?E.mx:c0), Lv=t1-t0;
-      const a=toS(W(t0,at)), b=toS(W(t1,at)); ctx.save(); ctx.strokeStyle=act?ACT:C.sel; ctx.lineWidth=act?2.2:1.4; if(act) actGlow(ctx,a,b); ctx.setLineDash([5,3]); line(a,b); ctx.setLineDash([]);
-      const nrm={x:b.y-a.y,y:a.x-b.x}, nl=Math.hypot(nrm.x,nrm.y)||1; for(const q of [a,b]) line({x:q.x-nrm.x/nl*6,y:q.y-nrm.y/nl*6},{x:q.x+nrm.x/nl*6,y:q.y+nrm.y/nl*6});
-      const ex=axis==='x'?P.mx:P.mn; ctx.save(); ctx.setLineDash([2,3]); ctx.lineWidth=1; line(a,toS(W(t0,ex))); line(b,toS(W(t1,ex))); ctx.restore();
-      const m={x:(a.x+b.x)/2,y:(a.y+b.y)/2}, tx=fmtU(Lv), hz=Math.abs(b.x-a.x)>=Math.abs(b.y-a.y);
-      ctx.save(); ctx.translate(m.x,m.y); if(!hz) ctx.rotate(-Math.PI/2); ctx.font='600 12px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; const w=ctx.measureText(tx).width;
-      ctx.translate(0,-11); ctx.fillStyle=act?ACT:C.surface; ctx.fillRect(-w/2-5,-9,w+10,18); ctx.strokeStyle=act?ACT:C.sel; ctx.lineWidth=1; ctx.strokeRect(-w/2-5,-9,w+10,18); ctx.fillStyle=act?'#fff':C.sel; ctx.fillText(tx,0,0); ctx.restore();
-      const lp=hz?{x:m.x,y:m.y-11}:{x:m.x-11,y:m.y}; arrHits.push({k:'tot',axis,x:lp.x,y:lp.y,w:toW(lp.x,lp.y),val:Lv});
-      const L0=Math.hypot(b.x-a.x,b.y-a.y)||1, sq={x:a.x+(b.x-a.x)/L0*14,y:a.y+(b.y-a.y)/L0*14}; ctx.fillStyle=tm==='in'?C.sel:tm==='out'?'#2f9e44':C.surface; ctx.strokeStyle=tm==='out'?'#2f9e44':C.sel; ctx.lineWidth=1.5; ctx.fillRect(sq.x-5,sq.y-5,10,10); ctx.strokeRect(sq.x-5,sq.y-5,10,10); arrHits.push({k:'ttog',axis,x:sq.x,y:sq.y});
-      ctx.restore(); }
-    ctx.save(); if(!d.tot) for(let i=0;i<n-1;i++){ const t0=ee?E.mx+i*step:(E.mn+E.mx)/2+i*step, t1=ee?E.mn+(i+1)*step:(E.mn+E.mx)/2+(i+1)*step;
-      const a=toS(W(t0,at)), b=toS(W(t1,at)); ctx.strokeStyle=act?ACT:C.sel; ctx.lineWidth=act?2.2:1.2; if(act) actGlow(ctx,a,b); ctx.setLineDash([5,3]); line(a,b); ctx.setLineDash([]);
-      const nrm={x:b.y-a.y,y:a.x-b.x}, nl=Math.hypot(nrm.x,nrm.y)||1; for(const q of [a,b]) line({x:q.x-nrm.x/nl*6,y:q.y-nrm.y/nl*6},{x:q.x+nrm.x/nl*6,y:q.y+nrm.y/nl*6});
-      const ex=axis==='x'?P.mx:P.mn; ctx.save(); ctx.setLineDash([2,3]); ctx.lineWidth=1; line(a,toS(W(t0,ex))); line(b,toS(W(t1,ex))); ctx.restore();
-      const m={x:(a.x+b.x)/2,y:(a.y+b.y)/2}, v=ee?gap:step, tx=fmtU(v), hz=Math.abs(b.x-a.x)>=Math.abs(b.y-a.y);
-      ctx.save(); ctx.translate(m.x,m.y); if(!hz) ctx.rotate(-Math.PI/2); ctx.font='600 12px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; const w=ctx.measureText(tx).width;
-      ctx.translate(0,-11); ctx.fillStyle=act?ACT:C.surface; ctx.fillRect(-w/2-5,-9,w+10,18); ctx.strokeStyle=act?ACT:C.sel; ctx.lineWidth=1; ctx.strokeRect(-w/2-5,-9,w+10,18); ctx.fillStyle=act?'#fff':C.sel; ctx.fillText(tx,0,0); ctx.restore();
-      const lp=hz?{x:m.x,y:m.y-11}:{x:m.x-11,y:m.y}; arrHits.push({k:'lab',axis,x:lp.x,y:lp.y,w:toW(lp.x,lp.y),val:v,ext:E.e});
-      /* the mode square near the start of the first dimension */
-      if(!i){ const L0=Math.hypot(b.x-a.x,b.y-a.y)||1, sq={x:a.x+(b.x-a.x)/L0*14,y:a.y+(b.y-a.y)/L0*14}; ctx.fillStyle=ee?C.surface:C.sel; ctx.strokeStyle=C.sel; ctx.lineWidth=1.5; ctx.fillRect(sq.x-5,sq.y-5,10,10); ctx.strokeRect(sq.x-5,sq.y-5,10,10); arrHits.push({k:'tog',axis,x:sq.x,y:sq.y}); } }
-    /* drag point: the far edge of the last copy */
-    const hp=toS(W(E.mx+(n-1)*step,(P.mn+P.mx)/2)), on=!!(press&&press.arrH&&press.arrH.axis===axis); ctx.beginPath(); ctx.arc(hp.x,hp.y,on?10:8,0,Math.PI*2); ctx.fillStyle=on?ACT:C.sel; ctx.fill(); ctx.strokeStyle=C.paper; ctx.lineWidth=2; ctx.stroke();
+      const tm=d.tm||'cc', t0=tm==='in'?hiE:tm==='out'?loE:c0, t1=(n-1)*step+(tm==='in'?loE:tm==='out'?hiE:c0), Lv=Math.abs(t1-t0);
+      const g=dimSeg(t0,t1,fmtU(sg*Lv),act); arrHits.push({k:'tot',axis,x:g.lp.x,y:g.lp.y,w:toW(g.lp.x,g.lp.y),val:sg*Lv});
+      const L0=Math.hypot(g.b.x-g.a.x,g.b.y-g.a.y)||1, sq={x:g.a.x+(g.b.x-g.a.x)/L0*14,y:g.a.y+(g.b.y-g.a.y)/L0*14}; ctx.fillStyle=tm==='in'?C.sel:tm==='out'?'#2f9e44':C.surface; ctx.strokeStyle=tm==='out'?'#2f9e44':C.sel; ctx.lineWidth=1.5; ctx.fillRect(sq.x-5,sq.y-5,10,10); ctx.strokeRect(sq.x-5,sq.y-5,10,10); arrHits.push({k:'ttog',axis,x:sq.x,y:sq.y}); }
+    else for(let i=0;i<n-1;i++){ const t0=ee?hiE+i*step:c0+i*step, t1=ee?loE+(i+1)*step:c0+(i+1)*step, v=sg*(ee?gap:as);
+      const g=dimSeg(t0,t1,fmtU(v),act); arrHits.push({k:'lab',axis,x:g.lp.x,y:g.lp.y,w:toW(g.lp.x,g.lp.y),val:v,ext:E.e});
+      if(!i){ const L0=Math.hypot(g.b.x-g.a.x,g.b.y-g.a.y)||1, sq={x:g.a.x+(g.b.x-g.a.x)/L0*14,y:g.a.y+(g.b.y-g.a.y)/L0*14}; ctx.fillStyle=ee?C.surface:C.sel; ctx.strokeStyle=C.sel; ctx.lineWidth=1.5; ctx.fillRect(sq.x-5,sq.y-5,10,10); ctx.strokeRect(sq.x-5,sq.y-5,10,10); arrHits.push({k:'tog',axis,x:sq.x,y:sq.y}); } }
+    /* drag point: the far face of the last copy */
+    const hp=toS(W(hiE+(n-1)*step,(P.mn+P.mx)/2)), on=!!(press&&press.arrH&&press.arrH.axis===axis); ctx.beginPath(); ctx.arc(hp.x,hp.y,on?10:8,0,Math.PI*2); ctx.fillStyle=on?ACT:C.sel; ctx.fill(); ctx.strokeStyle=C.paper; ctx.lineWidth=2; ctx.stroke();
     arrHits.push({k:'drag',axis,x:hp.x,y:hp.y,E,n}); ctx.restore(); };
   run('x',Math.max(1,d.nx|0),d.dx,A.ax,A.ay); run('y',Math.max(1,d.ny|0),d.dy,A.ay,{x:-A.ax.x,y:-A.ax.y}); }
 function arrHitAt(sx,sy){ let b=null,bd=20; for(const h of arrHits){ const dd=Math.hypot(h.x-sx,h.y-sy)-(h.k==='tog'||h.k==='ttog'?4:0); if(dd<bd){ bd=dd; b=h; } } return b; }
-function arrTotal(axis){ const d=arrDef(), items=arrItems(), A=arrAxes(items), n=Math.max(1,axis==='x'?d.nx|0:d.ny|0), st=axis==='x'?d.dx:d.dy, E=arrExt(items,axis==='x'?A.ax:A.ay), tm=d.tm||'cc'; return (n-1)*st+(tm==='out'?E.e:tm==='in'?-E.e:0); }
+function arrTotal(axis){ const d=arrDef(), items=arrItems(), A=arrAxes(items), n=Math.max(1,axis==='x'?d.nx|0:d.ny|0), st=axis==='x'?d.dx:d.dy, E=arrExt(arrRefItem(items,axis,A),axis==='x'?A.ax:A.ay), tm=d.tm||'cc'; return (st<0?-1:1)*((n-1)*Math.abs(st)+(tm==='out'?E.e:tm==='in'?-E.e:0)); }
 function arrSetTotal(axis,L){ const d=arrDef(), items=arrItems(), A=arrAxes(items), n=Math.max(1,axis==='x'?d.nx|0:d.ny|0); if(n<2){ toast('Сначала укажите количество больше 1',true); return; }
-  const E=arrExt(items,axis==='x'?A.ax:A.ay), tm=d.tm||'cc', st=r1((L+(tm==='in'?E.e:tm==='out'?-E.e:0))/(n-1)); if(st<E.e-0.5){ toast('Не помещается: копии налезут друг на друга',true); return; } if(axis==='x') d.dx=st; else d.dy=st; persist(); panelKey=''; syncPanel(); redraw(); }
+  const E=arrExt(arrRefItem(items,axis,A),axis==='x'?A.ax:A.ay), tm=d.tm||'cc', sg=L<0?-1:1, st=r1((Math.abs(L)+(tm==='in'?E.e:tm==='out'?-E.e:0))/(n-1)); if(st<E.e-0.5){ toast('Не помещается: копии налезут друг на друга',true); return; } if(axis==='x') d.dx=sg*st; else d.dy=sg*st; persist(); panelKey=''; syncPanel(); redraw(); }
 function arrDef(){ if(!doc.settings.arr) doc.settings.arr={nx:3,dx:1500,ny:1,dy:1500,ang:0}; return doc.settings.arr; }
 function arrAxes(items){ const ins=items.length&&items.every(isIns)&&items.every(i=>i.roof===items[0].roof); if(ins){ const F=insFrame(items[0]); if(F) return {roof:true,ax:F.u,ay:{x:F.b.x*F.ca,y:F.b.y*F.ca}}; }
   const a=(arrDef().ang||0)*Math.PI/180; return {roof:false,ax:{x:Math.cos(a),y:Math.sin(a)},ay:{x:-Math.sin(a),y:Math.cos(a)}}; }
@@ -4506,7 +4503,7 @@ function meRender(M){ const key='MSE|'+M.G.map(o=>o.li+':'+o.id).join(',')+'|'+(
   for(const el of R.querySelectorAll('button[aria-pressed]')){ const sig=meSig(el), ps=D.map(d=>{ const e=meFind(d,sig); return e?e.getAttribute('aria-pressed'):null; }); if(!ps.every(v=>v===ps[0])) el.setAttribute('aria-pressed','false'); }
   const n=M.G.length, nm=(CATN1[M.c]||CATN[M.c]||'Выбрано'), vw=!!inView();
   const OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>', CX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-  const pre=IDEL()+(vw?'':IB('grpMove','mv','Переместить: возьмите за любой угол и поставьте на точку',selMode==='mv'||mvB?'on':''))+ICOPY()+(vw?'':IB('arrStart','arr','Массив')+IB('grpRot','rot','Повернуть группу'))+`<div class="title" data-meg="1">${esc(nm)} <b>${n}</b></div>`;
+  const pre=IDEL()+(vw?'':IB('grpMove','mv','Переместить: возьмите за любой угол и поставьте на точку',selMode==='mv'||mvB?'on':''))+ICOPY()+(vw?'':IB('grpRot','rot','Повернуть группу'))+`<div class="title" data-meg="1">${esc(nm)} <b>${n}</b></div>`;
   const post=selMode==='multi'?`<button class="ibn cxb" data-act="msCancel" title="Отмена" aria-label="Отмена">${CX}</button><button class="ibn okb" data-act="msDone" title="Готово" aria-label="Готово">${OK}</button>`:ISELN();
   for(const t of [...R.querySelectorAll('.title')]) if(!t.dataset.meg) t.remove();
   panelKey=key; panel.innerHTML=pre+R.innerHTML+post; panel.hidden=false; for(const el of panel.querySelectorAll('input[type=checkbox][data-vary]')) el.indeterminate=true;
@@ -4532,7 +4529,7 @@ panel.addEventListener('click',e=>{ if(!MSE||meBusy||!MSE.G||!panelKey.startsWit
 panel.addEventListener('change',e=>{ if(!MSE||meBusy||!MSE.G||!panelKey.startsWith('MSE|')) return; const t=e.target; if(!t.matches('input,select')) return; e.stopImmediatePropagation(); meApply(t,'change'); },true);
 panel.addEventListener('input',e=>{ if(!MSE||meBusy||!panelKey.startsWith('MSE|')) return; if(e.target.type==='color'){ e.stopImmediatePropagation(); const sw=e.target.parentElement&&e.target.parentElement.querySelector('span'); if(sw) sw.style.background=e.target.value; } },true);
 panel.addEventListener('keydown',e=>{ if(!MSE||meBusy||!panelKey.startsWith('MSE|')||e.key!=='Enter') return; const t=e.target; if(!t.matches('input')) return; e.preventDefault(); e.stopImmediatePropagation(); t.blur(); },true);
-function syncPanel(){ if(!meBusy){ let M=null; try{ M=meGroup(); }catch(_){ M=null; } if(M){ try{ toolsDockSync(); }catch(_){} meRender(M); return; } if(MSE&&panelKey.startsWith('MSE|')) panelKey=''; MSE=null; } return syncPanel0(); }
+function syncPanel(){ if(!meBusy){ let M=null; try{ M=(tool==='select'&&arrayOn)?null:meGroup(); }catch(_){ M=null; } /* array: one panel for the whole selection, so all objects are copied */ if(M){ try{ toolsDockSync(); }catch(_){} meRender(M); return; } if(MSE&&panelKey.startsWith('MSE|')) panelKey=''; MSE=null; } return syncPanel0(); }
 function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.curLv!==planEd.cfg.li) planEd=null; else if(!planEd.drag) lnCommit(); } try{ toolsDockSync(); }catch(_){}
   if(detailSel&&detailSel!=='*'&&detailSel!==selId) detailSel=null; if(detailSel==='*'&&moveSel.size<2) detailSel=null;
   if(holeMv&&(selId!==holeMv||tool!=='select')) holeMv=null;
@@ -4608,7 +4605,7 @@ function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.cu
     h=det?`${grpHTML(GL,'',true)}${colorBtns(null,true)}${hasL?`<select class="inp" id="gLayer" title="Слой линий и стен" style="width:auto"><option value="">Слой…</option>${['walls','open','misc'].map(k=>`<option value="${k}">${LAYERS[k].n}</option>`).join('')}</select>`:''}
       <div class="fld"><label for="mvLen">Сдвиг, мм</label><input class="inp xs" id="mvLen" inputmode="decimal" autocomplete="off" placeholder="500"></div>
       <div class="dirs" role="group" aria-label="Направление сдвига"><button data-mdir="180" aria-label="Влево">←</button><button data-mdir="90" aria-label="Вверх">↑</button><button data-mdir="270" aria-label="Вниз">↓</button><button data-mdir="0" aria-label="Вправо">→</button></div>${IB('selAll','all','Выбрать все')}`
-      :`${IB('grpMove','mv','Переместить: возьмите за любой угол и поставьте на точку',selMode==='mv'||mvB?'on':'')}${ICOPY()}${IDEL()}${IB('arrStart','arr','Массив')}${IB('grpRot','rot','Повернуть группу')}${grpHTML(GL,'',false)}${IDET()}
+      :`${IB('grpMove','mv','Переместить: возьмите за любой угол и поставьте на точку',selMode==='mv'||mvB?'on':'')}${ICOPY()}${IDEL()}${IB('grpRot','rot','Повернуть группу')}${grpHTML(GL,'',false)}${IDET()}
       <select class="inp" id="grpLv" title="Перенести выбранное на другой уровень" style="width:auto"><option value="">⇅ На уровень…</option>${doc.levels.map((l,i)=>i===doc.curLv||l.gp?'':`<option value="${i}">${esc(l.name)}</option>`).join('')}</select>${ISELN()}`;
   } else if((tool==='select'||tool==='hole')&&sel&&isHole(sel)){
     const g=holeGeom(sel)||{w:sel.width,s0:0,s1:0,L:0}, isW=sel.t==='win';
@@ -4828,7 +4825,7 @@ function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.cu
     // 3D и фасады: «Выбрать несколько» как на плане; «Переместить» и «Орто» — только на плане
     if(tool==='select'&&sel&&selMode!=='multi'&&inView()&&h.includes(D)) h=h.replace(D,D+IB('msStart','msel','Выбрать несколько'));
     if(tool==='select'&&sel&&selMode!=='multi'&&!inView()&&!(panel.classList.contains('inview'))&&MVT(sel)&&h.includes(D)&&!(v3&&v3.el&&!v3.el.hidden)){ h=h.replace(D,D+IB('mvBase','mv','Переместить: возьмите за центр или угол — магнит к точкам соседей, пунктир выравнивания; Орто — по осям',mvB?'on':'')+IB('msStart','msel','Выбрать несколько')); if(!isHole(sel)&&!h.includes('data-act="mvOrtho"')&&!/data-act="copyMenu"/.test(h)) h=h.replace('data-act="msStart"','data-act="msStart"').replace(/(data-act="msStart"[\s\S]*?<\/button>)/,'$1'+IB('mvOrtho','ortho','Орто: двигать только по X или Y (та же кнопка, что сверху)',axisMode!=='free'?'on':'')); if(!isHole(sel)&&!h.includes('data-act="mvOrtho"')) h=h.replace(/(<button class="ibn[^"]*" data-act="copyMenu"[\s\S]*?<\/button>)/,'$1'+IB('mvOrtho','ortho','Орто: двигать только по X или Y (та же кнопка, что сверху)',axisMode!=='free'?'on':'')); } }
-  if(h&&tool==='select'&&sel&&(sel.t==='dorm'||sel.t==='skyl')&&selMode!=='multi'&&!moveSel.size&&!inView()&&!(v3&&v3.el&&!v3.el.hidden)&&!h.includes('data-act="arrStart"')) h=h.replace(/(<button class="ibn[^"]*" data-act="copyMenu"[\s\S]*?<\/button>)/,'$1'+IB('arrStart','arr','Массив: копии по скату с шагом'));
+  if(false&&h&&tool==='select'&&sel&&(sel.t==='dorm'||sel.t==='skyl')&&selMode!=='multi'&&!moveSel.size&&!inView()&&!(v3&&v3.el&&!v3.el.hidden)&&!h.includes('data-act="arrStart"')) h=h.replace(/(<button class="ibn[^"]*" data-act="copyMenu"[\s\S]*?<\/button>)/,'$1'+IB('arrStart','arr','Массив: копии по скату с шагом'));
   if(h&&tool==='select'&&selMode!=='multi'&&moveSel.size>1&&detailSel==='*') h+=`<button class="ibn okb" data-act="detOk" title="Готово" aria-label="Готово"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>`;
   else if(h&&panel.classList.contains('inview')&&sel&&tool==='select'&&!moveSel.size&&isDet(sel)) h+=`<button class="ibn okb" data-act="detOk" title="Готово" aria-label="Готово"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>`;
   panel.innerHTML=h; panel.hidden=!h; syncDelBtn(); layoutPanel(); syncLineHint(); if(tool==='move') syncMoveInfo(); redraw(); placePanel(); placePopups();
@@ -5610,7 +5607,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.30':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.31':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
