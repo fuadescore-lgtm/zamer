@@ -5707,7 +5707,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.36':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.37':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -8368,7 +8368,7 @@ function drawRoof(it,sel){ if(planEd&&planEd.id===it.id) return; /* being edited
       const so=toS({x:0,y:0}), od={x:toS(out).x-so.x,y:toS(out).y-so.y}, ol=Math.hypot(od.x,od.y)||1, dd=Math.hypot(se.x-sm.x,se.y-sm.y);
       const lx=dd>44?(sm.x+se.x)/2:se.x+od.x/ol*16, ly=dd>44?(sm.y+se.y)/2:se.y+od.y/ol*16;
       tmpBox(fmtU(ov),lx,ly,0); labelHits.push({id:it.id,kind:'rfO',i,one:true,w:toW(lx,ly),x:lx,y:ly,val:ov});
-      { const L=Math.hypot(B.x-A.x,B.y-A.y), q0=toS({x:A.x+u.x*L*0.25,y:A.y+u.y*L*0.25}), so=toS({x:0,y:0}), od=toS(out), ol=Math.hypot(od.x-so.x,od.y-so.y)||1, q={x:q0.x-(od.x-so.x)/ol*18,y:q0.y-(od.y-so.y)/ol*18}; if(L*view.scale>46){ tmpBox(fmtU(L),q.x,q.y,0); labelHits.push({id:it.id,kind:'rfS',i,one:true,w:toW(q.x,q.y),x:q.x,y:q.y,val:r1(L)}); } } }
+      /* no edge lengths in the roof edit mode: overhangs and slopes only */ }
     ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; for(const q of P){ const sq=toS(q); ctx.beginPath(); ctx.rect(sq.x-6,sq.y-6,12,12); ctx.fill(); ctx.stroke(); }
     const VS=roofVSplits(it); { ctx.save(); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; for(const o of VS){ const sq=toS(o.X); ctx.beginPath(); ctx.rect(sq.x-6,sq.y-6,12,12); ctx.fill(); ctx.stroke(); } ctx.restore(); }
     ctx.fillStyle=C.sel; const dia=m=>{ ctx.beginPath(); ctx.moveTo(m.x,m.y-7); ctx.lineTo(m.x+7,m.y); ctx.lineTo(m.x,m.y+7); ctx.lineTo(m.x-7,m.y); ctx.closePath(); ctx.fill(); };
