@@ -5707,7 +5707,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.37':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.38':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9357,7 +9357,7 @@ function open3D(){ linkPick=null; ridgePick=null; let M=bmLive(); if(!M.tri.leng
         const o0=[-1,-1,-1], g0=pr(o0); x.lineWidth=2; for(const [a,col,lab] of AX){ const e=pr(o0.map((v,i)=>v+a[i]*2.9)), t=pr(o0.map((v,i)=>v+a[i]*3.45)); x.strokeStyle=col; x.fillStyle=col; x.globalAlpha=.85; x.beginPath(); x.moveTo(g0.x,g0.y); x.lineTo(e.x,e.y); x.stroke(); x.globalAlpha=1; x.font='700 11px '+FNUM; x.fillText(lab,t.x,t.y); } }
       const O=ORG(), L0=Math.max(600,R*0.12), p0=doc.settings.noAx3?null:proj([O.x,O.y,0]); if(p0) for(const [a,col,lab] of AX){ const p1=proj([O.x+a[0]*L0,O.y+a[1]*L0,a[2]*L0]); if(!p1) continue; x.strokeStyle=col; x.fillStyle=col; x.lineWidth=2; x.beginPath(); x.moveTo(p0.x,p0.y); x.lineTo(p1.x,p1.y); x.stroke(); x.fillText(lab,p1.x+(p1.x-p0.x)*0.12,p1.y+(p1.y-p0.y)*0.12); } }catch(_){}
     if(planEd&&planEd.skv&&planEd.skv.vk==='v3'){ extSkGhost(); sweepSkLive(); }
-    try{ RFLK.v3=planEd&&planEd.skv?[]:rfLkView(x,M.tri||[],proj,(v3.sel&&v3.sel.id)||selId); }catch(_){ RFLK.v3=[]; }
+    try{ RFLK.v3=[]; /* the lock icon is shown on the plan only; a locked roof stays locked in every view */ }catch(_){ RFLK.v3=[]; }
     if(PDS&&PDS.vk==='v3') pdDraw(x,proj);
     if(planEd&&planEd.skv&&planEd.skv.vk==='v3') skvDrawOn(x);
     if(v3.box) boxDraw(x,v3.box);
@@ -10119,7 +10119,7 @@ function elevDraw(){ if(!elevDraw.sb){ elevDraw.sb=1; setTimeout(()=>{ elevDraw.
         if(area<2e5){ // скат виден ребром (торцевой фасад): цифра на середине его линии, чуть снаружи
           let lo=fc.P[0],hi=fc.P[0]; for(const p of fc.P){ if(p.z<lo.z) lo=p; if(p.z>hi.z) hi=p; } const a1=evS(lo.u,lo.z), b1=evS(hi.u,hi.z), mx=(a1.x+b1.x)/2, my=(a1.y+b1.y)/2, dx=b1.x-a1.x, dy=b1.y-a1.y, l=Math.hypot(dx,dy)||1; let nx=dy/l, ny=-dx/l; if(ny>0){ nx=-nx; ny=-ny; } c={x:mx+nx*18,y:my+ny*18}; }
         if(EV.hits.some(h=>h.kind==='rA'&&Math.hypot(h.x-c.x,h.y-c.y)<26)) continue; tag(Math.round(a*10)/10+'°',c.x,c.y,'rA',{i,val:a}); } } }
-  try{ RFLK.ev=planEd&&planEd.skv?[]:rfLkView(x,EV.M?EV.M.tri:[],q=>evS(evU({x:q[0],y:q[1]}),q[2]),(EV.sel&&EV.sel.it&&EV.sel.it.id)||selId); }catch(_){ RFLK.ev=[]; }
+  try{ RFLK.ev=[]; /* plan only */ }catch(_){ RFLK.ev=[]; }
   if(planEd&&planEd.skv&&planEd.skv.vk==='ev'){ extSkGhost(); sweepSkLive(); }
   if(PDS&&PDS.vk==='ev') pdDraw(x,q=>evS(evU({x:q[0],y:q[1]}),q[2]));
   if(EV.box) boxDraw(x,EV.box);
