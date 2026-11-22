@@ -4402,7 +4402,8 @@ function addChainPoint(p){
   else { pts.push({x:p.x,y:p.y}); if(segMode()){ chain.pts=[]; chain.ids=[]; live=null; } if(autoF) toast('Стена развёрнута по соседней — ⇅ «Перевернуть», если не так'); }
   persist(); syncLineHint(); ensureVisible(p); redraw();
 }
-function ensureVisible(p){const s=toS(p); if(s.x<30||s.x>W-30||s.y<50||s.y>H-(panel.hidden?30:panel.offsetHeight+40)){view.cx=p.x;view.cy=p.y;}}
+/* keep the new point on screen with the smallest shift (no recentring jump); a point the finger just tapped is already visible — nothing moves */
+function ensureVisible(p){ const s=toS(p), m=24, top=m, pr=panel.hidden?null:panel.getBoundingClientRect(), cr=cv.getBoundingClientRect(), bot=Math.min(H,pr&&pr.height?pr.top-cr.top:H)-m; /* the panel's real top edge */ let dx=0, dy=0; if(s.x<0) dx=s.x-m*3; else if(s.x>W) dx=s.x-(W-m*3); if(s.y<0) dy=s.y-top*3; else if(s.y>bot+m) dy=s.y-(bot-m*2); /* only when it is really off screen or under the panel */ if(dx||dy){ view.cx+=dx/view.scale; view.cy-=dy/view.scale; } }
 function parseNum(s){
   s=String(s||'').replace(/,/g,'.').replace(/\s/g,'').replace(/[−–]/g,'-'); /* a typographic minus counts too */
   if(!s) return NaN;
@@ -5683,7 +5684,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.50':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.51':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9086,7 +9087,7 @@ const panelHome={p:null,n:null};
 function toolsDockSync(){ const W=document.getElementById('toolsW'), v=document.getElementById('v3d'), e=document.getElementById('elev'); if(!W) return; const host=e&&!e.hidden?e:v&&!v.hidden?v:null; if(!toolsDockSync.home){ toolsDockSync.home={p:W.parentNode,n:W.nextSibling}; }
   if(host){ if(W.parentNode!==host||W.nextSibling){ if(W._hid==null){ W._hid=W.classList.contains('hid'); W.classList.remove('hid'); } host.appendChild(W); } }
   else if(W.parentNode!==toolsDockSync.home.p){ toolsDockSync.home.p.insertBefore(W,toolsDockSync.home.n); W.classList.remove('ahid'); if(W._hid!=null){ W.classList.toggle('hid',!!W._hid); W._hid=null; } } }
-document.addEventListener('pointerup',ev=>{ const W=document.getElementById('toolsW'); if(!W||!W.parentNode||(W.parentNode.id!=='v3d'&&W.parentNode.id!=='elev')) return; if(tool!=='select') return; /* placing (beams by columns etc.): the tool bar stays — the view must not jump between taps */ if(ev.target&&ev.target.tagName==='CANVAS'&&ev.target.closest('#v3d,#elev')) setTimeout(()=>{ if(W.parentNode&&(W.parentNode.id==='v3d'||W.parentNode.id==='elev')) W.classList.add('ahid'); },0); },true); // после касания — вид не прыгает под пальцем
+document.addEventListener('pointerup',ev=>{ const W=document.getElementById('toolsW'); if(!W||!W.parentNode||(W.parentNode.id!=='v3d'&&W.parentNode.id!=='elev')) return; return; /* no auto-hide of the tool bar after a tap: it resized the view and the picture jumped (hide it with the grip) */ if(ev.target&&ev.target.tagName==='CANVAS'&&ev.target.closest('#v3d,#elev')) setTimeout(()=>{ if(W.parentNode&&(W.parentNode.id==='v3d'||W.parentNode.id==='elev')) W.classList.add('ahid'); },0); },true); // после касания — вид не прыгает под пальцем
 function dockPanel(host){ if(!host) return; if(!panelHome.p){ panelHome.p=panel.parentNode; panelHome.n=panel.nextSibling; } if(panel.parentNode!==host) host.appendChild(panel); panel.classList.add('inview'); }
 function undockPanel(){ if(panelHome.p&&panel.parentNode!==panelHome.p){ panelHome.p.insertBefore(panel,panelHome.n); } panel.classList.remove('inview'); }
 // выбор объекта в 3D/на фасаде = выбор на плане: уровень, короткое меню; двойное касание — правка; у крыши касание ската — его уклон
