@@ -5405,5 +5405,9 @@
 "внутренняя грань": "inner face",
 "все линии стены": "all wall lines",
 "Отразить на месте": "Mirror in place",
-"Зеркальная копия": "Mirror copy"
+"Зеркальная копия": "Mirror copy",
+"Изменить или копия": "Modify or copy",
+"Исходные остаются, появляется масштабированная копия": "The originals stay, a scaled copy appears",
+"Масштабировать: точка опоры": "Scale: base point",
+"тянуть или ввести число": "drag or type a factor"
 }
