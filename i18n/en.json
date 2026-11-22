@@ -5396,5 +5396,6 @@
 "грань ниже (вода к краям), + грань выше (вода к середине); знак — для всех граней": "the edge is lower (water to the edges), + higher (water to the middle); the sign applies to all edges",
 "Устройства": "Devices",
 "Фундаменты": "Foundations",
-"Угловые размеры": "Angular dimensions"
+"Угловые размеры": "Angular dimensions",
+"Часть балок соединена с колоннами; нажмите — разделить все": "Some beams are joined to the columns; press to separate all"
 }
