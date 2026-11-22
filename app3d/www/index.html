@@ -1127,8 +1127,11 @@ function drawMvGrips(){ if(!mvB||tool!=='select') return; const ids=selIds(); if
 let beamDraw=null, beamLive=null;
 function beamDef(){ return Object.assign({w:200,hh:400},doc.settings.beamDef||{}); }
 function beamCol(id,li){ if(!id) return null; const L=li!=null?doc.levels[li].items:doc.items; return L.find(i=>i.id===id&&isCol(i))||null; }
+/* a beam from a copied floor may still point at the columns of the floor it was copied from: relink it to the column standing at the same place on its own floor */
+function beamRelink(it,li){ const L=doc.levels[li!=null?li:doc.curLv]; if(!L) return; for(const k of ['ca','cb']){ const id=it[k]; if(!id||L.items.some(i=>i.id===id&&isCol(i))) continue; let P=null; for(const L2 of doc.levels){ const C=L2.items.find(i=>i.id===id&&isCol(i)); if(C){ P=C.p; break; } } if(!P) continue;
+  const C=L.items.find(i=>isCol(i)&&i.p&&Math.hypot(i.p.x-P.x,i.p.y-P.y)<2); if(C&&C.id!==(k==='ca'?it.cb:it.ca)) it[k]=C.id; } }
 function colReach(c,u){ if(!c) return 0; if(chimRound(c)) return c.w/2; const r=(c.rot||0)*Math.PI/180, ux=u.x*Math.cos(r)+u.y*Math.sin(r), uy=-u.x*Math.sin(r)+u.y*Math.cos(r); return Math.min(Math.abs(ux)>1e-6?c.w/2/Math.abs(ux):1e9,Math.abs(uy)>1e-6?c.l/2/Math.abs(uy):1e9); }
-function beamG(it,li){ li=li==null?doc.curLv:li; const L=doc.levels[li], CA=beamCol(it.ca,li), CB=beamCol(it.cb,li), A=CA?{x:CA.p.x,y:CA.p.y}:it.a, B=CB?{x:CB.p.x,y:CB.p.y}:it.b, len=Math.hypot(B.x-A.x,B.y-A.y)||1, u={x:(B.x-A.x)/len,y:(B.y-A.y)/len};
+function beamG(it,li){ li=li==null?doc.curLv:li; if(it.ca||it.cb) beamRelink(it,li); const L=doc.levels[li], CA=beamCol(it.ca,li), CB=beamCol(it.cb,li), A=CA?{x:CA.p.x,y:CA.p.y}:it.a, B=CB?{x:CB.p.x,y:CB.p.y}:it.b, len=Math.hypot(B.x-A.x,B.y-A.y)||1, u={x:(B.x-A.x)/len,y:(B.y-A.y)/len};
   let top; if(it.zt!=null&&isFinite(+it.zt)) top=L.elev+(+it.zt); else { const T=[CA,CB].filter(Boolean).map(c=>chimTop(c,li)); top=T.length?Math.min(...T):L.elev+lvHeight(li); }
   const w=Math.max(20,+it.w||200), hh=Math.max(20,+it.hh||400), ta=CA?Math.min(len/2,colReach(CA,u)):0, tb=CB?Math.min(len/2,colReach(CB,{x:-u.x,y:-u.y})):0;
   return {A,B,u,n:{x:-u.y,y:u.x},len,w,hh,top,bot:top-hh,ta,tb,CA,CB}; }
@@ -3942,6 +3945,8 @@ function copyLevel(fi,ti,cats){ const idm={},out=[],src=doc.levels[fi].items, ok
   copyLevel.noW=0; for(const it of src){ if(!isHole(it)||!ok(it)) continue; if(!idm[it.wall]){ copyLevel.noW++; continue; } if(T.some(o=>isHole(o)&&o.wall===idm[it.wall]&&Math.abs(o.pos-it.pos)<1&&o.t===it.t)) continue; /* уже есть */ const c=JSON.parse(JSON.stringify(it)); c.id=uid(); c.wall=idm[it.wall]; out.push(c); }
   const gm={}; for(const c of out) if(c.g) c.g=gm[c.g]||(gm[c.g]=uid());
   for(const c of out) if(c.t==='dim') for(const k of ['ra','rb']) if(c[k]){ if(idm[c[k].id]) c[k]={...c[k],id:idm[c[k].id]}; else delete c[k]; }
+  for(const c of out){ /* beams and footings follow the copied columns of the new level */ if(c.t==='beam') for(const [k,e] of [['ca','a'],['cb','b']]) if(c[k]){ if(idm[c[k]]) c[k]=idm[c[k]]; else { const C=src.find(i=>i.id===c[k]); if(C) c[e]={...C.p}; delete c[k]; } }
+    if(c.t==='fnd'&&c.col){ if(idm[c.col]) c.col=idm[c.col]; else { const C=src.find(i=>i.id===c.col); if(C) c.p={...C.p}; delete c.col; } } }
   doc.levels[ti].items.push(...out); return out.length; }
 // «Что копировать»: категории этажа и крыши над ним (поднять над новым этажом или оставить)
 // «Куда» при копировании: выбранный уровень или новый над самым верхним; одинаковые — понятное сообщение всегда
@@ -5717,7 +5722,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.47':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.48':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
