@@ -5397,5 +5397,11 @@
 "Устройства": "Devices",
 "Фундаменты": "Foundations",
 "Угловые размеры": "Angular dimensions",
-"Часть балок соединена с колоннами; нажмите — разделить все": "Some beams are joined to the columns; press to separate all"
+"Часть балок соединена с колоннами; нажмите — разделить все": "Some beams are joined to the columns; press to separate all",
+"наружная грань": "outer face",
+"ось стены": "wall axis",
+"Настройки магнита": "Snap settings",
+"Прилипать к другим этажам": "Snap to other floors",
+"внутренняя грань": "inner face",
+"все линии стены": "all wall lines"
 }
