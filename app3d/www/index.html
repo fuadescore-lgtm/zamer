@@ -1137,7 +1137,8 @@ function mvStepTo(D,p){ const w=toW(p.x,p.y); let dx=w.x-D.g.x, dy=w.y-D.g.y; ({
     if(isHole(it)){ const g=holeGeom(it); if(g&&!g.G){ it.pos=r3(o.pos+dx*g.u.x+dy*g.u.y); } continue; } shiftItem(it,dx,dy); if(it.t==='dim'){ delete it.ra; delete it.rb; } /* a moved dimension lets go of the walls */
     if(isIns(it)){ D.okP=D.okP||{}; D.okH=D.okH||{}; if(D.okH[it.id]) insSetHost(it,D.okH[it.id]); const tg={...it.p}; insIgn=D.ids; try{ if(!(insValid(it)&&!insClash(it,D.ids))){ const pv=D.okP[it.id]||o.p; it.p=pv; insSlide(it,pv,tg); } } finally{ insIgn=null; } D.okP[it.id]={...it.p}; D.okH[it.id]=it.prim?{prim:it.prim}:it.roof?{roof:it.roof}:null; } } /* окно в крыше: по скату, на соседнюю крышу — если там помещается; не налезает на другие окна */
   moveDelta={dx,dy}; redraw(); viewRefresh(); }
-function drawMvGrips(){ if(!mvB||tool!=='select') return; const ids=selIds(); if(!ids.size) return; const D=press&&press.mvb, G0=D?(D.started&&mvGuide&&mvGuide.P?mvGuide.P:D.g):null; /* the grip the object is held by — yellow */ let gotY=false; ctx.save(); for(const it of doc.items){ if(!ids.has(it.id)) continue; for(const g of gripsOf(it)){ const q=toS(g), hold=!gotY&&G0&&Math.hypot(g.x-G0.x,g.y-G0.y)<1; if(hold) gotY=true; ctx.beginPath(); if(g.k==='c') ctx.arc(q.x,q.y,hold?7:6,0,Math.PI*2); else ctx.rect(q.x-(hold?6:5),q.y-(hold?6:5),hold?12:10,hold?12:10); ctx.fillStyle=hold?'#f5c518':C.surface; ctx.fill(); ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.stroke(); } }
+function drawMvGrips(){ if(!mvB||tool!=='select') return; const ids=selIds(); if(!ids.size) return; const D=press&&press.mvb, G0=D?(D.started&&mvGuide&&mvGuide.P?mvGuide.P:D.g):null; /* the grip the object is held by — yellow */ let isC=false; ctx.save(); for(const it of doc.items){ if(!ids.has(it.id)) continue; for(const g of gripsOf(it)){ const q=toS(g); if(G0&&g.k==='c'&&Math.hypot(g.x-G0.x,g.y-G0.y)<2) isC=true; ctx.beginPath(); if(g.k==='c') ctx.arc(q.x,q.y,6,0,Math.PI*2); else ctx.rect(q.x-5,q.y-5,10,10); ctx.fillStyle=C.surface; ctx.fill(); ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.stroke(); } }
+  if(G0){ const q=toS(G0); ctx.beginPath(); if(isC) ctx.arc(q.x,q.y,7,0,Math.PI*2); else ctx.rect(q.x-6,q.y-6,12,12); ctx.fillStyle='#f5c518'; ctx.fill(); ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.stroke(); } /* drawn last — not hidden under a grip of a neighbour wall */
   if(mvGuide){ const P=toS(mvGuide.P); ctx.setLineDash([5,4]); ctx.lineWidth=1.3; if(mvGuide.gx){ ctx.strokeStyle='#d33b2c'; const a=toS(mvGuide.gx); line(a,P); } if(mvGuide.gy){ ctx.strokeStyle='#2f9e44'; const a=toS(mvGuide.gy); line(a,P); } ctx.setLineDash([]); if(mvGuide.hit){ ctx.strokeStyle='#2fbf62'; ctx.lineWidth=2.2; ctx.strokeRect(P.x-8,P.y-8,16,16); } }
   ctx.restore(); }
 let beamDraw=null, beamLive=null;
@@ -5746,7 +5747,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.56':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.57':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
