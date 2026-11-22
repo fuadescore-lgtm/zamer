@@ -5393,5 +5393,8 @@
 "Убрать уклон этой грани": "Remove the slope of this edge",
 "Разница между самой высокой и самой низкой точкой верха": "Difference between the highest and the lowest point of the top",
 "Уклон грани": "Edge slope",
-"грань ниже (вода к краям), + грань выше (вода к середине); знак — для всех граней": "the edge is lower (water to the edges), + higher (water to the middle); the sign applies to all edges"
+"грань ниже (вода к краям), + грань выше (вода к середине); знак — для всех граней": "the edge is lower (water to the edges), + higher (water to the middle); the sign applies to all edges",
+"Устройства": "Devices",
+"Фундаменты": "Foundations",
+"Угловые размеры": "Angular dimensions"
 }
