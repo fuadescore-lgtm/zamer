@@ -229,7 +229,7 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
 .t3dv{font:800 13px var(--f-ui,system-ui)}.seg button.sico svg{width:24px;height:24px;display:block}
 .snappop{position:absolute;overflow:visible!important;right:8px;left:auto;flex-direction:row;flex-wrap:wrap;align-items:center;max-width:calc(100% - 16px)}
 .snappop .tool{flex:none}
-.panel:has(.trsheet){flex-wrap:wrap!important;overflow-y:auto!important;overflow-x:hidden!important;max-height:64vh!important;align-items:flex-start!important}.panel:has(.trsheet)>:not(.trsheet){max-width:100%;overflow-x:auto;flex-wrap:nowrap}.panel:has(.trsheet)>:not(.trsheet)>*,.panel:has(.trsheet)>:not(.trsheet) .seg>*{flex-shrink:0;white-space:nowrap}.trsheet{width:100%;max-width:100%}.trsheet .trrow>*{flex:0 0 auto}.trfold .ibn.okb{min-width:44px}.trsheet{flex:1 1 100%;display:flex;flex-direction:column;gap:8px;min-width:0}.trhd{display:flex;align-items:center;gap:8px}.trhd b{font-size:14px}.trsheet .sp,.trfold .sp{flex:1}
+@media (max-width:600px){.panel:has(.trsheet){max-height:50vh!important}}.panel:has(.trsheet){flex-wrap:wrap!important;overflow-y:auto!important;overflow-x:hidden!important;max-height:64vh!important;align-items:flex-start!important}.panel:has(.trsheet)>:not(.trsheet){max-width:100%;overflow-x:auto;flex-wrap:nowrap}.panel:has(.trsheet)>:not(.trsheet)>*,.panel:has(.trsheet)>:not(.trsheet) .seg>*{flex-shrink:0;white-space:nowrap}.trsheet{width:100%;max-width:100%}.trsheet .trrow>*{flex:0 0 auto}.trfold .ibn.okb{min-width:44px}.trsheet{flex:1 1 100%;display:flex;flex-direction:column;gap:8px;min-width:0}.trhd{display:flex;align-items:center;gap:8px}.trhd b{font-size:14px}.trsheet .sp,.trfold .sp{flex:1}
 .trgrid{display:flex;flex-wrap:wrap;gap:6px}.trb{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 6px 4px;min-width:108px;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--sel,#4d9aff);cursor:pointer;font:inherit}.trb span{font-size:11px;color:var(--ink,inherit)}.trb i{position:absolute;top:3px;left:6px;font-style:normal;font-size:10px;opacity:.6;color:var(--ink,inherit)}.trb.on{border:2px solid #f5c518}.trb.sm{min-width:76px}
 .trauto{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--sel,#4d9aff);border-radius:8px;font-size:13px}.trauto input{width:18px;height:18px}
 .trrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.trrow input:disabled{opacity:.55}
@@ -2121,7 +2121,11 @@ const lwPx=(it,def)=>it.lw?1+it.lw*3.5:def;
 function ltDash(it){ const k=Math.max(1,lwPx(it,1.5)/1.5); return it.lt==='dash'?[10*k,6*k]:it.lt==='dot'?[1.5*k,4*k]:it.lt==='dashdot'?[12*k,4*k,2*k,4*k]:[]; }
 cv.addEventListener('pointerdown',()=>{ const ae=document.activeElement; if(ae&&panel.contains(ae)&&ae.matches('input,select')) ae.blur(); },{capture:true});
 function drawGeoUI(){ try{ syncDelBtn(); syncModeBtns(); } catch(e){} try{ ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); const sr=IS3D&&selId&&!moveSel.size?doc.items.find(i=>i.id===selId&&i.t==='roof'):null; if(sr) drawRoofJoinIcons(sr); else roofJoinHits=[]; ctx.restore(); }catch(e){ console.warn(e); } try{ if(typeof drawMe!=='function') return; ctx.save(); ctx.setTransform(DPR,0,0,DPR,0,0); drawMe(); drawNorthSym(); ctx.restore(); }catch(e){ console.warn(e); } }
-let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;render();drawGeoUI();drawLoupe();snapBuzz();}); }
+/* plan labels that must not overlap: each frame keeps the screen boxes already taken */
+let LBLR=[]; function lblFree(cx,cy,w,h,ang){ const c=Math.abs(Math.cos(ang)), s2=Math.abs(Math.sin(ang)), W2=(w*c+h*s2)/2, H2=(w*s2+h*c)/2, b=[cx-W2,cy-H2,cx+W2,cy+H2];
+  for(const q of LBLR) if(b[0]<q[2]&&b[2]>q[0]&&b[1]<q[3]&&b[3]>q[1]) return false; LBLR.push(b); return true; }
+function lblTake(cx,cy,w,h,ang){ const c=Math.abs(Math.cos(ang)), s2=Math.abs(Math.sin(ang)), W2=(w*c+h*s2)/2, H2=(w*s2+h*c)/2; LBLR.push([cx-W2,cy-H2,cx+W2,cy+H2]); } /* a label that always shows (wall length) — others keep clear of it */
+let raf=0; function redraw(){ if(!raf) raf=requestAnimationFrame(()=>{raf=0;LBLR=[];render();drawGeoUI();drawLoupe();snapBuzz();}); }
 
 /* ---------- render ---------- */
 const FNUM='"IBM Plex Mono", ui-monospace, monospace';
@@ -2205,7 +2209,7 @@ function drawItem0(it,sel){
         const wm={x:(it.a.x+it.b.x)/2+n.x*off*sgn,y:(it.a.y+it.b.y)/2+n.y*off*sgn}, m=toS(wm);
         labelHits.push({id:it.id,w:wm,x:m.x,y:m.y,val:len});
         ctx.save();ctx.translate(m.x,m.y);ctx.rotate(-readableAngle(u)*Math.PI/180);
-        ctx.font=(sel?'600 ':'')+'12px '+FNUM;ctx.textAlign='center';ctx.textBaseline='middle';haloText(fmtU(len),0,0,sel?C.sel:C.muted);ctx.restore();
+        ctx.font=(sel?'600 ':'')+'12px '+FNUM;ctx.textAlign='center';ctx.textBaseline='middle';haloText(fmtU(len),0,0,sel?C.sel:C.muted);lblTake(m.x,m.y,ctx.measureText(fmtU(len)).width+6,15,-readableAngle(u)*Math.PI/180);ctx.restore();
       }
     }
     if(sel){ctx.fillStyle=C.sel;for(const p of [a,b]){ctx.fillRect(p.x-4,p.y-4,8,8);}}
@@ -2264,10 +2268,12 @@ function drawItem0(it,sel){
       const a1=Math.atan2(p1.y-c.y,p1.x-c.x), a2=Math.atan2(p2.y-c.y,p2.x-c.x); let d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
       ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.arc(c.x,c.y,r,a1,a2,d<0); ctx.stroke(); ctx.setLineDash([]); }
     if(sy.dash){ ctx.lineWidth=1; ctx.setLineDash([6,4]); for(const [a,b] of sy.dash) line(toS(a),toS(b)); ctx.setLineDash([]); }
-    if(sel||doc.settings.wallLabels){ const g=sy.g, m=toS(g.at(g.c,-g.oR-12/view.scale));
-      if(g.w*view.scale>34){ ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(-readableAngle(g.u)*Math.PI/180);
-        ctx.font=(sel?'600 ':'500 ')+'11px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle';
-        haloText((it.dk==='gar'?'ВОР ':HOLEA[it.t])+(doorLab(it)?doorLab(it,fmtU)+'×'+fmtU(it.height):(it.sh||'rect')==='round'?'Ø'+fmtU(g.w):fmtU(g.w)+'×'+fmtU(it.height))+(it.sh==='arch'?' арка':''),0,0,sel?C.sel:(it.t==='win'?C.open:C.ink)); ctx.restore(); } }
+    if(false){ /* window / door labels are not shown on the plan (sizes are in the panel) */ const g=sy.g, m=toS(g.at(g.c,-g.oR-12/view.scale));
+      if(g.w*view.scale>34){ const an=-readableAngle(g.u)*Math.PI/180; ctx.save(); ctx.font=(sel?'600 ':'500 ')+'11px '+FNUM;
+        /* full label, else only the size, else none — never over a neighbour's label (the selected one always shows) */
+        const sz=doorLab(it)?doorLab(it,fmtU)+'×'+fmtU(it.height):(it.sh||'rect')==='round'?'Ø'+fmtU(g.w):fmtU(g.w)+'×'+fmtU(it.height), full=tr((it.dk==='gar'?'ВОР ':HOLEA[it.t]))+sz+(it.sh==='arch'?tr(' арка'):''), room=g.w*view.scale+10;
+        let txt=null; for(const t of [full,sz]){ const w=ctx.measureText(t).width; if(sel||w<=room){ if(lblFree(m.x,m.y,w+6,14,an)||sel){ txt=t; break; } } }
+        if(txt){ ctx.translate(m.x,m.y); ctx.rotate(an); ctx.textAlign='center'; ctx.textBaseline='middle'; haloText(txt,0,0,sel?C.sel:(it.t==='win'?C.open:C.ink)); } ctx.restore(); } }
     if(sel||holeDrag===it) drawHoleClear(it);
     if(holeMv===it.id&&selId===it.id) drawHoleArrows(it);
   } else if(it.t==='circ'){
@@ -4123,7 +4129,9 @@ function drawStair(it,sel,ghost){ const g=stairGeom(it); ctx.save(); if(ghost) c
   if(g.arrow.length>1){ ctx.strokeStyle=sel?C.sel:C.muted; ctx.lineWidth=1.2; const A=g.arrow.map(toS); ctx.beginPath(); ctx.moveTo(A[0].x,A[0].y); for(let i=1;i<A.length;i++) ctx.lineTo(A[i].x,A[i].y); ctx.stroke();
     const e=A[A.length-1], f=A[A.length-2], d=Math.hypot(e.x-f.x,e.y-f.y)||1, ux=(e.x-f.x)/d, uy=(e.y-f.y)/d; ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(e.x-ux*10-uy*5,e.y-uy*10+ux*5); ctx.lineTo(e.x-ux*10+uy*5,e.y-uy*10-ux*5); ctx.closePath(); ctx.fillStyle=sel?C.sel:C.muted; ctx.fill();
     const s0=A[0]; ctx.beginPath(); ctx.arc(s0.x,s0.y,4,0,Math.PI*2); ctx.fill(); }
-  const P0=it.pts[0], L0=toS(P0); ctx.font='600 12px '+FNUM; ctx.textAlign='center'; ctx.textBaseline='middle'; haloText(g.n+' ступ.',L0.x,L0.y-14,sel?C.sel:C.ink);
+  /* the step count sits inside the first flight, along it — not over a neighbour */
+  const P0=it.pts[0], P1=it.pts[1]||P0, L0=toS({x:(P0.x+P1.x)/2,y:(P0.y+P1.y)/2}), an=-readableAngle(unit(P0,P1))*Math.PI/180, tx=tr(g.n+' ступ.'); ctx.font='600 12px '+FNUM;
+  if(sel||lblFree(L0.x,L0.y,ctx.measureText(tx).width+6,16,an)){ ctx.save(); ctx.translate(L0.x,L0.y); ctx.rotate(an); ctx.textAlign='center'; ctx.textBaseline='middle'; haloText(tx,0,0,sel?C.sel:C.ink); ctx.restore(); }
   ctx.restore(); }
 // где встанет окно/дверь под пальцем (или курсором): ближайшая стена и место на ней
 function holePreview(p){ const h=hit(p.x,p.y); if(!h||h.t!=='line'||!isWall(h)) return null; const def=holeDef(holeType), L=lineLen(h); if(L<def.w+20) return null;
@@ -4810,6 +4818,10 @@ window.addEventListener('resize',()=>{ try{ if(panel.contains(document.activeEle
 function placePanel(){ /* панель свойств закреплена над нижней панелью инструментов */ }
 // планшет: у кнопок с короткой надписью (.tp2) первое касание — подсветка и подсказка, второе — действие; мышь — как обычно
 let lastPT='mouse', tip2=null; document.addEventListener('pointerdown',e=>{ lastPT=e.pointerType||'mouse'; },true);
+/* a tap on the drawing while a pop-up menu is open only closes the menu — it does not also select / draw underneath */
+document.addEventListener('pointerdown',e=>{ if(e.__menuClose||!e.target||e.target.tagName!=='CANVAS') return;
+  const open=[...document.querySelectorAll('#popMenu,#cpMenu,#snapPop,#toolMenu,#magPop,.popup-up,.lvdd .lvmenu')].some(m=>!m.hidden&&m.offsetParent);
+  if(!open) return; e.stopImmediatePropagation(); e.preventDefault(); const ev=new PointerEvent('pointerdown',{bubbles:true,pointerType:e.pointerType}); ev.__menuClose=true; document.body.dispatchEvent(ev); },true);
 function tip2Off(){ if(!tip2) return; tip2.el.classList.remove('tip2on'); tip2.box.remove(); clearTimeout(tip2.t); tip2=null; }
 document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('.tp2'); if(!b){ tip2Off(); return; } if(lastPT!=='touch'&&lastPT!=='pen'){ tip2Off(); return; } if(tip2&&tip2.el===b){ tip2Off(); return; } tip2Off();
   e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); const t=b.getAttribute('title')||b.getAttribute('aria-label')||b.textContent||''; const box=document.createElement('div'); box.className='tip2b'; box.textContent=(typeof tr==='function'?tr(t)+' — '+tr('коснитесь ещё раз'):t+' — коснитесь ещё раз'); document.body.appendChild(box); const r=b.getBoundingClientRect(), w=box.offsetWidth, h=box.offsetHeight; box.style.left=Math.max(6,Math.min(innerWidth-w-6,r.left+r.width/2-w/2))+'px'; box.style.top=(r.top-h-8>4?r.top-h-8:r.bottom+8)+'px'; b.classList.add('tip2on'); tip2={el:b,box,t:setTimeout(tip2Off,4000)}; },true);
@@ -5982,7 +5994,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.66':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.67':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -9450,7 +9462,13 @@ function open3D(){ linkPick=null; ridgePick=null; let M=bmLive(); if(!M.tri.leng
     lp=[]; for(const [a,b] of M.lines) lp.push(...a,...b);
     for(const b of [bP,bN,bC,bL]) gl.deleteBuffer(b); bP=buf(pos); bN=buf(nrm); bC=buf(col); bL=buf(lp); if(b2) b2.forEach(x=>gl.deleteBuffer(x)); b2=pos2.length?[buf(pos2),buf(nrm2),buf(col2)]:null; if(b3) b3.forEach(x=>gl.deleteBuffer(x)); b3=gP.length?[buf(gP),buf(gN),buf(gC)]:null; n3=gP.length/3; if(bX) bX.forEach(x=>gl.deleteBuffer(x)); bX=xP.length?[buf(xP),buf(xN),buf(xC)]:null; nX=xP.length/3; if(v3.elec||mechOn) lp=[]; if(v3.elec||mechOn){ gl.deleteBuffer(bL); bL=buf(lp); } if(bS){ gl.deleteBuffer(bS); bS=null; nS=0; } if(mechOn){ const q=[]; for(const ln of M.lines) if(ln.ns) q.push(...ln[0],...ln[1]); if(q.length){ bS=buf(q); nS=q.length/3; } } };
   const fitD=()=>{ const a=(cvs.clientWidth||1)/(cvs.clientHeight||1); return R/Math.tan(0.4)/Math.min(1,a)*1.08; };
-  const st=v3&&v3.keep&&v3.R===R?v3:{yaw:-0.6-Math.PI/2,pitch:0.5,dist:fitD(),pan:[0,0,0],edges:true};
+  const fresh=!(v3&&v3.keep&&v3.R===R), st=!fresh?v3:{yaw:-0.6-Math.PI/2,pitch:0.5,dist:fitD(),pan:[0,0,0],edges:true};
+  /* fit by the projected bounding box (the sphere fit leaves a long, flat model small, most of all on a phone) */
+  const fitTight=()=>{ let mn=[1e18,1e18,1e18], mx=[-1e18,-1e18,-1e18]; for(const t of (M&&M.tri)||[]) for(const q of t.v) for(let k=0;k<3;k++){ if(q[k]<mn[k]) mn[k]=q[k]; if(q[k]>mx[k]) mx[k]=q[k]; } if(mn[0]>mx[0]) return;
+    const C=[]; for(const x of [mn[0],mx[0]]) for(const y of [mn[1],mx[1]]) for(const z of [mn[2],mx[2]]) C.push([x,y,z]);
+    for(let i=0;i<5;i++){ draw(); const c=v3.cam; if(!c||!c.W2||!c.H2) return; let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const q of C){ const p=proj(q); if(!p) return; x0=Math.min(x0,p.x); x1=Math.max(x1,p.x); y0=Math.min(y0,p.y); y1=Math.max(y1,p.y); }
+      const k=Math.max((x1-x0)/(c.W2*0.88),(y1-y0)/(c.H2*0.8)); if(!(k>0)||Math.abs(k-1)<0.02) break; v3.dist=Math.max(R*0.15,v3.dist*k); }
+    draw(); };
   v3={...st,keep:true,el,draw:null,R}; if(typeof evElec!=='undefined'&&evElec) v3.elec=evElec; /* режим — как на фасадах */
   const mul=(a,b)=>{ const r=new Array(16).fill(0); for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=0;k<4;k++) r[j*4+i]+=a[k*4+i]*b[j*4+k]; return r; };
   const draw=()=>{ const W2=cvs.clientWidth, H2=cvs.clientHeight, dpr=window.devicePixelRatio||1; if(cvs.width!==Math.round(W2*dpr)||cvs.height!==Math.round(H2*dpr)){ cvs.width=Math.round(W2*dpr); cvs.height=Math.round(H2*dpr); } /* и по высоте: панель внизу меняет высоту вида */
@@ -9471,10 +9489,10 @@ function open3D(){ linkPick=null; ridgePick=null; let M=bmLive(); if(!M.tri.leng
     for(const nm of ['n','c']){ const l=gl.getAttribLocation(pr,nm); gl.disableVertexAttribArray(l); }
     if(v3.edges&&lp.length){ gl.useProgram(pl2); gl.uniformMatrix4fv(gl.getUniformLocation(pl2,'m'),false,new Float32Array(MV)); gl.uniform3f(gl.getUniformLocation(pl2,'e'),eye[0],eye[1],eye[2]); const l=gl.getAttribLocation(pl2,'p'); gl.bindBuffer(gl.ARRAY_BUFFER,bL); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); gl.drawArrays(gl.LINES,0,lp.length/3); }
     if(mechOn&&bS){ const po=window.MECH_PO||[0.72,0.5,1,0.3]; gl.useProgram(plB); gl.uniformMatrix4fv(gl.getUniformLocation(plB,'m'),false,new Float32Array(MV)); gl.uniform3f(gl.getUniformLocation(plB,'e'),eye[0],eye[1],eye[2]); gl.uniform4f(gl.getUniformLocation(plB,'c'),po[0],po[1],po[2],po[3]); const l=gl.getAttribLocation(plB,'p'); gl.bindBuffer(gl.ARRAY_BUFFER,bS); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.drawArrays(gl.LINES,0,nS); gl.depthMask(true); gl.disable(gl.BLEND); } drawOv(); };
-  { const hb=el.querySelector('.v3home'); if(hb) hb.onclick=e=>{ e.stopPropagation(); let mn=[1e18,1e18,1e18], mx=[-1e18,-1e18,-1e18]; for(const t of (M&&M.tri)||[]) for(const q of t.v) for(let k=0;k<3;k++){ if(q[k]<mn[k]) mn[k]=q[k]; if(q[k]>mx[k]) mx[k]=q[k]; } if(mn[0]>mx[0]) return; const c=[0,1,2].map(k=>(mn[k]+mx[k])/2), rr=Math.hypot(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])/2||1000, a=(cvs.clientWidth||1)/(cvs.clientHeight||1); v3.pan=[c[0]-C0[0],c[1]-C0[1],c[2]-C0[2]]; v3.dist=rr/Math.tan(0.4)/Math.min(1,a)*1.08; draw(); }; }
+  { const hb=el.querySelector('.v3home'); if(hb) hb.onclick=e=>{ e.stopPropagation(); let mn=[1e18,1e18,1e18], mx=[-1e18,-1e18,-1e18]; for(const t of (M&&M.tri)||[]) for(const q of t.v) for(let k=0;k<3;k++){ if(q[k]<mn[k]) mn[k]=q[k]; if(q[k]>mx[k]) mx[k]=q[k]; } if(mn[0]>mx[0]) return; const c=[0,1,2].map(k=>(mn[k]+mx[k])/2), rr=Math.hypot(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])/2||1000, a=(cvs.clientWidth||1)/(cvs.clientHeight||1); v3.pan=[c[0]-C0[0],c[1]-C0[1],c[2]-C0[2]]; v3.dist=rr/Math.tan(0.4)/Math.min(1,a)*1.08; fitTight(); }; }
   // центр выделенного объекта — ось вращения
   v3.selC=()=>{ const id=v3.sel&&v3.sel.id; if(!id||!M) return null; let mn=[1e18,1e18,1e18], mx=[-1e18,-1e18,-1e18], n=0; for(const t of M.tri){ if(t.iid!==id&&t.rid!==id) continue; n++; for(const q of t.v) for(let k=0;k<3;k++){ if(q[k]<mn[k]) mn[k]=q[k]; if(q[k]>mx[k]) mx[k]=q[k]; } } return n?[0,1,2].map(k=>(mn[k]+mx[k])/2):null; };
-  v3.draw=draw; v3.up=upload; if(v3.elec===2) v3.elec=1; v3ModeBtn(); if(v3.elec||mechOn) upload(true); try{ v3OrthoBtn(); v3TopBtn(); }catch(_){} draw();
+  v3.draw=draw; v3.up=upload; if(v3.elec===2) v3.elec=1; v3ModeBtn(); if(v3.elec||mechOn) upload(true); try{ v3OrthoBtn(); v3TopBtn(); }catch(_){} draw(); if(fresh) queueMicrotask(()=>{ try{ fitTight(); }catch(_){} });
   // правый столбец кнопок, как на плане: назад, вперёд, корзина, отмена, готово
   if(!el.querySelector('.v3side')){ const sd=document.createElement('div'); sd.className='v3side'; sd.innerHTML=[['btnUndo','u'],['btnRedo','r'],['btnDel','d'],['btnCancel','c'],['btnOk','o']].map(([id,k])=>{ const src=$('#'+id); return `<button class="${src.className}" data-v3s="${k}" title="${src.title}" aria-label="${src.getAttribute('aria-label')||''}">${src.innerHTML}</button>`; }).join('');
     el.querySelector('.v3w').appendChild(sd);
@@ -9869,7 +9887,7 @@ function open3D(){ linkPick=null; ridgePick=null; let M=bmLive(); if(!M.tri.leng
       mn.innerHTML=`<button class="btn" data-v3="capA">${tr('Аксонометрия электрики')}${ed.axo?' ✓':''}</button><button class="btn" data-v3="capZ">${tr('Узел подключения')}${ed.axoZ?' ✓':''}</button><button class="btn" data-v3="capX">${tr('Ракурс — авто')}</button>`; el.querySelector('.v3bar').appendChild(mn); return; }
     if(k==='capA'||k==='capZ'||k==='capX'){ const ed=elecDef(), mn=el.querySelector('.v3capm'); if(mn) mn.remove(); pushUndo(); if(k==='capX'){ delete ed.axo; delete ed.axoZ; toast('Ракурсы для отчёта — авто'); } else { const c=v3.cam; if(!c) return; const tg=[0,1,2].map(i=>c.eye[i]+c.f[i]*v3.dist); ed[k==='capA'?'axo':'axoZ']={eye:c.eye.map(Math.round),tgt:tg.map(Math.round),ortho:!!v3.ortho,oh:Math.round(c.oh||v3.dist*Math.tan(0.4)),asp:Math.round((c.asp||1.5)*1000)/1000}; toast(k==='capA'?'Ракурс «Аксонометрия электрики» сохранён для отчёта':'Ракурс «Узел подключения» сохранён для отчёта'); } persist(); return; }
     if((k==='close'||/^e[SNEW]$/.test(k))&&planEd&&planEd.skv&&planEd.skv.vk==='v3') skQuit(); /* a sketch on a 3D face ends with its view */
-    if(k==='close'){ xSel=null; msLeave(); el.hidden=true; undockPanel(); panelKey=''; syncPanel(); redraw(); return; } if(/^e[SNEW]$/.test(k)){ el.hidden=true; undockPanel(); if(EV) EV.view=null; openElev(elevByCard(k[1])); return; } if(k==='iso'){ v3.yaw=-0.6-Math.PI/2; v3.pitch=0.5; v3.dist=fitD(); v3.topLock=false; v3TopBtn(); } if(k==='top'){ if(!v3.topLock) v3.preTop={yaw:v3.yaw,pitch:v3.pitch,dist:v3.dist,pan:v3.pan.slice(),ortho:!!v3.ortho}; v3.ortho=true; v3OrthoBtn(); /* вид сверху — всегда ортогональный */ v3.yaw=-Math.PI/2; v3.pitch=Math.PI/2-0.0005; v3.dist=fitD(); v3.topLock=true; v3TopBtn(); }
+    if(k==='close'){ xSel=null; msLeave(); el.hidden=true; undockPanel(); panelKey=''; syncPanel(); redraw(); return; } if(/^e[SNEW]$/.test(k)){ el.hidden=true; undockPanel(); if(EV) EV.view=null; openElev(elevByCard(k[1])); return; } if(k==='iso'){ v3.yaw=-0.6-Math.PI/2; v3.pitch=0.5; v3.pan=[0,0,0]; v3.dist=fitD(); v3.topLock=false; v3TopBtn(); fitTight(); } if(k==='top'){ if(!v3.topLock) v3.preTop={yaw:v3.yaw,pitch:v3.pitch,dist:v3.dist,pan:v3.pan.slice(),ortho:!!v3.ortho}; v3.ortho=true; v3OrthoBtn(); /* вид сверху — всегда ортогональный */ v3.yaw=-Math.PI/2; v3.pitch=Math.PI/2-0.0005; v3.dist=fitD(); v3.topLock=true; v3TopBtn(); }
     if(k==='orb'){ const p=v3.preTop; if(v3.topLock&&p&&p.pitch<1.5){ v3.yaw=p.yaw; v3.pitch=p.pitch; v3.dist=p.dist; v3.topLock=false; if(p.ortho!=null){ v3.ortho=p.ortho; v3OrthoBtn(); } v3TopBtn(); v3.pan=p.pan.slice(); draw(); return; } v3.yaw=-0.6-Math.PI/2; v3.pitch=0.5; v3.dist=fitD(); v3.topLock=false; v3TopBtn(); } if(k==='front'){ v3.yaw=-Math.PI/2; v3.pitch=0.05; v3.dist=fitD(); } if(k==='edges'){ v3.edges=!v3.edges; const mm=el.querySelector('.v3modm'); if(mm) mm.remove(); } if(k==='axes'){ if(doc.settings.noAx3) delete doc.settings.noAx3; else doc.settings.noAx3=true; persist(); const mm=el.querySelector('.v3modm'); if(mm) mm.remove(); draw(); return; /* вид не сбрасываем */ } if(k==='ortho'){ v3.ortho=!v3.ortho; v3OrthoBtn(); } if(k==='elec'){ const wasM=mechOn; mechOn=false; v3.elec=((v3.elec||0)+1)%3, evElec=v3.elec; const bb=el.querySelector('[data-v3="elec"]'); if(bb){ bb.textContent=tr(['Электрика','Электрика: прозрачно','Электрика: только кабели'][v3.elec]); bb.classList.toggle('go',!!v3.elec); } v3ModeBtn(); if(v3.up) v3.up(!wasM); } v3.pan=[0,0,0]; draw(); };
   window.addEventListener('resize',()=>{ if(!el.hidden) draw(); }); }
 
