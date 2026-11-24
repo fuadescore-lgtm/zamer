@@ -229,7 +229,7 @@ html:not(.is3d) .lvrow{grid-template-columns:minmax(0,1fr) 104px auto}
 .t3dv{font:800 13px var(--f-ui,system-ui)}.seg button.sico svg{width:24px;height:24px;display:block}
 .snappop{position:absolute;overflow:visible!important;right:8px;left:auto;flex-direction:row;flex-wrap:wrap;align-items:center;max-width:calc(100% - 16px)}
 .snappop .tool{flex:none}
-.panel:has(.trsheet){flex-wrap:wrap!important;overflow-y:auto!important;max-height:64vh!important;align-items:flex-start!important}.trsheet{flex:1 1 100%;display:flex;flex-direction:column;gap:8px;min-width:0}.trhd{display:flex;align-items:center;gap:8px}.trhd b{font-size:14px}.trsheet .sp,.trfold .sp{flex:1}
+.panel:has(.trsheet){flex-wrap:wrap!important;overflow-y:auto!important;overflow-x:hidden!important;max-height:64vh!important;align-items:flex-start!important}.panel:has(.trsheet)>:not(.trsheet){max-width:100%;overflow-x:auto;flex-wrap:nowrap}.panel:has(.trsheet)>:not(.trsheet)>*,.panel:has(.trsheet)>:not(.trsheet) .seg>*{flex-shrink:0;white-space:nowrap}.trsheet{width:100%;max-width:100%}.trsheet .trrow>*{flex:0 0 auto}.trfold .ibn.okb{min-width:44px}.trsheet{flex:1 1 100%;display:flex;flex-direction:column;gap:8px;min-width:0}.trhd{display:flex;align-items:center;gap:8px}.trhd b{font-size:14px}.trsheet .sp,.trfold .sp{flex:1}
 .trgrid{display:flex;flex-wrap:wrap;gap:6px}.trb{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 6px 4px;min-width:108px;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--sel,#4d9aff);cursor:pointer;font:inherit}.trb span{font-size:11px;color:var(--ink,inherit)}.trb i{position:absolute;top:3px;left:6px;font-style:normal;font-size:10px;opacity:.6;color:var(--ink,inherit)}.trb.on{border:2px solid #f5c518}.trb.sm{min-width:76px}
 .trauto{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--sel,#4d9aff);border-radius:8px;font-size:13px}.trauto input{width:18px;height:18px}
 .trrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.trrow input:disabled{opacity:.55}
@@ -4375,7 +4375,7 @@ function hitAll(sx,sy){
       if(Math.abs(sx-p.x)<w+6&&Math.abs(sy-p.y)<fs/2+6) d=0; }
     if(d<20) all.push({it,d,ix});
   });
-  all.sort((a,b)=>(Math.round(a.d*2)/2-Math.round(b.d*2)/2)||(b.ix-a.ix)); hitAll.last=all; return all.map(o=>o.it);
+  const pen=o=>o.it.t==='grid'?4:0; /* an axis line yields to the object standing on it */ all.sort((a,b)=>(Math.round((a.d+pen(a))*2)/2-Math.round((b.d+pen(b))*2)/2)||(b.ix-a.ix)); hitAll.last=all; return all.map(o=>o.it);
 }
 // касание в режиме выбора: первое — верхний объект; следующие касания в той же точке — следующий под ним, по кругу;
 // двойное касание — подробная правка выделенного (графика, контур, ступени, проём)
@@ -4757,7 +4757,7 @@ const IDET=()=>IB('detail','pen','Изменить параметры (двой�
 const ROOFJ={auto:['Авто','Соединение: авто — край сам примыкает к соседней крыше, если она рядом'],join:['Примыкать','Соединение: край продлевается до соседней крыши и подрезается по ней'],free:['Свободно','Соединение: край не продлевается к соседним крышам']};
 function roofJoinSeg(ed,act){ const cur=ed.j||'auto'; return `<span class="lbl">Соединение</span><div class="seg" role="group">${Object.keys(ROOFJ).map(k=>`<button data-act="${act}" data-j="${k}" aria-pressed="${cur===k}" title="${ROOFJ[k][1]}">${ROOFJ[k][0]}</button>`).join('')}</div>`; }
 function ridgeFix(r){ return isExt(r)?'':`<button class="btn" data-act="rfFix" aria-pressed="${r.fixT!=null}" title="Фиксировать высоту конька: при смене уклона конёк остаётся на месте, двигается низ крыши. Выкл — конёк следует за уклонами">${r.fixT!=null?'☑':'☐'} Фикс. конёк</button>`; } // только в меню параметров (двойное касание)
-function roofRmToggle(r){ pushUndo(); if(r.rm==='fix'){ delete r.rm; delete r.eqM; roofEqRidges(r); doc.settings.roofRm='eq'; toast('Коньки ровно: уклоны пересчитаны, коньки на одной высоте',true); } else { r.rm='fix'; doc.settings.roofRm='fix'; toast('Задаю уклоны: крыша строится по уклонам скатов, коньки могут быть разной высоты',true); } persist(); panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} }
+function roofRmToggle(r){ pushUndo(); if(r.rm==='fix'){ delete r.rm; delete r.eqM; roofEqRidges(r); doc.settings.roofRm='eq'; } else { r.rm='fix'; doc.settings.roofRm='fix'; } /* the button shows the mode — no explanation toast */ persist(); panelKey=''; syncPanel(); redraw(); try{ viewRefresh(); }catch(e){} }
 function rmBtn(r,attr){ let n=0; try{ n=ridgeList(r).filter(H=>H.L>=300).length; }catch(e){} if(n<2||isExt(r)) return ''; const fx=r.rm==='fix'; return `<button class="btn" ${attr} aria-pressed="${!fx}" title="${fx?'Что задаю: уклоны (по замеру) — коньки, вальмы и ендовы строятся по уклонам, коньки могут быть разной высоты. Касание — коньки ровно':'Что задаю: коньки ровно — после правки уклоны пересчитываются, коньки на одной высоте. Касание — задаю уклоны'}">${fx?'∠ Задаю уклоны':'═ Коньки ровно'}</button>`; }
 /* slope panel of a roof by plan: ★ main slope, its pitch locked; other slopes — pitch computed, inclinometer check */
 function planMainFlds(r,i,ed){ const CN=planConeOf(r,i); if(CN) return `<span class="lbl">конус: уклон ${r1(CN.amin)}…${r1(CN.amax)}° · вершина на коньке, карниз по дуге на одной высоте</span>`; const M=r.main, me=M===i, a=Math.round((ed.a||0)*10)/10, Y='background:#ffcc33;color:#222;border-color:#e0a800;font-weight:700';
@@ -5299,7 +5299,7 @@ panel.addEventListener('click',e=>{ { const rk=e.target.closest('[data-rlk]'), s
     case 'ang':{const a=parseNum($('#inAng').value); if(isNaN(a)){toast('Введите угол в градусах');return;} addByLen(a);break;}
     case 'close':closeChain();break;
     case 'copy':copyOn=!copyOn;b.setAttribute('aria-pressed',String(copyOn));toast(copyOn?'Режим копии: оригинал останется на месте':'Режим копии выключен');break;
-    case 'mvOrtho':{ setAxis(axisMode==='free'?'ortho':'free'); panelKey=''; syncPanel(); toast(axisMode==='free'?'Орто выключено — свободно':'Орто — только по X или Y',true); break; }
+    case 'mvOrtho':{ setAxis(axisMode==='free'?'ortho':'free'); panelKey=''; syncPanel(); break; } /* the button shows the state — no toast */
     case 'mvBase':{ mvB=!mvB; mvGuide=null; if(mvB){ selJoint=null; mvSelId=selId; if(axisMode!=='free'){ mvAx0=axisMode; setAxis('free'); } } else if(mvAx0){ setAxis(mvAx0); mvAx0=null; } /* «Переместить»: по умолчанию без орто, после — как было */ panelKey=''; syncPanel(); redraw(); if(mvB) toast('Переместить: возьмите за точку (центр или угол) и тяните — магнит к точкам соседей, пунктир выравнивания',true); break; }
     case 'msStart':{ if(mvB&&mvAx0){ setAxis(mvAx0); mvAx0=null; } mvB=false; msStart(); panelKey=''; syncPanel(); redraw(); break; }
     case 'grpMove':{ msLeave(); if(selMode==='mv'){ selMode='pick'; syncSelLbl(); } /* a group: grab any corner (grip) and drop it on any point — the same «Переместить» as for one object */
@@ -5982,7 +5982,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.65':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.66':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -8161,7 +8161,7 @@ function railApply(pts,cl,id,slab,z){ const d=railDef(); let it=id?doc.items.fin
   if(!it){ it={id:uid(),t:'rail',pts,cl,kind:d.kind,h:d.h,st:d.st,nb:d.nb,ps:d.ps}; doc.items.push(it); } else { it.pts=pts; it.cl=cl; }
   if(slab){ it.slab=slab; delete it.z; } else { delete it.slab; it.z=z||0; }
   d.base=slab?'slab':'lv'; if(!slab) d.z=z||0; selId=it.id; persist(); panelKey=''; syncPanel(); syncModeBtns(); syncTop(); redraw(); viewRefresh();
-  toast('Ограждение: '+RAILK[it.kind||'bal'].toLowerCase()+', '+vFmt(vr(railLen(it)/1000,2),2)+' м, высота '+(it.h||1000)+' мм'+(slab?' — на перекрытии':' — низ '+fmtElev(railZ(it,doc.curLv))),true); }
+  toast('Ограждение: '+tr(RAILK[it.kind||'bal']).toLowerCase()+', '+vFmt(vr(railLen(it)/1000,2),2)+' м, высота '+(it.h||1000)+' мм'+(slab?' — на перекрытии':' — низ '+fmtElev(railZ(it,doc.curLv))),true); }
 function railPickTap(sx,sy){ const w=toW(sx,sy), S=doc.items.find(i=>i.t==='slab'&&i.pts&&inPoly(i.pts,w)&&!(i.holes||[]).some(H=>inPoly(H,w))), rp=railPick;
   if(!S){ toast('Здесь нет перекрытия — коснитесь перекрытия или ✕',true); return; } railPick=null;
   if(rp.pts) railApply(rp.pts,rp.cl,rp.id,S.id); else { const it=doc.items.find(i=>i.id===rp.id&&i.t==='rail'); if(it){ pushUndo(); it.slab=S.id; delete it.z; selId=it.id; persist(); panelKey=''; syncPanel(); syncModeBtns(); redraw(); viewRefresh(); toast('Ограждение стоит на перекрытии: низ '+fmtElev(railZ(it,doc.curLv)),true); } } }
@@ -9636,10 +9636,12 @@ function open3D(){ linkPick=null; ridgePick=null; let M=bmLive(); if(!M.tri.leng
       const bb=sI.bb; for(const p of P){ if(p.x<bb[0]) bb[0]=p.x; if(p.y<bb[1]) bb[1]=p.y; if(p.x>bb[2]) bb[2]=p.x; if(p.y>bb[3]) bb[3]=p.y; }
       if(Math.min(P[0].x,P[1].x,P[2].x)>x+R||Math.max(P[0].x,P[1].x,P[2].x)<x-R||Math.min(P[0].y,P[1].y,P[2].y)>y+R||Math.max(P[0].y,P[1].y,P[2].y)<y-R) continue;
       const r=cl(P); if(r.d<sI.d){ sI.d=r.d; sI.q=r.q; sI.c={x:(P[0].x+P[1].x+P[2].x)/3,y:(P[0].y+P[1].y+P[2].y)/3}; } }
-    const small=sI=>Math.min(sI.bb[2]-sI.bb[0],sI.bb[3]-sI.bb[1])<48, bid=best&&(best.iid||best.rid), bs=bid&&S.get(bid);
-    if(bs&&small(bs)) return null; /* already on a small object */
-    const Rb=lastPT==='mouse'?8:18; /* over a big surface hit — a tighter radius, so the surface itself stays easy to pick */
-    const C=[...S.entries()].filter(([id,sI])=>id!==bid&&sI.q&&sI.d<=(best?Rb:R)&&(small(sI)||!best)).sort((a,b)=>(small(b[1])-small(a[1]))||a[1].d-b[1].d).slice(0,8);
+    const IC=new Map(); for(const L of doc.levels) for(const it of L.items) IC.set(it.id,it);
+    const SURF=id=>{ const it=IC.get(id); return !it||it.t==='line'||it.t==='slab'||it.t==='roof'||isHole(it); }; /* walls, slabs, roofs, openings: never pulled to */
+    const small=sI=>Math.min(sI.bb[2]-sI.bb[0],sI.bb[3]-sI.bb[1])<48, bid=best&&(best.iid||best.rid);
+    if(bid&&!SURF(bid)) return null; /* a tap right on an object (column, beam, truss, stair, …) always keeps it */
+    const Rb=lastPT==='mouse'?4:10; /* over a wall / slab / roof — only a near miss of a thin object, so the surface itself stays easy to pick */
+    const C=[...S.entries()].filter(([id,sI])=>id!==bid&&!SURF(id)&&sI.q&&sI.d<=(best?Rb:R)&&(small(sI)||!best)).sort((a,b)=>(small(b[1])-small(a[1]))||a[1].d-b[1].d).slice(0,8);
     for(const [id,sI] of C){ const q=sI.q, k=Math.hypot(sI.c.x-q.x,sI.c.y-q.y), m=Math.min(2,k), qx=k?q.x+(sI.c.x-q.x)/k*m:q.x, qy=k?q.y+(sI.c.y-q.y)/k*m:q.y, h=pickAt(qx,qy); if(h&&h.best&&(h.best.iid||h.best.rid)===id) return {best:h.best,bt:h.bt,o:h.o,d:h.d}; }
     return null; };
   const v3Pick0=(x,y)=>{ const c=v3.cam; if(!c) return;
