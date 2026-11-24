@@ -1170,30 +1170,35 @@ function trClip(P,C){ /* Sutherland–Hodgman: P clipped by the convex CCW polyg
 const trCCW=P=>trArea(P)<0?P.slice().reverse():P;
 /* the truss as one solid: chords mitred at every node and at the supports, posts and diagonals cut to the chord faces */
 function trussPieces(it,g){ const L=g.L, P=g.P, pr=g.pr, n=P.n, X=[...Array(n+1)].map((_,i)=>i*L/n), [wt,ht]=trSec(it,'t'), [wb,hb]=trSec(it,'b'), [wd,hd]=trSec(it,'d'), [wv,hv]=trSec(it,'v'), out=[];
-  const add=(poly,w)=>{ poly=poly.filter((q,i,a)=>{ const r=a[(i+1)%a.length]; return Math.hypot(q[0]-r[0],q[1]-r[1])>0.05; }); if(poly.length>=3&&Math.abs(trArea(poly))>1) out.push({p:trCCW(poly),w}); };
+  const add=(poly,w,own)=>{ poly=poly.filter((q,i,a)=>{ const r=a[(i+1)%a.length]; return Math.hypot(q[0]-r[0],q[1]-r[1])>0.05; }); if(poly.length>=3&&Math.abs(trArea(poly))>1) out.push({p:trCCW(poly),w,own:!!own}); };
   const sub=P.k==='arch'?3:1, TP=[]; for(let i=0;i<n;i++) for(let j=0;j<sub;j++){ const x=X[i]+(X[i+1]-X[i])*j/sub; TP.push([x,pr.yt(x)]); } TP.push([L,pr.yt(L)]); const BP=X.map(x=>[x,pr.yb(x)]);
   const inner=(Q,d,up)=>Q.slice(0,-1).map((a,k)=>{ const b=Q[k+1], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1, N=up?[-dy/l,dx/l]:[dy/l,-dx/l]; return {p:[a[0]+N[0]*d,a[1]+N[1]*d],d:[dx,dy]}; });
   const TI=inner(TP,ht,false), BI=inner(BP,hb,true), atX=(ln,x)=>[x,ln.p[1]+ln.d[1]*(x-ln.p[0])/(ln.d[0]||1e-9)];
   const mit=(I,k,Q)=>trLX(I[k-1].p,I[k-1].d,I[k].p,I[k].d)||atX(I[k],Q[k][0]);
   const J=TP.map((q,k)=>k>0&&k<TP.length-1?mit(TI,k,TP):null), K=BP.map((q,k)=>k>0&&k<BP.length-1?mit(BI,k,BP):null);
-  const postE=[false,false];
+  /* the heel. Tall: node Б — the post runs from the plate up under the top chord, which ends square over it, and the bottom chord butts into it;
+     node A — mitred corners. Low: the chords meet in a wedge; node Б gets the post stub below and a small filler of the post section above the bottom chord */
+  const postE=[false,false], BS=BP.slice(), run=!g.side&&g.sp>0;
   for(const e of [0,1]){ const x=e?L:0, xi=e?L-hv:hv, h0=pr.yt(x)-pr.yb(x), jt=e?TI.length-1:0, jb=e?BI.length-1:0, kt=e?TP.length-1:0, kb=e?BP.length-1:0, T0=TP[kt], B0=BP[kb];
-    if(h0>ht+hb+20){ postE[e]=true; J[kt]=atX(TI[jt],xi); K[kb]=atX(BI[jb],xi); add([B0,K[kb],J[kt],T0],wv); }
-    else { let I=trLX(TI[jt].p,TI[jt].d,BI[jb].p,BI[jb].d)||[xi,(T0[1]+B0[1])/2]; I=[Math.max(0,Math.min(L,I[0])),I[1]]; J[kt]=I; K[kb]=I; add([B0,I,T0],wt); } }
+    if(h0>ht+hb+20){ postE[e]=true; K[kb]=atX(BI[jb],xi);
+      if(run){ J[kt]=atX(TI[jt],x); BS[kb]=[xi,pr.yb(xi)]; add([[x,-g.sp],[xi,-g.sp],atX(TI[jt],xi),J[kt]],wv); }
+      else { J[kt]=atX(TI[jt],xi); add([B0,K[kb],J[kt],T0],wv); } }
+    else { let I=trLX(TI[jt].p,TI[jt].d,BI[jb].p,BI[jb].d)||[xi,(T0[1]+B0[1])/2]; I=[Math.max(0,Math.min(L,I[0])),I[1]]; J[kt]=I; K[kb]=I; add([B0,I,T0],wt);
+      if(run){ const x0=e?L-hv:0, x1=e?L:hv, yb=Math.min(pr.yb(x0),pr.yb(x1)); add([[x0,-g.sp],[x1,-g.sp],[x1,yb],[x0,yb]],wv);
+        const tb=atX(BI[jb],xi), tt=atX(TI[jt],xi); if((e?I[0]>xi:I[0]<xi)&&tt[1]>tb[1]+1) add([I,tb,tt],wv,true); /* filler: a part of its own, its edges stay drawn */ } } }
   for(let k=0;k<TP.length-1;k++) add([TP[k],TP[k+1],J[k+1],J[k]],wt);
-  for(let k=0;k<BP.length-1;k++) add([BP[k],BP[k+1],K[k+1],K[k]],wb);
-  /* the inner (open) region of panel i: convex */
-  const region=i=>{ const R=[atX(BI[i],X[i]),atX(BI[i],X[i+1])]; const ks=[]; for(let j=sub-1;j>=0;j--) ks.push(i*sub+j); R.push(atX(TI[ks[0]],X[i+1])); for(let q=0;q<ks.length-1;q++) R.push(J[ks[q]]); R.push(atX(TI[ks[ks.length-1]],X[i])); return trCCW(R); };
+  for(let k=0;k<BP.length-1;k++) add([BS[k],BS[k+1],K[k+1],K[k]],wb);
+  /* the inner (open) region of panel i: the slab of the panel cut by the half-planes of the chords' inner lines (convex) */
+  const half=(ln,left)=>{ const E=1e6, l=Math.hypot(ln.d[0],ln.d[1])||1, d=[ln.d[0]/l,ln.d[1]/l], N=left?[-d[1],d[0]]:[d[1],-d[0]], a=[ln.p[0]-d[0]*E,ln.p[1]-d[1]*E], b=[ln.p[0]+d[0]*E,ln.p[1]+d[1]*E]; return trCCW([a,b,[b[0]+N[0]*E,b[1]+N[1]*E],[a[0]+N[0]*E,a[1]+N[1]*E]]); };
+  const region=i=>{ let R=[[X[i],-1e5],[X[i+1],-1e5],[X[i+1],1e5],[X[i],1e5]]; R=trClip(R,half(BI[i],true)); for(let j=0;j<sub;j++) R=trClip(R,half(TI[i*sub+j],false)); return R; }, clipR=(Q,Rg)=>Rg.length<3?[]:trClip(Q,Rg);
   const post=i=>i===0?postE[0]:i===n?postE[1]:P.pat!=='V';
-  for(let i=1;i<n;i++) if(post(i)) for(const pi of [i-1,i]) add(trClip([[X[i]-hv/2,-1e5],[X[i]+hv/2,-1e5],[X[i]+hv/2,1e5],[X[i]-hv/2,1e5]],region(pi)),wv);
+  for(let i=1;i<n;i++) if(post(i)) for(const pi of [i-1,i]) add(clipR([[X[i]-hv/2,-1e5],[X[i]+hv/2,-1e5],[X[i]+hv/2,1e5],[X[i]-hv/2,1e5]],region(pi)),wv);
   const yc=(x,top)=>top?pr.yt(x)-ht/2:pr.yb(x)+hb/2;
   for(const m of trMembers(P,L)){ if(m.s!=='d') continue; const i=Math.min(n-1,Math.floor(Math.min(m.a[0],m.b[0])/(L/n)+1e-6)), isT=q=>Math.abs(q[1]-pr.yt(q[0]))<1, a=[m.a[0],yc(m.a[0],isT(m.a))], b=[m.b[0],yc(m.b[0],isT(m.b))];
     const dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1, ux=dx/l, uy=dy/l, nx=-uy*hd/2, ny=ux*hd/2, E=1e4, A2=[a[0]-ux*E,a[1]-uy*E], B2=[b[0]+ux*E,b[1]+uy*E];
     const xl=X[i]+(post(i)?(i===0?hv:hv/2):0), xr=X[i+1]-(post(i+1)?(i+1===n?hv:hv/2):0); if(xr-xl<5) continue;
-    let Q=trClip(trCCW([[A2[0]+nx,A2[1]+ny],[B2[0]+nx,B2[1]+ny],[B2[0]-nx,B2[1]-ny],[A2[0]-nx,A2[1]-ny]]),region(i));
-    Q=trClip(Q,[[xl,-1e5],[xr,-1e5],[xr,1e5],[xl,1e5]]); add(Q,wd); }
-  /* node Б: the end posts run on below the bottom chord to the plates */
-  if(!g.side&&g.sp>0) for(const e of [0,1]){ const x0=e?L-hv:0, x1=e?L:hv, yb=Math.min(pr.yb(x0),pr.yb(x1)); add([[x0,-g.sp],[x1,-g.sp],[x1,yb],[x0,yb]],wv); }
+    let Q=clipR(trCCW([[A2[0]+nx,A2[1]+ny],[B2[0]+nx,B2[1]+ny],[B2[0]-nx,B2[1]-ny],[A2[0]-nx,A2[1]-ny]]),region(i));
+    Q=trClip(Q,[[xl,-1e5],[xr,-1e5],[xr,1e5],[xl,1e5]]); if(Q.length>=3&&Math.abs(trArea(Q))>=0.4*hd*(xr-xl)/Math.max(0.05,Math.abs(ux))) add(Q,wd); /* a sliver (low heel panel) is no member */ }
   return out; }
 function trussMesh(M,it,li){ const g=trussG(it,li); if(g.L<100) return; const col=it.mat==='steel'?TR_STEEL:TR_WOOD, u=g.u, nv=g.n;
   const W3=(x,y,s)=>[g.S0.x+u.x*x+nv.x*s,g.S0.y+u.y*x+nv.y*s,g.z0+y];
@@ -1202,6 +1207,7 @@ function trussMesh(M,it,li){ const g=trussG(it,li); if(g.L<100) return; const co
   /* boundary of the union: an edge part shared with an equally wide (or wider) piece is inside — no wall, no line */
   const BB=PC.map(o=>{ let x0=1e18,y0=1e18,x1=-1e18,y1=-1e18; for(const q of o.p){ x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); } return [x0-1,y0-1,x1+1,y1+1]; });
   PC.forEach((o,oi)=>{ const Pp=o.p, hw=o.w/2, F=[nv.x,nv.y,0], Bk=[-nv.x,-nv.y,0];
+    if(o.own) for(let i=0;i<Pp.length;i++){ const a=Pp[i], b=Pp[(i+1)%Pp.length]; M.lines.push([W3(a[0],a[1],hw),W3(b[0],b[1],hw)],[W3(a[0],a[1],-hw),W3(b[0],b[1],-hw)]); }
     for(let i=1;i<Pp.length-1;i++){ face(W3(Pp[0][0],Pp[0][1],hw),W3(Pp[i][0],Pp[i][1],hw),W3(Pp[i+1][0],Pp[i+1][1],hw),F,col); face(W3(Pp[0][0],Pp[0][1],-hw),W3(Pp[i][0],Pp[i][1],-hw),W3(Pp[i+1][0],Pp[i+1][1],-hw),Bk,col); }
     for(let i=0;i<Pp.length;i++){ const a=Pp[i], b=Pp[(i+1)%Pp.length], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); if(l<0.05) continue; const cov=[];
       PC.forEach((q,qi)=>{ if(qi===oi||q.w+0.5<o.w) return; const bb=BB[qi]; if(Math.max(a[0],b[0])<bb[0]||Math.min(a[0],b[0])>bb[2]||Math.max(a[1],b[1])<bb[1]||Math.min(a[1],b[1])>bb[3]) return;
@@ -5928,7 +5934,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.63':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.64':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
