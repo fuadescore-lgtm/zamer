@@ -5470,5 +5470,8 @@
 "Файл DWG не читается": "The DWG file cannot be read",
 "Импорт DWG / DXF (подложка)": "Import DWG / DXF (underlay)",
 "DWG / DXF-подложка": "DWG / DXF underlay",
-"📐 DWG / DXF-подложка": "📐 DWG / DXF underlay"
+"📐 DWG / DXF-подложка": "📐 DWG / DXF underlay",
+"Редактировать блок": "Edit block",
+"Добавить в блок": "Add to block",
+"Исключить из блока": "Remove from block"
 }
