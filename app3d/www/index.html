@@ -718,7 +718,7 @@ const blkNo=it=>!it||isHole(it)||it.t==='dxf';
 function blkClean(){ const n={}; for(const L of doc.levels) for(const it of L.items) if(it.blk) n[it.blk]=(n[it.blk]||0)+1; for(const L of doc.levels) for(const it of L.items) if(it.blk&&n[it.blk]<2){ delete it.blk; delete it.blkN; } }
 function blkStart(edit){ if(tool!=='select') setTool('select'); const B=blkOf(); blkMk=true; blkEd=B?{id:B.blk,n:B.n,orig:new Set(B.its.map(i=>i.id)),on:!!edit,rm:false}:null; msStart(); }
 /* a tap, a frame or the filter inside the block panel: add, exclude, or (tap) toggle; «Один» keeps only the tapped object */
-function blkPick(ids,tap){ ids=[...ids].filter(id=>!blkNo(doc.items.find(i=>i.id===id))); if(!ids.length) return;
+function blkPick(ids,tap){ if(blkEd&&!blkEd.on) return; /* a finished block changes only after «Редактировать блок» */ ids=[...ids].filter(id=>!blkNo(doc.items.find(i=>i.id===id))); if(!ids.length) return;
   const cur=new Set(moveSel); if(!cur.size&&selId) for(const id of selIds()) cur.add(id); const E=blkEd&&blkEd.on?(blkEd.rm?'rem':'add'):null;
   if(E==='rem') ids.forEach(id=>cur.delete(id)); else if(E==='add') ids.forEach(id=>cur.add(id));
   else if(tap&&selMode==='pick'){ cur.clear(); ids.forEach(id=>cur.add(id)); }
@@ -757,7 +757,7 @@ function armLongPress(h){ if(!h) return; press.lpSel=setTimeout(()=>{ if(press&&
 let msPrev=null;
 function inView(){ const v=document.getElementById('v3d'); if(v&&!v.hidden) return 'v3'; const e=document.getElementById('elev'); if(e&&!e.hidden) return 'ev'; return null; }
 // «Выбрать несколько» в 3D и на фасадах: набор на всех уровнях [{li,id}] (как «Фильтр»)
-function xToggle(li,id){ const L=xSel?xSel.slice():[]; const i=L.findIndex(o=>o.id===id&&o.li===li); if(i>=0) L.splice(i,1); else L.push({li,id}); xSel=L.length?L:null; selId=null; moveSel.clear(); detailSel=null; try{navigator.vibrate&&navigator.vibrate(15);}catch(e){} panelKey=''; syncPanel(); viewRefresh(); }
+function xToggle(li,id){ if(blkMk&&blkEd&&!blkEd.on) return; /* a finished block changes only after «Редактировать блок» */ const L=xSel?xSel.slice():[]; const i=L.findIndex(o=>o.id===id&&o.li===li); if(i>=0) L.splice(i,1); else L.push({li,id}); xSel=L.length?L:null; selId=null; moveSel.clear(); detailSel=null; try{navigator.vibrate&&navigator.vibrate(15);}catch(e){} panelKey=''; syncPanel(); viewRefresh(); }
 function msStart(){ const vw=inView(); if(vw){ if(tool!=='select') setTool('select'); msPrev={selId,ms:new Set(moveSel),x:xSel?xSel.slice():null}; let L=xSel?xSel.slice():[]; if(!L.length){ const o=vw==='v3'?(v3&&v3.sel?{li:v3.sel.li,id:v3.sel.id}:null):(EV&&EV.sel&&EV.sel.it&&EV.sel.it.id?{li:EV.sel.li,id:EV.sel.it.id}:null); if(o) L.push(o); } xSel=L.length?L:null; selId=null; moveSel.clear(); editGrp=null; selJoint=null; arrayOn=false; detailSel=null; if(vw==='v3'&&v3) v3.sel=null; if(vw==='ev'&&EV) EV.sel=null; selMode='multi'; syncSelLbl(); panelKey=''; syncPanel(); viewRefresh(); syncModeBtns(); (blkMk||toast('Касайтесь объектов — добавить или убрать. Готово — когда всё выбрано',true)); return; }
   if(tool!=='select') setTool('select'); msPrev={selId,ms:new Set(moveSel)}; if(selId&&!moveSel.size) for(const id of selIds()) moveSel.add(id); editGrp=null; selJoint=null; arrayOn=false; selMode='multi'; syncSelLbl(); panelKey=''; syncPanel(); redraw(); syncModeBtns(); (blkMk||toast('Касайтесь объектов — добавить или убрать. Готово — когда всё выбрано',true)); }
 function msDone(){ blkMk=false; blkEd=null; if(inView()){ selMode='pick'; msPrev=null; syncSelLbl(); panelKey=''; syncPanel(); viewRefresh(); syncModeBtns(); return; } selMode='pick'; msPrev=null; const ids=[...moveSel].filter(id=>doc.items.some(i=>i.id===id)); if(!ids.length){ selId=null; moveSel.clear(); }
@@ -6185,7 +6185,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.77':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.78':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
