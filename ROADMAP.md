@@ -64,7 +64,7 @@
       внутрь другой, лишнее срезается её скатом, по линии встречи — ендовы. Любые типы (2-, 4-скатные) и высоты.
       Так же в 3D, на фасадах, в IFC и на плане (конёк крыла обрывается, видны ендовы).
 - [x] Экспорт «3D модель» в DWG и DXF для AutoCAD: грани 3DFACE по слоям 3D_WALLS, 3D_ROOF, 3D_WINDOWS, 3D_DOORS,
-      3D_STAIRS, 3D_CHIMNEY. DWG — через LibreDWG (добавлена функция zd_face, исходник native/zwasm.c).
+      3D_STAIRS, 3D_CHIMNEY. DWG — через ACadSharp (MIT) в WebAssembly (dwgnet/, web-src/zdnet.js).
 - [x] Компас в приложении: родной датчик Android (TYPE_ROTATION_VECTOR) через свой плагин Compass (native/), без браузера.
 - [ ] Revit: элементы из IFC попадают в последнюю стадию проекта — вид со стадией раньше их не показывает (настроить стадию вида).
 

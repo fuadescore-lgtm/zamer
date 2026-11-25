@@ -26,13 +26,16 @@ for fn in sorted(os.listdir(P('fonts'))):
     data = base64.b64encode(open(P('fonts', fn), 'rb').read()).decode()
     css.append("@font-face{font-family:'%s';font-style:normal;font-weight:%s;font-display:swap;src:url(data:font/woff2;base64,%s) format('woff2');unicode-range:%s}" % (fam, w, data, UR[sub]))
 src = src.replace('<!--BS-FONTS-->', '<style id="bsfonts">' + ''.join(css) + '</style>', 1)
-b64 = base64.b64encode(open(P('zamerdwg.wasm.gz'), 'rb').read()).decode()
-js = open(P('dwgjs.js'), encoding='utf-8').read().replace("if(typeof module!=='undefined') module.exports={zdLoad};", "")
+# DWG engine: ACadSharp (MIT) on .NET WebAssembly (MIT), built by .github/workflows/dwgnet.yml → web-src/dwgnet.zip
+import gzip, zipfile
+zf = zipfile.ZipFile(P('dwgnet.zip'))
+net = {n.split('/')[-1]: base64.b64encode(gzip.compress(zf.read(n), 9, mtime=0)).decode() for n in sorted(zf.namelist()) if n.startswith('_framework/') and not n.endswith('/')}
+js = open(P('zdnet.js'), encoding='utf-8').read()
 i = src.index('<script>\n(function(){')
-out = src[:i] + '<script type="application/octet-stream" id="zdwasm">' + b64 + '</script>\n<script>\n' + js + '\n</script>\n' + src[i:]
+out = src[:i] + '<script type="application/json" id="zdnet">' + json.dumps(net, separators=(',', ':')) + '</script>\n<script>\n' + js + '\n</script>\n' + src[i:]
 # BIMsketcher = программа в режиме 3D
 out = out.replace('<title>EasyCAD</title>', '<title>BIMsketcher</title>', 1)
-k = out.index('<script type="application/octet-stream" id="zdwasm">')
+k = out.index('<script type="application/json" id="zdnet">')
 out = out[:k] + '<script>window.__IS3D__=true;</script>\n' + out[k:]
 head = '<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#c0532f"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style></head><body>'
 www = P('..', 'www') if os.path.isdir(P('..', 'www')) else P('..', 'app3d', 'www')

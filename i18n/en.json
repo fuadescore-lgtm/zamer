@@ -5466,5 +5466,9 @@
 "линий": "lines",
 "Блок": "Block",
 "Слои": "Layers",
-"Это": "This is"
+"Это": "This is",
+"Файл DWG не читается": "The DWG file cannot be read",
+"Импорт DWG / DXF (подложка)": "Import DWG / DXF (underlay)",
+"DWG / DXF-подложка": "DWG / DXF underlay",
+"📐 DWG / DXF-подложка": "📐 DWG / DXF underlay"
 }

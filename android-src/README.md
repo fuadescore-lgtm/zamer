@@ -24,7 +24,7 @@ BIMsketcher-android/
   www/index.html            ← собранная веб-часть (то, что попадает в приложение)
   web-src/                  ← ИСХОДНИК веб-части
     zamer-dxf.html          ← весь код программы (HTML + CSS + JavaScript)
-    dwgjs.js, zamerdwg.wasm.gz ← модуль записи DWG
+    zdnet.js, dwgnet.zip ← модуль DWG (ACadSharp, MIT; сборка: .github/workflows/dwgnet.yml)
     build_web.py            ← сборка web-src → www/index.html
   i18n/en.json              ← английский словарь интерфейса
   native/                   ← исходные Java-файлы (шаблоны с `package PKG;`)
