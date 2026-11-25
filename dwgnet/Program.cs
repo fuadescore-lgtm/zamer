@@ -73,7 +73,7 @@ public static partial class Dwg
     [JSExport] public static int BlkLine(double x1, double y1, double x2, double y2)
     { if (blk == null) return -1; var l = new Line { StartPoint = new XYZ(x1, y1, blkZ), EndPoint = new XYZ(x2, y2, blkZ) }; if (cur != null) l.Layer = cur; blk.Entities.Add(l); return 0; }
     [JSExport] public static int BlkMtext(string s, double x, double y, double h, double rot)
-    { if (blk == null) return -1; var t = new MText { InsertPoint = new XYZ(x, y, blkZ), Height = h, Value = s ?? "", Rotation = R(rot), AttachmentPoint = AttachmentPointType.MiddleCenter }; if (cur != null) t.Layer = cur; blk.Entities.Add(t); return 0; }
+    { if (blk == null) return -1; var t = new MText { InsertPoint = new XYZ(x, y, blkZ), Height = h, Value = s ?? "", AlignmentPoint = new XYZ(Math.Cos(R(rot)), Math.Sin(R(rot)), 0), AttachmentPoint = AttachmentPointType.MiddleCenter }; if (cur != null) t.Layer = cur; blk.Entities.Add(t); return 0; }
     [JSExport] public static int BlkEnd() { if (blk == null) return -1; doc.BlockRecords.Add(blk); return 0; }
     [JSExport] public static int Dim(int aligned, double p1x, double p1y, double p2x, double p2y, double dpx, double dpy, double tpx, double tpy, double rot, double meas, double z)
     {

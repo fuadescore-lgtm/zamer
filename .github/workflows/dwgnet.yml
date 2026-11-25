@@ -13,7 +13,9 @@ jobs:
       - name: wasm workload
         run: dotnet workload install wasm-tools
       - name: publish
-        run: dotnet publish dwgnet/DwgNet.csproj -c Release -o out 2>&1 | tee publish.log
+        run: |
+          set -o pipefail
+          dotnet publish dwgnet/DwgNet.csproj -c Release -o out 2>&1 | tee publish.log
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -22,6 +24,7 @@ jobs:
           ls -la out/wwwroot/_framework | tee files.txt
           du -sh out/wwwroot/_framework | tee -a files.txt
           cp dwgnet/main.js out/wwwroot/main.mjs
+          set -o pipefail
           cd out/wwwroot && node main.mjs 2>&1 | tee ../../smoke.log
       - name: cross-check with an independent DWG reader (test only, not shipped)
         continue-on-error: true
