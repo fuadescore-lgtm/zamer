@@ -22,6 +22,5 @@
   </ItemGroup>
   <ItemGroup>
     <TrimmerRootAssembly Include="ACadSharp" />
-    <TrimmerRootAssembly Include="CSMath" />
   </ItemGroup>
 </Project>
