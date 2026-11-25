@@ -4982,7 +4982,7 @@ panel.addEventListener('click',e=>{ if(!MSE||meBusy||!MSE.G||!panelKey.startsWit
 panel.addEventListener('change',e=>{ if(!MSE||meBusy||!MSE.G||!panelKey.startsWith('MSE|')) return; const t=e.target; if(!t.matches('input,select')) return; e.stopImmediatePropagation(); meApply(t,'change'); },true);
 panel.addEventListener('input',e=>{ if(!MSE||meBusy||!panelKey.startsWith('MSE|')) return; if(e.target.type==='color'){ e.stopImmediatePropagation(); const sw=e.target.parentElement&&e.target.parentElement.querySelector('span'); if(sw) sw.style.background=e.target.value; } },true);
 panel.addEventListener('keydown',e=>{ if(!MSE||meBusy||!panelKey.startsWith('MSE|')||e.key!=='Enter') return; const t=e.target; if(!t.matches('input')) return; e.preventDefault(); e.stopImmediatePropagation(); t.blur(); },true);
-function syncPanel(){ if(!meBusy){ let M=null; try{ M=(tool==='select'&&arrayOn)?null:meGroup(); }catch(_){ M=null; } /* array: one panel for the whole selection, so all objects are copied */ if(M){ try{ toolsDockSync(); }catch(_){} meRender(M); return; } if(MSE&&panelKey.startsWith('MSE|')) panelKey=''; MSE=null; } return syncPanel0(); }
+function syncPanel(){ if(tool==='select'&&!blkMk&&selId&&moveSel.size<=1){ const it=doc.items.find(i=>i.id===selId); if(it&&it.blk){ const g=grpItems(it); if(g.length>1) moveSel=new Set(g.map(i=>i.id)); } } /* a block is always selected whole — its own panel */ if(!meBusy){ let M=null; try{ M=(tool==='select'&&arrayOn)?null:meGroup(); }catch(_){ M=null; } /* array: one panel for the whole selection, so all objects are copied */ if(M){ try{ toolsDockSync(); }catch(_){} meRender(M); return; } if(MSE&&panelKey.startsWith('MSE|')) panelKey=''; MSE=null; } return syncPanel0(); }
 function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.curLv!==planEd.cfg.li) planEd=null; else if(!planEd.drag) lnCommit(); } try{ toolsDockSync(); }catch(_){}
   if(detailSel&&detailSel!=='*'&&detailSel!==selId) detailSel=null; if(detailSel==='*'&&moveSel.size<2) detailSel=null;
   if(holeMv&&(selId!==holeMv||tool!=='select')) holeMv=null;
@@ -6123,7 +6123,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.74':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.75':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
