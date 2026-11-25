@@ -5442,5 +5442,6 @@
 "Брус": "Timber",
 "Ферм": "Trusses",
 "Опорная стойка": "Support post",
-"Пластина": "Plate"
+"Пластина": "Plate",
+"Колонна, балка, ферма, обвязка колонн балками, фундамент": "Column, beam, truss, tie columns with beams, footing"
 }
