@@ -36,7 +36,8 @@ jobs:
           (cd libredwg-0.13.3 && ./configure -q --disable-bindings --disable-python > cfg.log 2>&1; tail -5 cfg.log; make -j4 -C src CFLAGS='-O2 -w' > mk.log 2>&1; tail -15 mk.log; make -j4 -C programs dwgread CFLAGS='-O2 -w' > mk2.log 2>&1; tail -15 mk2.log) || true
           ls -la libredwg-0.13.3/programs/dwgread || true
           R=libredwg-0.13.3/programs
-          for f in out/wwwroot/test*.dwg dwgnet/samples/*.dwg; do echo "== $f"; $R/dwgread -v2 "$f" -O DXF -o "$f.chk.dxf" 2>&1 | grep -iE "error|warn|fail" | head -8; for k in LINE ARC CIRCLE TEXT 3DFACE POLYLINE DIMENSION; do echo "  $k $(grep -c "^$k\s*$" "$f.chk.dxf" 2>/dev/null)"; done; done 2>&1 | tee check.log
+          mkdir -p acad && for v in AC1015 AC1018 AC1027; do curl -sL -o acad/autocad_$v.dwg https://raw.githubusercontent.com/DomCR/ACadSharp/master/samples/sample_$v.dwg; done
+          for f in acad/*.dwg out/wwwroot/test*.dwg dwgnet/samples/*.dwg; do echo "== $f"; $R/dwgread -v2 "$f" -O DXF -o "$f.chk.dxf" 2>&1 | grep -iE "error|warn|fail" | head -8; for k in LINE ARC CIRCLE TEXT 3DFACE POLYLINE DIMENSION; do echo "  $k $(grep -c "^$k\s*$" "$f.chk.dxf" 2>/dev/null)"; done; done 2>&1 | tee check.log
       - name: publish build as a release asset
         env:
           GH_TOKEN: ${{ github.token }}
