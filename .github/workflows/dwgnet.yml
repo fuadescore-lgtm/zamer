@@ -32,7 +32,9 @@ jobs:
         continue-on-error: true
         run: |
           curl -sL https://github.com/LibreDWG/libredwg/releases/download/0.13.3/libredwg-0.13.3.tar.xz | tar xJ
-          cd libredwg-0.13.3 && ./configure -q --disable-bindings --disable-docs > /dev/null && make -j4 -s > /dev/null 2>&1; cd ..
+          sudo apt-get install -y -qq texinfo > /dev/null 2>&1 || true
+          (cd libredwg-0.13.3 && ./configure -q --disable-bindings --disable-python > cfg.log 2>&1; tail -5 cfg.log; make -j4 -C src > mk.log 2>&1; tail -15 mk.log; make -j4 -C programs dwgread > mk2.log 2>&1; tail -15 mk2.log) || true
+          ls -la libredwg-0.13.3/programs/dwgread || true
           R=libredwg-0.13.3/programs
           for f in out/wwwroot/test*.dwg; do echo "== $f"; $R/dwgread -v2 "$f" -O DXF -o "$f.chk.dxf" 2>&1 | grep -iE "error|warn|fail" | head -8; for k in LINE ARC CIRCLE TEXT 3DFACE POLYLINE DIMENSION; do echo "  $k $(grep -c "^$k\$" "$f.chk.dxf" 2>/dev/null)"; done; done 2>&1 | tee check.log
       - name: publish build as a release asset
