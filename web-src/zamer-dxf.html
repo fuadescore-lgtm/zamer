@@ -2006,7 +2006,7 @@ function faceParts(Y,p0,p1,gaps){
   if(cur<s1) out.push([at(cur),p1]);
   return out;
 }
-function joints(){ if(mvB&&tool==='select') return []; if(tool==='select'&&blkOf()) return []; /* a block moves only as a whole */ /* «Переместить»: только точки захвата */ const out=[], SJ=tool==='select'&&!editLine&&!editGrp?selIds():null; for(const it of doc.items){ if(it.t!=='line'||(it.g&&it.g===editGrp?false:(it.id!==editLine&&!(SJ&&SJ.has(it.id)&&SJ.size<=24)))) continue;
+function joints(){ if(mvB&&tool==='select') return []; if(tool==='select'&&blkMk) return []; /* block panel: selection only */ if(tool==='select'&&blkOf()) return []; /* a block moves only as a whole */ /* «Переместить»: только точки захвата */ const out=[], SJ=tool==='select'&&!editLine&&!editGrp?selIds():null; for(const it of doc.items){ if(it.t!=='line'||(it.g&&it.g===editGrp?false:(it.id!==editLine&&!(SJ&&SJ.has(it.id)&&SJ.size<=24)))) continue;
     for(const p of [it.a,it.b]) if(!out.some(q=>near(q,p))) out.push(p); } return out; }
 function jointLines(P){ const r=[]; for(const it of doc.items){ if(it.t!=='line') continue;
     if(near(it.a,P)) r.push([it,'a']); else if(near(it.b,P)) r.push([it,'b']); } return r; }
@@ -2497,7 +2497,7 @@ function beamEnds(){ const S=selIds(), out=[]; if(!S.size||S.size>12||blkOf()) r
 function drawBeamJoins(){ if(tool!=='select'||selMode==='multi'||blkOf()) return; const L=beamEnds(); const S=selIds();
   for(const o of L){ const t=Math.min(colReach(o.col,o.dir)+26/view.scale,beamG(o.it).len*0.45), w={x:o.P.x+o.dir.x*t,y:o.P.y+o.dir.y*t}, c=toS(w); drawChainIco(c,!o.on); joinHits.push({beam:1,id:o.it.id,k:o.k,e:o.e,col:o.col.id,on:o.on,x:c.x,y:c.y}); }
   if(mvB) return; ctx.save(); for(const it of doc.items){ if(it.t!=='beam'||!S.has(it.id)) continue; const g=beamG(it); for(const P of [g.A,g.B]){ const q=toS(P); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.fillRect(q.x-5,q.y-5,10,10); ctx.strokeRect(q.x-5,q.y-5,10,10); } } ctx.restore(); }
-function drawJoinIcons(){
+function drawJoinIcons(){ if(blkMk&&tool==='select'){ joinHits=[]; return; }
   if(tool!=='select'||mvB||!attachOn||editLine||editGrp) return; const S=selIds(); if(!S.size||S.size>8) return;
   for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line'||it.g) continue;
     for(const k of ['a','b']){ const off=nj(it,k)||!endLinked(it,k);
@@ -2581,7 +2581,7 @@ function adSet(A,deg){ const G=adGeom(A); if(!G) return; if(!(deg>0&&deg<180)){ 
   else { const oa={...W.a}, ob={...W.b}; moveCoincident(oa,rot(oa,G.V),null); moveCoincident(ob,rot(ob,G.V),null); }
   syncDims(); persist(); panelKey=''; syncPanel(); redraw(); viewRefresh(); const g2=adGeom(A); toast('Угол '+(g2?fmtDeg(g2.ang):fmtDeg(deg))); }
 function drawSelTemp(){ const o=C.sel; C.sel=C.td||o; try{ drawSelTemp0(); } finally{ C.sel=o; } } /* the wall's own length and angle: violet and dashed, like all temporary dimensions */
-function drawSelTemp0(){ const it=tmpTarget(); if(!it) return; const len=lineLen(it); if(len<1) return;
+function drawSelTemp0(){ if(blkMk&&tool==='select') return; const it=tmpTarget(); if(!it) return; const len=lineLen(it); if(len<1) return;
   const u=unit(it.a,it.b), n=lft(u), sd=isWall(it)?(it.side||0):0, sg=sd>0?-1:1, o=isWall(it)?offs(it):{L:0,R:0}, ext=sg>0?o.L:o.R;
   const k=1/view.scale, off=ext+26*k, P=(q,f)=>({x:q.x+n.x*sg*f,y:q.y+n.y*sg*f});
   const A=P(it.a,off), B=P(it.b,off);
@@ -4036,7 +4036,7 @@ function tempDimList(){
 }
 function drawTempDims(){ const o=C.sel; SELB=o; C.sel=C.td||o; try{ drawTempDims0(); } finally{ C.sel=o; } }
 let SELB=null;
-function drawTempDims0(){
+function drawTempDims0(){ if(blkMk&&tool==='select') return;
   const L=tempDimList(); if(!L.length) return; const GH=tool==='hole'&&!!chimPrev, TC=C.td||C.sel; /* temporary dimensions: violet, apart from the blue selection */
   const RA=new Set(); for(const d of doc.items){ if(d.t!=='dim'||!dimActSel(d)) continue; const g=dimGeom(d); RA.add(Math.abs(g.u.x)>=Math.abs(g.u.y)?'x':'y'); } // свой красный размер по этой оси — синий временный не дублирует
   for(const t of L){ if(RA.has(t.dir[1])) continue; const A=toS(t.A),B=toS(t.B); const hz=t.dir[1]==='x', act=!!(inlineH&&inlineH.kind==='td'&&inlineH.dir===t.dir);
@@ -4926,7 +4926,7 @@ document.addEventListener('pointerdown',e=>{ if(!(elMenu||colMenu||cabListOpen||
 // ---------- несколько объектов одной категории: то же меню, что у одного; разные значения — пустые («разные»), ввод — всем ----------
 let MSE=null, meBusy=false, ME_U=null;
 const ME_CAT=new Set(['line','win','door','open','chim','beam','fnd','tree','dim','prim','solar','dev','rail','text','circ','skyl','dorm']);
-function meGroup(){ if(tool!=='select'||!(selMode==='pick'||selMode==='multi'||selMode==='mv')||editGrp||cabEd||bsk) return null; let G=null;
+function meGroup(){ if(blkMk||tool!=='select'||!(selMode==='pick'||selMode==='multi'||selMode==='mv')||editGrp||cabEd||bsk) return null; let G=null;
   if(xSel&&xSel.length>1) G=xSel.map(o=>({li:o.li,id:o.id})); else if(!xSel&&moveSel.size>1) G=[...moveSel].map(id=>({li:doc.curLv,id}));
   if(!G) return null; const its=G.map(o=>{ const L=doc.levels[o.li]; return L&&L.items.find(i=>i.id===o.id); }); if(its.some(x=>!x)) return null;
   const t=its[0].t, c=catOf(its[0]); if(!ME_CAT.has(t)||!its.every(i=>i.t===t&&catOf(i)===c)) return null;
@@ -5278,7 +5278,7 @@ function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.cu
         <button class="btn" data-act="rwMeas" title="Положите телефон на скат и держите неподвижно 2 с">📱 Замерить</button><button class="btn" data-act="rwZero" title="Положите телефон на ровный пол: запомнить поправку датчика">Обнулить</button>
         ${rwLastA!=null?`<button class="btn" data-act="rwPrev" title="Такой же уклон, как у предыдущего">= ${r1(rwLastA)}°</button>`:''}<button class="btn" data-act="rwAll" title="Этот уклон — всем скатам (все замерены)">Всем одинаковый</button>
         <span class="lbl">замерено ${MS.length} из ${S.length}</span><button class="btn" data-act="rwNext">Далее ▸</button><button class="ibn okb" data-act="rwDone" title="Готово" aria-label="Готово"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>`; } }
-  if(tool==='select'&&blkMk){ const xv=!!inView(), n=xv?(xSel?xSel.length:0):selIds().size?selCount():0, E=blkEd, SV=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${k}</svg>`, cm=['pick','multi','win','cross'].includes(selMode)?selMode:'multi';
+  if(tool==='select'&&blkMk){ const xv=!!inView(), n=xv?(xSel?xSel.length:0):selIds().size?selCount():0, E=blkEd, SV=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${k}</svg>`, cm=['multi','win','cross'].includes(selMode)?selMode:'multi';
     h=`<div class="title">${E?'▣ '+tr('Блок')+' '+E.n+(E.on?' · '+tr('правка'):''):tr('Блок')+' · '+tr('выбрано')} <b>${n}</b></div>`
      +(xv?'':`<button class="ibn bksel" data-act="blkSel" title="Выбор" aria-label="Выбор" aria-haspopup="menu">${SV(MICO[cm])}<i class="car">▾</i></button>`)
      +`<button class="ibn${E&&E.on?' on':''}" data-act="blkEdT" title="Редактировать блок" aria-label="Редактировать блок" aria-pressed="${!!(E&&E.on)}"${E?'':' disabled'}>${SV(ICO.bnd)}</button>`
@@ -5466,7 +5466,7 @@ panel.addEventListener('click',e=>{ { const rk=e.target.closest('[data-rlk]'), s
     case 'msCancel':blkMk=false;blkEd=null;msCancel();break;
     case 'blkOk':blkOk();break;
     case 'blkSel':{ const cm=selMode, mbI=k=>`<button data-bsm="${k}" aria-pressed="${k===cm}" title="${MTIP[k]||MODEN[k]}" aria-label="${MTIP[k]||MODEN[k]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MICO[k]}</svg></button>`;
-      popMenu(b,`<div class="mh">Выбор</div><div class="mg">${['pick','multi','win','cross'].map(mbI).join('')}${mbI('filter').replace('aria-pressed="false"','')}</div>`,bb=>{ const k=bb.dataset.bsm; if(!k) return; if(k==='filter'){ fltOpen(false); return; } selMode=k; syncSelLbl(); panelKey=''; syncPanel(); redraw(); }); break; }
+      popMenu(b,`<div class="mh">Выбор</div><div class="mg">${['multi','win','cross'].map(mbI).join('')}${mbI('filter').replace('aria-pressed="false"','')}</div>`,bb=>{ const k=bb.dataset.bsm; if(!k) return; if(k==='filter'){ fltOpen(false); return; } selMode=k; syncSelLbl(); panelKey=''; syncPanel(); redraw(); }); break; }
     case 'blkEdT':if(blkEd){ blkEd.on=!blkEd.on; panelKey=''; syncPanel(); redraw(); } break;
     case 'blkAdd':if(blkEd){ blkEd.rm=false; panelKey=''; syncPanel(); } break;
     case 'blkRem':if(blkEd){ blkEd.rm=true; panelKey=''; syncPanel(); } break;
@@ -5835,7 +5835,7 @@ $('#toolMenu').addEventListener('click',e=>{ const b=e.target.closest('button');
   if(b.dataset.an){ annGo(b.dataset.an); closeToolMenu(); return; }
   if(b.dataset.tm){ textMode=b.dataset.tm==='tleader'?'leader':'plain'; ldPick=null; pendingText=null; setTool('text'); closeToolMenu(); return; }
   if(b.dataset.ldend){ doc.settings.ldEnd=b.dataset.ldend; persist(); $('#toolMenu').querySelectorAll('[data-ldend]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); return; }
-  if(b.dataset.sm&&blkMk&&tool==='select'){ selMode=b.dataset.sm; syncSelLbl(); closeToolMenu(); panelKey=''; syncPanel(); redraw(); return; }
+  if(b.dataset.sm&&blkMk&&tool==='select'){ selMode=b.dataset.sm==='pick'?'multi':b.dataset.sm; syncSelLbl(); closeToolMenu(); panelKey=''; syncPanel(); redraw(); return; }
   if(b.dataset.sm){ const was=selMode, keep=tool==='select'; if(b.dataset.sm==='multi'&&was!=='multi') msStart(); else { selMode=b.dataset.sm; setTool('select'); } closeToolMenu(); rotC=null; return; }
   if(b.dataset.solp){ closeToolMenu(); solarPick(); return; }
   if(b.dataset.ins){ holeType=b.dataset.ins; persist(); setTool('hole'); closeToolMenu(); panelKey=''; syncPanel(); toast(holeType==='skyl'?'Мансардное окно: коснитесь ската крыши. Зелёным — где оно помещается':'Слуховое окно: коснитесь ската крыши — там будет его передняя стенка. Зелёным — где оно помещается'); return; }
@@ -6118,7 +6118,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.72':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.73':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
