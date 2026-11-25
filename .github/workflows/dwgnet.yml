@@ -1,0 +1,41 @@
+name: dwgnet
+# DWG writer/reader for BIMsketcher: ACadSharp (MIT) → .NET WebAssembly. Manual run only; the result is an artifact.
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: wasm workload
+        run: dotnet workload install wasm-tools
+      - name: publish
+        run: dotnet publish dwgnet/DwgNet.csproj -c Release -o out 2>&1 | tee publish.log
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: smoke test (write DWG, read it back)
+        run: |
+          ls -la out/wwwroot/_framework | tee files.txt
+          du -sh out/wwwroot/_framework | tee -a files.txt
+          cp dwgnet/main.js out/wwwroot/main.mjs
+          cd out/wwwroot && node main.mjs 2>&1 | tee ../../smoke.log
+      - name: cross-check with an independent DWG reader (test only, not shipped)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq && (sudo apt-get install -y -qq libredwg-tools || sudo apt-get install -y -qq libredwg-utils) > /dev/null 2>&1 || true
+          which dwgread && (dwgread -v1 out/wwwroot/test.dwg -O DXF -o check.dxf 2>&1 | tail -20 | tee check.log; grep -c "3DFACE\|LINE\|ARC" check.dxf | tee -a check.log) || echo "no dwgread" | tee check.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dwgnet
+          path: |
+            out/wwwroot/_framework
+            out/wwwroot/test.dwg
+            out/wwwroot/test_back.dxf
+            publish.log
+            smoke.log
+            files.txt
+            check.log

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <!-- DWG for BIMsketcher: ACadSharp (MIT) compiled to WebAssembly. Write DWG (2D + 3D) and read DWG to DXF. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
+    <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
+    <DebuggerSupport>false</DebuggerSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <EventSourceSupport>false</EventSourceSupport>
+    <WasmEmitSymbolMap>false</WasmEmitSymbolMap>
+    <CompressionEnabled>false</CompressionEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ACadSharp" Version="3.8.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <TrimmerRootAssembly Include="ACadSharp" />
+    <TrimmerRootAssembly Include="CSMath" />
+  </ItemGroup>
+</Project>
