@@ -2,6 +2,8 @@ name: dwgnet
 # DWG writer/reader for BIMsketcher: ACadSharp (MIT) → .NET WebAssembly. Manual run only; the result is an artifact.
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,16 +31,15 @@ jobs:
       - name: cross-check with an independent DWG reader (test only, not shipped)
         continue-on-error: true
         run: |
-          sudo apt-get update -qq && (sudo apt-get install -y -qq libredwg-tools || sudo apt-get install -y -qq libredwg-utils) > /dev/null 2>&1 || true
-          which dwgread && (dwgread -v1 out/wwwroot/test.dwg -O DXF -o check.dxf 2>&1 | tail -20 | tee check.log; grep -c "3DFACE\|LINE\|ARC" check.dxf | tee -a check.log) || echo "no dwgread" | tee check.log
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dwgnet
-          path: |
-            out/wwwroot/_framework
-            out/wwwroot/test.dwg
-            out/wwwroot/test_back.dxf
-            publish.log
-            smoke.log
-            files.txt
-            check.log
+          curl -sL https://github.com/LibreDWG/libredwg/releases/download/0.13.3/libredwg-0.13.3.tar.xz | tar xJ
+          cd libredwg-0.13.3 && ./configure -q --disable-bindings --disable-docs > /dev/null && make -j4 -s > /dev/null 2>&1; cd ..
+          R=libredwg-0.13.3/programs
+          for f in out/wwwroot/test*.dwg; do echo "== $f"; $R/dwgread -v2 "$f" -O DXF -o "$f.chk.dxf" 2>&1 | grep -iE "error|warn|fail" | head -8; for k in LINE ARC CIRCLE TEXT 3DFACE POLYLINE DIMENSION; do echo "  $k $(grep -c "^$k\$" "$f.chk.dxf" 2>/dev/null)"; done; done 2>&1 | tee check.log
+      - name: publish build as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out/wwwroot && zip -qr ../../dwgnet.zip _framework test*.dwg test*_back.dxf && cd ../..
+          zip -qj dwgnet.zip publish.log smoke.log files.txt check.log || true
+          gh release delete dwgnet-build -y --cleanup-tag 2>/dev/null || true
+          gh release create dwgnet-build dwgnet.zip --prerelease --title "dwgnet build (internal)" --notes "ACadSharp (MIT) WebAssembly build for BIMsketcher DWG export/import"

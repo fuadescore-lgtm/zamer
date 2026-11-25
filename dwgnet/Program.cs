@@ -24,8 +24,8 @@ public static partial class Dwg
 
     [JSExport] public static string Begin(int ver)
     {
-        var v = ver switch { 2000 => ACadVersion.AC1015, 2007 => ACadVersion.AC1021, 2010 => ACadVersion.AC1024, 2013 => ACadVersion.AC1027, 2018 => ACadVersion.AC1032, _ => ACadVersion.AC1018 };
-        doc = new CadDocument(v); layers.Clear(); cur = null; blk = null; nBlk = 0; dst = null; return "ok";
+        var v = ver switch { 2000 => ACadVersion.AC1015, 2007 => ACadVersion.AC1021, 2010 => ACadVersion.AC1024, 2013 => ACadVersion.AC1027, 2018 => ACadVersion.AC1032, 2004 => ACadVersion.AC1018, _ => ACadVersion.AC1027 };
+        doc = new CadDocument(v); if (v < ACadVersion.AC1021) doc.Header.CodePage = "ANSI_1251"; layers.Clear(); cur = null; blk = null; nBlk = 0; dst = null; return "ok";
     }
     [JSExport] public static int Layer(string name, int color)
     {
