@@ -2497,7 +2497,7 @@ function beamEnds(){ const S=selIds(), out=[]; if(!S.size||S.size>12||blkOf()) r
 function drawBeamJoins(){ if(tool!=='select'||selMode==='multi'||blkOf()) return; const L=beamEnds(); const S=selIds();
   for(const o of L){ const t=Math.min(colReach(o.col,o.dir)+26/view.scale,beamG(o.it).len*0.45), w={x:o.P.x+o.dir.x*t,y:o.P.y+o.dir.y*t}, c=toS(w); drawChainIco(c,!o.on); joinHits.push({beam:1,id:o.it.id,k:o.k,e:o.e,col:o.col.id,on:o.on,x:c.x,y:c.y}); }
   if(mvB) return; ctx.save(); for(const it of doc.items){ if(it.t!=='beam'||!S.has(it.id)) continue; const g=beamG(it); for(const P of [g.A,g.B]){ const q=toS(P); ctx.fillStyle=C.surface; ctx.strokeStyle=C.sel; ctx.lineWidth=2; ctx.fillRect(q.x-5,q.y-5,10,10); ctx.strokeRect(q.x-5,q.y-5,10,10); } } ctx.restore(); }
-function drawJoinIcons(){ if(blkMk&&tool==='select'){ joinHits=[]; return; }
+function drawJoinIcons(){ if(tool==='select'&&(blkMk||blkOf())){ joinHits=[]; return; } /* a block: no joint icons */
   if(tool!=='select'||mvB||!attachOn||editLine||editGrp) return; const S=selIds(); if(!S.size||S.size>8) return;
   for(const it of doc.items){ if(!S.has(it.id)||it.t!=='line'||it.g) continue;
     for(const k of ['a','b']){ const off=nj(it,k)||!endLinked(it,k);
@@ -3263,7 +3263,7 @@ function endPtr(e,cancel){ if(copyHi&&press&&press.moved&&(press.sd||press.mv||p
       persist(); }
     panelKey=''; syncPanel(); redraw(); return; }
   if(pr.sd&&pr.sd.started&&pr.sd.rf&&!pr.sd.copy) setTimeout(()=>{ const r=doc.items.find(i=>i.id===pr.sd.rf.id); if(r) roofJoinAsk(r,pr.sd.jb); },0);
-  if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.grp&&editGrp===pr.sd.grp) editGrp=null; if(!pr.sd.started&&!pr.moved&&selJoint) selJoint=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); try{ colReattach(pr.sd.ids); }catch(_){} persist(); if(pr.sd.copy) toast('Копия поставлена'); if(selMode==='mv'){ selMode='pick'; syncSelLbl(); } } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } else if(!pr.moved&&tool==='select'&&!pr.sd.copy&&moveSel.size<=1){ selTap(p.x,p.y); return; } panelKey=''; syncPanel(); redraw(); return; }
+  if(pr.sd){ moveDelta=null; snapMark=null; liveSnap=null; if(pr.sd.grp&&editGrp===pr.sd.grp) editGrp=null; if(!pr.sd.started&&!pr.moved&&selJoint) selJoint=null; if(pr.sd.started){ for(const it of doc.items) if(pr.sd.ids.has(it.id)&&it.t==='dim') attachDim(it); try{ colReattach(pr.sd.ids); }catch(_){} persist(); if(pr.sd.copy) toast('Копия поставлена'); if(selMode==='mv'){ selMode='pick'; syncSelLbl(); } } else if(pr.label&&!pr.moved){ openInline(pr.label); return; } else if(!pr.moved&&tool==='select'&&!pr.sd.copy&&(moveSel.size<=1||blkOf())){ selTap(p.x,p.y); return; } panelKey=''; syncPanel(); redraw(); return; }
   if(pr.label&&!pr.moved){ openInline(pr.label); return; }
   if(pr.labelArm){ return; }
   if(pr.lp) clearTimeout(pr.lp);
@@ -4003,7 +4003,9 @@ function tempDimList(){
   // у одной стены/линии — только размеры поперёк неё
   let only=null; if(B.items.every(i=>i.t==='line')){ const o=new Set(B.items.map(L0=>Math.abs(L0.b.x-L0.a.x)>=Math.abs(L0.b.y-L0.a.y)?'y':'x')); if(o.size===1) only=[...o][0]; }
   const {segs}=snapGeo(S), best={'+x':null,'-x':null,'+y':null,'-y':null};
-  for(const sg of segs){ if(sg.k==='aux') continue;
+  /* a block: objects that touch or overlap it are no target (a wall joined to it would give a meaningless few-mm dimension) */
+  const tch=new Map(), touch=it=>{ if(!it||!blkOf()) return false; if(tch.has(it)) return tch.get(it); let r=false, Sh=[]; try{ Sh=itemShape(it)||[]; }catch(_){} for(const sh of Sh) for(const q of (sh.pts||[])) if(q.x>=x0-1&&q.x<=x1+1&&q.y>=y0-1&&q.y<=y1+1){ r=true; break; } tch.set(it,r); return r; };
+  for(const sg of segs){ if(sg.k==='aux') continue; if(touch(sg.it)) continue;
     if(Math.abs(sg.a.x-sg.b.x)<0.5){ const x=sg.a.x, lo=Math.min(sg.a.y,sg.b.y), hi=Math.max(sg.a.y,sg.b.y), ol=Math.max(lo,y0), oh=Math.min(hi,y1);
       if(ol>oh+0.5) continue; const at=(ol+oh)/2;
       if(x>x1+0.5&&(!best['+x']||x<best['+x'].t)) best['+x']={t:x,at,lo:ol,hi:oh,it:sg.it};
@@ -4015,7 +4017,7 @@ function tempDimList(){
   const out=[];
   for(const dir of ['+x','-x','+y','-y']){ if(only&&dir[1]!==only) continue;
     const hz=dir[1]==='x', sg=dir[0]==='+'?1:-1, m=(sel.tface&&sel.tface[dir])||0; let e=tdNear(B,dir,m), eF0=null;
-    let ref=(tdDrag&&tdDrag.dir===dir)?tdDrag.pt:trefPt(sel.tref&&sel.tref[dir]); let t=null, at=null, man=false;
+    let ref=(tdDrag&&tdDrag.dir===dir)?tdDrag.pt:(blkOf()?null:trefPt(sel.tref&&sel.tref[dir])); /* a block: no reference of one of its walls */ let t=null, at=null, man=false;
     if(ref){ const rt=hz?ref.x:ref.y; if((rt-(hz?(sg>0?x1:x0):(sg>0?y1:y0)))*sg>0.5){ t=rt; at=hz?Math.max(y0,Math.min(y1,ref.y)):Math.max(x0,Math.min(x1,ref.x)); man=true; } }
     let tw=null; if(t===null&&best[dir]){ t=best[dir].t; at=best[dir].at; tw=best[dir].it||null; }
     /* a slanted wall: the dimension sits at the middle of the wall and starts on the chosen face line (near / centre / far) — it never hangs in the air */
@@ -4670,6 +4672,7 @@ function drawArrayPreview(){ if(!(tool==='select'&&arrayOn)) return; const S=sel
   for(const o of offs) for(const it of items) for(const sh of itemShape(it)){ const P=sh.pts.map(q=>toS({x:q.x+o.x,y:q.y+o.y})); if(P.length<2) continue; ctx.beginPath(); ctx.moveTo(P[0].x,P[0].y); for(const q of P.slice(1)) ctx.lineTo(q.x,q.y); if(sh.closed) ctx.closePath(); ctx.stroke(); }
   ctx.restore(); drawArrayDims(); }
 function selTap(sx,sy){ if(linkPick){ const w=toW(sx,sy); for(const r of doc.items){ if(r.t!=='roof'||r.id===linkPick.id||isExt(r)) continue; let R0; try{ R0=roofPlan(r); }catch(e){ continue; } const f=R0.g.faces.find(f=>f.pl&&inPoly(f.P,w)); if(f){ roofLinkPick(r,doc.curLv,f.pl.i); return; } } linkPick=null; toast('Связь отменена: нужен скат другой крыши',true); }
+ { const B=blkOf(), h0=B&&!blkMk&&selMode==='pick'?hit(sx,sy):null; if(h0&&h0.blk===B.blk){ blkStart(false); return; } } /* a tap on the selected block: its block panel */
  const now=Date.now(), same=CYC&&Math.hypot(sx-CYC.x,sy-CYC.y)<16;
   if(same&&now-CYC.t<380&&selId){ clearTimeout(CYCt); CYC=null; enterDetail(); return; }
   const L=hitAll(sx,sy), H0=hitAll.last||[]; /* apply() перерисовывает — hitAll.last может смениться */
@@ -4926,7 +4929,7 @@ document.addEventListener('pointerdown',e=>{ if(!(elMenu||colMenu||cabListOpen||
 // ---------- несколько объектов одной категории: то же меню, что у одного; разные значения — пустые («разные»), ввод — всем ----------
 let MSE=null, meBusy=false, ME_U=null;
 const ME_CAT=new Set(['line','win','door','open','chim','beam','fnd','tree','dim','prim','solar','dev','rail','text','circ','skyl','dorm']);
-function meGroup(){ if(blkMk||tool!=='select'||!(selMode==='pick'||selMode==='multi'||selMode==='mv')||editGrp||cabEd||bsk) return null; let G=null;
+function meGroup(){ if(blkMk||(tool==='select'&&blkOf())||tool!=='select'||!(selMode==='pick'||selMode==='multi'||selMode==='mv')||editGrp||cabEd||bsk) return null; let G=null;
   if(xSel&&xSel.length>1) G=xSel.map(o=>({li:o.li,id:o.id})); else if(!xSel&&moveSel.size>1) G=[...moveSel].map(id=>({li:doc.curLv,id}));
   if(!G) return null; const its=G.map(o=>{ const L=doc.levels[o.li]; return L&&L.items.find(i=>i.id===o.id); }); if(its.some(x=>!x)) return null;
   const t=its[0].t, c=catOf(its[0]); if(!ME_CAT.has(t)||!its.every(i=>i.t===t&&catOf(i)===c)) return null;
@@ -5282,6 +5285,7 @@ function syncPanel0(){ try{ syncTop(); }catch(_){} if(isLnSk(planEd)){ if(doc.cu
     h=`<div class="title">${E?'▣ '+tr('Блок')+' '+E.n+(E.on?' · '+tr('правка'):''):tr('Блок')+' · '+tr('выбрано')} <b>${n}</b></div>`
      +(xv?'':`<button class="ibn bksel" data-act="blkSel" title="Выбор" aria-label="Выбор" aria-haspopup="menu">${SV(MICO[cm])}<i class="car">▾</i></button>`)
      +`<button class="ibn${E&&E.on?' on':''}" data-act="blkEdT" title="Редактировать блок" aria-label="Редактировать блок" aria-pressed="${!!(E&&E.on)}"${E?'':' disabled'}>${SV(ICO.bnd)}</button>`
+     +(E?`<button class="btn" data-act="blkUnE">${tr('Разгруппировать')}</button>`:'')
      +(E&&E.on&&!xv?`<span class="bksep"></span><button class="ibn${E.rm?'':' on'}" data-act="blkAdd" title="Добавить в блок" aria-label="Добавить в блок" aria-pressed="${!E.rm}">${SV('<path d="M4 3l9 6.8-4.1.8L10.4 16l-1.9.8-1.9-5.2L4 13.6z"/><path d="M18 13v8M14 17h8" stroke="#2fbf62" stroke-width="2.6"/>')}</button><button class="ibn${E.rm?' on':''}" data-act="blkRem" title="Исключить из блока" aria-label="Исключить из блока" aria-pressed="${!!E.rm}">${SV('<path d="M4 3l9 6.8-4.1.8L10.4 16l-1.9.8-1.9-5.2L4 13.6z"/><path d="M14 17h8" stroke="#e5484d" stroke-width="2.6"/>')}</button>`:'')
      +`<button class="ibn cxb" data-act="msCancel" title="Отмена" aria-label="Отмена"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><button class="ibn okb" data-act="blkOk" title="Готово" aria-label="Готово"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>`; }
   else if(tool==='select'&&selMode==='multi'){ const xv=!!inView(), n=xv?(xSel?xSel.length:0):selIds().size?selCount():0, SN=ISELN(); h=(!xv&&n>=2&&selIds().size>=2&&moveSel.size?h.split(SN).join('')+``:`<div class="title">Выбрать несколько <b>${n}</b></div><span class="lbl">${n?'касание снова — убрать':'касайтесь объектов'}</span>${n?ICOPY()+(xv?IDEL():''):''}`)+`<button class="ibn cxb" data-act="msCancel" title="Отмена" aria-label="Отмена"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><button class="ibn okb" data-act="msDone" title="Готово" aria-label="Готово"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>`; }
@@ -5471,6 +5475,7 @@ panel.addEventListener('click',e=>{ { const rk=e.target.closest('[data-rlk]'), s
     case 'blkAdd':if(blkEd){ blkEd.rm=false; panelKey=''; syncPanel(); } break;
     case 'blkRem':if(blkEd){ blkEd.rm=true; panelKey=''; syncPanel(); } break;
     case 'blkEdGo':blkStart(true);break;
+    case 'blkUnE':if(blkEd){ const id=blkEd.id; pushUndo(); for(const L of doc.levels) for(const it of L.items) if(it.blk===id){ delete it.blk; delete it.blkN; } blkMk=false; blkEd=null; msPrev=null; selMode='pick'; xSel=null; selId=null; moveSel.clear(); persist(); syncSelLbl(); panelKey=''; syncPanel(); redraw(); viewRefresh(); syncModeBtns(); } break;
     case 'dxfU':if(sel&&sel.t==='dxf'){ pushUndo(); const u=+b.dataset.u, k=u/(sel.u||1); sel.u=u; persist(); panelKey=''; syncPanel(); redraw(); } break;
     case 'dxfLock':if(sel&&sel.t==='dxf'){ pushUndo(); if(sel.pin) delete sel.pin; else sel.pin=true; /* «pin», not «lock»: lock belongs to roofs */ mvB=false; persist(); panelKey=''; syncPanel(); redraw(); } break;
     case 'dxfOk':selId=null; moveSel.clear(); mvB=false; panelKey=''; syncPanel(); redraw(); break;
@@ -6118,7 +6123,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.73':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.74':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
