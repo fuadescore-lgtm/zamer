@@ -5527,5 +5527,21 @@
 "СЭС": "PV",
 "Объекты на разных уровнях — копируйте по одному уровню": "Objects are on different levels — copy one level at a time",
 "кабеля — выбрать другое устройство": "of the cable — choose another device",
-"Куда подключён": "Where is connected"
+"Куда подключён": "Where is connected",
+"Эта группа сама заземлена через ту — перемычка замкнёт кольцо без выхода к оборудованию": "That group is grounded through this one — the jumper would close a ring with no way to the equipment",
+"У группы ещё нет главного кабеля — нажмите «Авто» или нарисуйте трассу": "The group has no main cable yet — press «Auto» or draw a route",
+"перемычкой к другой группе, не вдоль своего кабеля: петля между": "via a jumper to another group, not along its own cable: a loop between",
+"убрана — заземление группы снова идёт вдоль её кабеля": "removed — the group's ground runs along its cable again",
+"Линия: коснитесь цели — точки, обведённой синим": "Line: tap the target — the point circled in blue",
+"Полилиния: тапами — вершины, последний тап — на": "Polyline: tap the vertices, the last tap — on",
+"Изменить трассу перемычки": "Change the jumper route",
+"Дуга: тап — изгиб, затем": "Arc: tap — the bend, then",
+"параллельно и рядом с": "parallel and close to",
+"Линия: коснитесь": "Line: tap",
+"Трасса готова": "The route is ready",
+"перемычка от": "jumper from",
+"Ред. эскиз": "Edit sketch",
+"Шаг назад": "Step back",
+"кабелями": "cables",
+"цели": "of the target"
 }
