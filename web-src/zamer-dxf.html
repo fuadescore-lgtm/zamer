@@ -6190,7 +6190,7 @@ function openProjectPicker(){ let inp=$('#bsOpenInp');
     inp.addEventListener('change',()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const fr=new FileReader();
       fr.onload=()=>{ importProjectText(fr.result,f.name); inp.value=''; }; fr.onerror=()=>{ toast('Не удалось прочитать файл',true); inp.value=''; }; fr.readAsText(f,'utf-8'); }); }
   inp.click(); }
-const APP_VER=IS3D?'3D 3.0.82':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
+const APP_VER=IS3D?'3D 3.0.83':'4.0.18'; // версия 2D: 4.0.1, 4.0.2, 4.0.3…; версия 3D: 1.0.1, 1.0.2… — меняется при каждом выпуске APK
 let appView='recent', acctDelAsk=false; /* «Удалить аккаунт»: second tap confirms */
 // главное меню как «Файл» в Revit: слева команды, справа последние чертежи или параметры
 function renderSheet(view){ if(view) appView=view;
@@ -14160,7 +14160,7 @@ function peNear(a,b){ const A=peCellsOf(a), B=peCellsOf(b); let best=null; for(c
   let pb=peOnCell(best.y.g,best.x.g,40), pa=peOnCell(best.x.g,pb,40); pb=peOnCell(best.y.g,pa,40); pa=peOnCell(best.x.g,pb,40); return {pa,pb,d:Math.hypot(pa.x-pb.x,pa.y-pb.y)}; }
 function peInPanels(q){ for(const g of strGeo().m.values()){ const dx=q.x-g.x, dy=q.y-g.y; if(Math.abs(dx*g.F.u.x+dy*g.F.u.y)<(g.hw||560)&&Math.abs(dx*g.F.b.x+dy*g.F.b.y)<(g.hh||860)) return true; } return false; }
 /* plan route between two points: straight, or one corner along the array axes (the corner off the modules when possible) */
-function peAxis(pa,pb,F){ const u=F&&F.u?F.u:{x:1,y:0}, b={x:-u.y,y:u.x}, dx=pb.x-pa.x, dy=pb.y-pa.y, du=dx*u.x+dy*u.y, db=dx*b.x+dy*b.y; if(Math.abs(du)<150||Math.abs(db)<150) return [pa,pb];
+function peAxis(pa,pb,F){ const u=F&&F.u?F.u:{x:1,y:0}, b={x:-u.y,y:u.x}, dx=pb.x-pa.x, dy=pb.y-pa.y, du=dx*u.x+dy*u.y, db=dx*b.x+dy*b.y; if(Math.abs(du)<20||Math.abs(db)<20) return [pa,pb]; /* square corners — only a tiny offset goes straight */
   const c1={x:pa.x+u.x*du,y:pa.y+u.y*du}, c2={x:pa.x+b.x*db,y:pa.y+b.y*db}; return [pa,peInPanels(c1)&&!peInPanels(c2)?c2:c1,pb]; }
 function peArrF(arr){ const f=itemById(arr); if(!f) return null; const F=onLv(f.li,()=>insFrame(f.it,f.li)); if(!F||!F.zt) return null; return {f,F,S:strSurf(f.it,F),top:(f.it.off==null?150:f.it.off)+(f.it.th||30)}; }
 const peTop=(A,q,n)=>{ if(!A.S) return [q.x,q.y,A.F.zt(q)+A.top+(n||0)]; const P0=A.S(q,n||0), P1=A.S({x:2*q.x-P0[0],y:2*q.y-P0[1]},n||0); return [q.x,q.y,P1[2]]; }; /* on the module top right above q (the surface point is lifted along the normal, so step back once) */
@@ -14332,7 +14332,12 @@ function pePaths(minOff){ let G=[]; try{ G=peGroups(); }catch(_){ return []; } c
     const it=g.type==='str'||g.type==='join'?g.main:g.cab; const li=doc.levels.findIndex(L=>L.items.includes(it)); if(li<0) continue;
     if(g.type==='str'&&g.noTrunk){} /* its PE is drawn by hand to the device */ else if(g.type==='str'&&g.jn) along(it,li,0,{p:g.jn.p,start:g.ki===0}); else if(g.type==='join') along(it,li,0,{p:g.jp,start:g.ki!==0,mark:true}); else along(it,li,0);
     if(g.type==='str'){ for(const j of g.jumps||[]) if(j.P&&!j.man) out.push({P:j.P,li:j.a.li,it:null,jump:true});
-      /* from the main ⏚ point: down along the module normal, then on the roof to where the PE trunk starts (next to the main cable) */ let ld=null; try{ const rt=g.pts&&g.pts.find(q=>q.root)||strPEPts().find(q=>q.root&&q.gid===it.id), tr=out.filter(o=>o.it===it).pop(); if(rt&&tr){ const A=peArrF(rt.arr), e0=tr.P[0], e1=tr.P[tr.P.length-1], T=Math.hypot(e0[0]-rt.x,e0[1]-rt.y)<=Math.hypot(e1[0]-rt.x,e1[1]-rt.y)?e0:e1; if(A&&Math.hypot(T[0]-rt.x,T[1]-rt.y)>60){ const top=peTop(A,rt,6), ft=nFoot(top,A.F,20)||[rt.x,rt.y,A.F.zt(rt)+20], P2=peAxis({x:ft[0],y:ft[1]},{x:T[0],y:T[1]},A.F); ld=[top,ft,...P2.slice(1,-1).map(q=>[q.x,q.y,A.F.zt(q)+20]),T]; } } }catch(_){ ld=null; }
+      /* from the main ⏚ point: down along the module normal, then on the roof to where the PE trunk starts (next to the main cable) */ let ld=null; try{ const rt=g.pts&&g.pts.find(q=>q.root)||strPEPts().find(q=>q.root&&q.gid===it.id), tr=out.filter(o=>o.it===it).pop(); if(rt&&tr){ const A=peArrF(rt.arr), e0=tr.P[0], e1=tr.P[tr.P.length-1], T=Math.hypot(e0[0]-rt.x,e0[1]-rt.y)<=Math.hypot(e1[0]-rt.x,e1[1]-rt.y)?e0:e1; if(A&&Math.hypot(T[0]-rt.x,T[1]-rt.y)>60){ const top=peTop(A,rt,6), ft=nFoot(top,A.F,20)||[rt.x,rt.y,A.F.zt(rt)+20];
+          /* the last leg comes in along the trunk's first run, so the PE stays parallel to the main cable at its distance; the corner before it is square */
+          const TP=T===e0?tr.P:tr.P.slice().reverse(); let dn=null; for(let i=1;i<TP.length;i++){ const dx=TP[i][0]-T[0], dy=TP[i][1]-T[1], l=Math.hypot(dx,dy); if(l>1){ dn={x:dx/l,y:dy/l}; break; } }
+          let P2; if(dn){ const s0=(ft[0]-T[0])*dn.x+(ft[1]-T[1])*dn.y, c={x:T[0]+dn.x*s0,y:T[1]+dn.y*s0}; P2=Math.hypot(c.x-ft[0],c.y-ft[1])<5||Math.abs(s0)<5?[{x:ft[0],y:ft[1]},{x:T[0],y:T[1]}]:[{x:ft[0],y:ft[1]},c,{x:T[0],y:T[1]}]; }
+          else P2=peAxis({x:ft[0],y:ft[1]},{x:T[0],y:T[1]},A.F);
+          ld=[top,ft,...P2.slice(1,-1).map(q=>[q.x,q.y,A.F.zt(q)+20]),T]; } } }catch(_){ ld=null; }
       if(ld) out.push({P:ld,li,it:null,lead:true}); else if(g.lead) out.push({P:g.lead,li,it:null,lead:true}); } }
   return out; }
 function peMesh(M){ const col=rgbOf('#94d82d'), r=12; for(const o of pePaths(0)){ const sh=o.P; if(o.mark&&o.end) tubeJoint(M,o.end,r*1.6,col,'cab'); for(let i=0;i<sh.length-1;i++) tube(M,sh[i],sh[i+1],r,col,'cab'); for(let i=1;i<sh.length-1;i++) tubeJoint(M,sh[i],r*1.06,col,'cab'); } }
