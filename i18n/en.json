@@ -5543,5 +5543,12 @@
 "Ред. эскиз": "Edit sketch",
 "Шаг назад": "Step back",
 "кабелями": "cables",
-"цели": "of the target"
+"цели": "of the target",
+"Кабель удалён — нарисуйте трассу заново (на плане) или соедините": "Cable deleted — draw the route again (on the plan) or connect",
+"У обеих групп ещё нет главного кабеля — соедините": "Neither group has a main cable yet — connect",
+"Орто: участки трассы — только по осям": "Ortho: route segments along the axes only",
+"другой группы (обведена синим": "of another group (circled in blue",
+"с группой, у которой он есть": "to a group that has one",
+"Последнюю точку поставьте на": "Put the last point on",
+"группы перемычкой": "of the group with a jumper"
 }
